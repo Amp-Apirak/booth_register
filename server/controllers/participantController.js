@@ -2,6 +2,8 @@ const participantRepository = require('../repositories/participantRepository');
 const checkinService = require('../services/checkinService');
 const { sendTicketEmail } = require('../utils/email_sender');
 
+const IMPORT_MAX_ROWS = 5000;
+
 /**
  * Helper to generate ticket code in format: SER20260920XXXX
  */
@@ -126,6 +128,75 @@ class ParticipantController {
         data: newParticipant
       });
     } catch (err) {
+      return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: err.message });
+    }
+  }
+
+  /**
+   * Bulk import participants from an uploaded spreadsheet (Staff CMS)
+   * Body: { participants: [{ row, name, company, position?, email?, phone?, attendee_type? }] }
+   */
+  async importBulk(req, res) {
+    try {
+      const input = req.body?.participants;
+      if (!Array.isArray(input) || input.length === 0) {
+        return res.status(400).json({ success: false, error: 'NO_ROWS', message: 'ไม่พบข้อมูลสำหรับนำเข้า' });
+      }
+      if (input.length > IMPORT_MAX_ROWS) {
+        return res.status(400).json({ success: false, error: 'TOO_MANY_ROWS', message: `นำเข้าได้สูงสุด ${IMPORT_MAX_ROWS} รายการต่อครั้ง` });
+      }
+
+      const text = (v, max) => String(v ?? '').trim().slice(0, max);
+      const valid = [];
+      const skipped = [];
+      input.forEach((raw, i) => {
+        const row = Number.isInteger(raw?.row) ? raw.row : i + 1;
+        const name = text(raw?.name ?? raw?.fullname, 150);
+        const company = text(raw?.company, 150);
+        if (!name || !company) {
+          skipped.push({ row, reason: 'MISSING_REQUIRED_FIELDS' });
+          return;
+        }
+        const email = text(raw?.email, 255);
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          skipped.push({ row, reason: 'INVALID_EMAIL' });
+          return;
+        }
+        valid.push({
+          row,
+          name,
+          company,
+          position: text(raw?.position, 100),
+          email,
+          phone: text(raw?.phone, 50),
+          attendee_type: String(raw?.attendee_type ?? '').trim().toUpperCase() === 'VIP' ? 'VIP' : 'General'
+        });
+      });
+
+      const eventId = 1;
+      const result = valid.length > 0
+        ? await participantRepository.bulkCreate(eventId, valid, generateTicketCode)
+        : { imported: [], skipped: [] };
+      const allSkipped = [...skipped, ...result.skipped].sort((a, b) => a.row - b.row);
+
+      const io = req.app.get('io');
+      if (io && result.imported.length > 0) {
+        const allParticipants = await participantRepository.getAll();
+        io.emit('participants:update', { action: 'import', data: allParticipants });
+        io.emit('overview:update', await getStatsSummary());
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: `นำเข้าสำเร็จ ${result.imported.length} รายการ, ข้าม ${allSkipped.length} รายการ`,
+        data: {
+          imported_count: result.imported.length,
+          skipped_count: allSkipped.length,
+          skipped: allSkipped
+        }
+      });
+    } catch (err) {
+      console.error('Import participants failed:', err.message);
       return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: err.message });
     }
   }

@@ -9,6 +9,7 @@ import useWebSocket from '@/lib/useWebSocket';
 import { useSettings } from '@/contexts/SettingsContext';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/cropImage';
+import ParticipantImportModal from '@/components/ParticipantImportModal';
 import { 
   LayoutDashboard, 
   Users, 
@@ -20,6 +21,7 @@ import {
   Filter, 
   CheckCircle2, 
   Download, 
+  Upload,
   Trash2, 
   Edit3, 
   X, 
@@ -51,6 +53,7 @@ export default function DashboardPage() {
 
   const [filter, setFilter] = useState<'all' | 'Pending' | 'Checked-in'>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [newAttendee, setNewAttendee] = useState({
     name: '',
     company: '',
@@ -309,6 +312,14 @@ export default function DashboardPage() {
           >
             <Download className="w-4 h-4 text-cyan-400" />
             <span>ส่งออก Excel</span>
+          </button>
+
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2"
+          >
+            <Upload className="w-4 h-4 text-cyan-400" />
+            <span>นำเข้า Excel</span>
           </button>
 
           <button
@@ -592,6 +603,13 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Add Attendee Modal ── */}
+      {isImportModalOpen && (
+        <ParticipantImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={fetchParticipants}
+        />
+      )}
+
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">

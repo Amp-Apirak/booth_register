@@ -28,6 +28,7 @@ router.get('/events/:event_id/stats', (req, res) => participantController.getSta
 // ─────────────────────────────────────────────────
 router.get('/participants', verifyToken, (req, res) => participantController.getAll(req, res));
 router.post('/participants', verifyToken, (req, res) => participantController.createManual(req, res));
+router.post('/participants/import', verifyToken, (req, res) => participantController.importBulk(req, res));
 router.get('/participants/:ticket_code', verifyToken, (req, res) => participantController.getByTicketCode(req, res));
 router.put('/participants/:id', verifyToken, (req, res) => participantController.update(req, res));
 router.delete('/participants/:id', verifyToken, (req, res) => participantController.delete(req, res));

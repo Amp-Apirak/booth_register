@@ -116,6 +116,66 @@ class ParticipantRepository {
     const result = await db.query(queryStr, [id]);
     return result.rows[0] || null;
   }
+
+  /**
+   * Bulk import in a single transaction (all rows or none).
+   * Rows whose email already exists in the event (or earlier in the batch) are skipped.
+   * @param {number} eventId
+   * @param {Array<{row:number,name:string,company:string,position:string,email:string,phone:string,attendee_type:string}>} rows
+   * @param {() => string} generateTicketCode
+   * @returns {{ imported: Array, skipped: Array<{row:number,reason:string}> }}
+   */
+  async bulkCreate(eventId, rows, generateTicketCode) {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const existing = await client.query(
+        `SELECT ticket_code, LOWER(email) AS email FROM participants`
+      );
+      const usedCodes = new Set(existing.rows.map(r => r.ticket_code));
+      const eventEmails = await client.query(
+        `SELECT LOWER(email) AS email FROM participants WHERE event_id = $1 AND email <> ''`,
+        [eventId]
+      );
+      const seenEmails = new Set(eventEmails.rows.map(r => r.email));
+
+      const imported = [];
+      const skipped = [];
+      for (const r of rows) {
+        const emailKey = r.email.toLowerCase();
+        if (emailKey && seenEmails.has(emailKey)) {
+          skipped.push({ row: r.row, reason: 'DUPLICATE_EMAIL' });
+          continue;
+        }
+
+        // Ticket codes only have ~9,000 values per day, so avoid collisions explicitly
+        let ticketCode = generateTicketCode();
+        for (let i = 0; usedCodes.has(ticketCode); i++) {
+          if (i >= 1000) throw new Error('TICKET_CODE_EXHAUSTED');
+          ticketCode = generateTicketCode();
+        }
+        usedCodes.add(ticketCode);
+        if (emailKey) seenEmails.add(emailKey);
+
+        const result = await client.query(
+          `INSERT INTO participants (event_id, ticket_code, fullname, company, position, email, phone, attendee_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING participant_id AS id, fullname AS name, ticket_code`,
+          [eventId, ticketCode, r.name, r.company, r.position, r.email, r.phone, r.attendee_type]
+        );
+        imported.push({ row: r.row, ...result.rows[0] });
+      }
+
+      await client.query('COMMIT');
+      return { imported, skipped };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = new ParticipantRepository();

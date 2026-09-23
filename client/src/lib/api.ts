@@ -356,6 +356,23 @@ export const api = {
   },
 
   // Add participant manually
+  // Bulk import participants (Staff CMS). Throws with the server's message on failure.
+  async importParticipants(rows: { row: number; name: string; company: string; position?: string; email?: string; phone?: string; attendee_type?: string }[]): Promise<{
+    imported_count: number;
+    skipped_count: number;
+    skipped: { row: number; reason: string }[];
+  }> {
+    const res = await fetch(`${API_BASE}/api/v1/participants/import`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ participants: rows }),
+    });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.message || `API Error: ${res.status}`);
+    return data.data;
+  },
+
   async addParticipant(data: {
     name: string;
     company: string;
