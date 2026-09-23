@@ -36,6 +36,13 @@ export interface SystemSettings {
   registration_intro: string;
   registration_objectives: string;
   registration_terms: string;
+  // Footer / help (ข้อมูลทั่วไป → ข้อมูลติดต่อและผู้จัดงาน)
+  organizer_name: string;
+  contact_phone: string;
+  contact_email: string;
+  contact_line: string;
+  event_map_url: string;
+  privacy_policy: string;
 }
 
 export const DEFAULT_SETTINGS: SystemSettings = {
@@ -51,7 +58,13 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   registration_brochure_image: '',
   registration_intro: '',
   registration_objectives: '',
-  registration_terms: ''
+  registration_terms: '',
+  organizer_name: '',
+  contact_phone: '',
+  contact_email: '',
+  contact_line: '',
+  event_map_url: '',
+  privacy_policy: ''
 };
 
 // Formats event start/end into a readable Thai date (or date range)

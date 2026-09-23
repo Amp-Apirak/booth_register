@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Save, Image as ImageIcon, Settings, LayoutTemplate, RefreshCcw, Check, X as XIcon, MapPin, Map, Building2, Layers, CalendarClock, CalendarRange, Gift, PanelsTopLeft } from 'lucide-react';
+import { Save, Image as ImageIcon, Settings, LayoutTemplate, RefreshCcw, Check, X as XIcon, MapPin, Map, Building2, Layers, CalendarClock, CalendarRange, Gift, PanelsTopLeft, Phone, Mail, MessageCircle, Users, ShieldCheck, LifeBuoy } from 'lucide-react';
 import api from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
 import Cropper from 'react-easy-crop';
@@ -45,6 +45,8 @@ const formatDT = (v: string): string => {
   return d.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
 };
 
+const EMPTY_FOOTER_INFO = { organizer_name: '', contact_phone: '', contact_email: '', contact_line: '', event_map_url: '', privacy_policy: '' };
+
 type SettingsTab = 'general' | 'registration' | 'agenda' | 'prizes';
 const SETTINGS_TABS: SettingsTab[] = ['general', 'registration', 'agenda', 'prizes'];
 
@@ -72,6 +74,9 @@ function SettingsContent() {
   const [eventFloor, setEventFloor] = useState('');
   const [eventStart, setEventStart] = useState('');
   const [eventEnd, setEventEnd] = useState('');
+  // Shown in the site footer and on /privacy
+  const [footerInfo, setFooterInfo] = useState({ ...EMPTY_FOOTER_INFO });
+  const setFooterField = (key: keyof typeof EMPTY_FOOTER_INFO, value: string) => setFooterInfo(current => ({ ...current, [key]: value }));
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
@@ -94,6 +99,14 @@ function SettingsContent() {
     setEventFloor(settings.event_floor || '');
     setEventStart(settings.event_start || '');
     setEventEnd(settings.event_end || '');
+    setFooterInfo({
+      organizer_name: settings.organizer_name || '',
+      contact_phone: settings.contact_phone || '',
+      contact_email: settings.contact_email || '',
+      contact_line: settings.contact_line || '',
+      event_map_url: settings.event_map_url || '',
+      privacy_policy: settings.privacy_policy || '',
+    });
   }, [settings, router]);
 
   const onCropComplete = useCallback((croppedArea: any, croppedAreaPixels: any) => {
@@ -121,11 +134,16 @@ function SettingsContent() {
     setEventFloor('');
     setEventStart('');
     setEventEnd('');
+    setFooterInfo({ ...EMPTY_FOOTER_INFO });
     setImageToCrop(null);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (footerInfo.event_map_url && !/^https?:\/\//i.test(footerInfo.event_map_url.trim())) {
+      setMessage({ text: 'ลิงก์แผนที่ต้องขึ้นต้นด้วย https:// เช่น https://maps.app.goo.gl/...', type: 'error' });
+      return;
+    }
     setIsSaving(true);
     setMessage({ text: '', type: '' });
 
@@ -138,7 +156,8 @@ function SettingsContent() {
         event_building: eventBuilding,
         event_floor: eventFloor,
         event_start: eventStart,
-        event_end: eventEnd
+        event_end: eventEnd,
+        ...footerInfo
       };
       const result = await api.updateSettings(payload);
 
@@ -301,6 +320,41 @@ function SettingsContent() {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">ข้อมูลสถานที่และวันเวลานี้จะแสดงบนบัตรตั๋วดิจิทัลและหน้าลงทะเบียนของงาน</p>
+              </div>
+
+              {/* Organizer, attendee help contacts, map and privacy policy (site footer) */}
+              <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2"><LifeBuoy className="w-4 h-4 text-emerald-400" />ข้อมูลติดต่อและผู้จัดงาน</h3>
+                  <p className="text-xs text-slate-500 mt-1">แสดงที่ส่วนท้ายเว็บ (Footer) และหน้านโยบายความเป็นส่วนตัว · ช่องที่เว้นว่างจะไม่แสดง</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Users className="w-4 h-4 text-indigo-400" />ชื่อผู้จัดงาน (Organizer)</label>
+                    <input type="text" value={footerInfo.organizer_name} onChange={(e) => setFooterField('organizer_name', e.target.value)} placeholder="เช่น บริษัท อีเว้นท์ จำกัด" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Map className="w-4 h-4 text-cyan-400" />ลิงก์แผนที่ (Google Maps)</label>
+                    <input type="url" value={footerInfo.event_map_url} onChange={(e) => setFooterField('event_map_url', e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Phone className="w-4 h-4 text-emerald-400" />เบอร์โทรติดต่อ</label>
+                    <input type="tel" value={footerInfo.contact_phone} onChange={(e) => setFooterField('contact_phone', e.target.value)} placeholder="เช่น 0812345678" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Mail className="w-4 h-4 text-indigo-400" />อีเมลติดต่อ</label>
+                    <input type="email" value={footerInfo.contact_email} onChange={(e) => setFooterField('contact_email', e.target.value)} placeholder="เช่น help@event.com" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-green-400" />LINE ID</label>
+                    <input type="text" value={footerInfo.contact_line} onChange={(e) => setFooterField('contact_line', e.target.value)} placeholder="เช่น @myevent หรือ myevent" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-cyan-400" />นโยบายความเป็นส่วนตัว (PDPA)</label>
+                  <textarea value={footerInfo.privacy_policy} onChange={(e) => setFooterField('privacy_policy', e.target.value)} rows={6} placeholder="ข้อความนโยบายที่ผ่านการตรวจจากผู้จัดงาน/ฝ่ายกฎหมาย · เว้นบรรทัดว่างเพื่อขึ้นย่อหน้าใหม่" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all resize-y" />
+                  <p className="text-xs text-slate-500">แสดงที่หน้า <a href="/privacy" target="_blank" className="text-cyan-400 hover:text-cyan-300">/privacy</a> (ลิงก์จาก Footer และช่องยินยอม PDPA ในหน้าลงทะเบียน)</p>
+                </div>
               </div>
 
               {/* Event Logo */}

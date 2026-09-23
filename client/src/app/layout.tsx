@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import MainLayoutWrapper from "@/components/MainLayoutWrapper";
+import SiteFooter from "@/components/SiteFooter";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { SiteBackdropProvider } from "@/components/SiteBackdrop";
 
@@ -17,13 +18,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="th" className="dark">
-      <body className="bg-cyber-mesh min-h-screen text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+      <body className="bg-cyber-mesh min-h-screen flex flex-col text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
         <SettingsProvider>
           <SiteBackdropProvider>
             <Navigation />
             <MainLayoutWrapper>
               {children}
             </MainLayoutWrapper>
+            <SiteFooter />
           </SiteBackdropProvider>
         </SettingsProvider>
       </body>

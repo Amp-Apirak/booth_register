@@ -29,7 +29,13 @@ class SettingsRepository {
           ('registration_brochure_image', ''),
           ('registration_intro', ''),
           ('registration_objectives', ''),
-          ('registration_terms', '')
+          ('registration_terms', ''),
+          ('organizer_name', ''),
+          ('contact_phone', ''),
+          ('contact_email', ''),
+          ('contact_line', ''),
+          ('event_map_url', ''),
+          ('privacy_policy', '')
         ON CONFLICT (key) DO NOTHING;
       `;
       await query(insertDefaultsQuery);
@@ -66,6 +72,10 @@ class SettingsRepository {
     if (settings['registration_intro'] === undefined) settings['registration_intro'] = '';
     if (settings['registration_objectives'] === undefined) settings['registration_objectives'] = '';
     if (settings['registration_terms'] === undefined) settings['registration_terms'] = '';
+    // Footer: organizer, attendee help contacts, map link and privacy policy
+    for (const key of ['organizer_name', 'contact_phone', 'contact_email', 'contact_line', 'event_map_url', 'privacy_policy']) {
+      if (settings[key] === undefined) settings[key] = '';
+    }
     
     return settings;
   }

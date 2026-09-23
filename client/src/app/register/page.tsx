@@ -550,6 +550,7 @@ function RegisterPageContent() {
                 ความยินยอมตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA Consent)
               </span>
               ข้าพเจ้ายินยอมให้ผู้จัดงานจัดเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลนี้เพื่อวัตถุประสงค์ในการออกตั๋วเข้างาน การสแกนเช็คอินผ่านประตู และการติดต่อประชาสัมพันธ์กิจกรรมสัมมนาในอนาคต
+              {' '}<Link href="/privacy" target="_blank" className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200">อ่านนโยบายความเป็นส่วนตัว</Link>
             </div>
           </label>
         </div>

@@ -13,7 +13,7 @@ export default function MainLayoutWrapper({ children }: { children: React.ReactN
 
   // Standard container layout for other pages
   return (
-    <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 max-w-7xl">
+    <main className="flex-1 w-full container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 max-w-7xl">
       {children}
     </main>
   );
