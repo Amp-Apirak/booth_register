@@ -50,7 +50,9 @@ CREATE TABLE participants (
     email VARCHAR(255),
     phone VARCHAR(50),
     registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    profile_picture TEXT, -- Data URL of the attendee photo (shown on LED welcome / lucky draw)
+    attendee_type VARCHAR(50) DEFAULT 'General' -- 'General' | 'VIP'
 );
 
 -- Indices for scanning ticket_code (QR Code) and searching participants by name/company

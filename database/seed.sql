@@ -22,7 +22,8 @@ SELECT setval('events_event_id_seq', (SELECT MAX(event_id) FROM events));
 
 
 -- 2. Insert Users / Staff (สร้างบัญชีเจ้าหน้าที่ปฏิบัติงาน)
--- Note: รหัสผ่านสมมุติเข้ารหัสผ่าน bcrypt (รหัสผ่านดิบ: "password123")
+-- Note: บัญชีตัวอย่างเหล่านี้ไม่มีรหัสผ่านที่ใช้ login ได้ (hash ไม่ตรงกับรหัสใด ๆ ที่เผยแพร่)
+-- สร้าง/รีเซ็ตบัญชีจริงด้วย: cd server && node scripts/create-admin.js <username> <password>
 INSERT INTO users (user_id, username, password_hash, fullname, role, email, active_status)
 VALUES 
 (
@@ -141,7 +142,7 @@ VALUES
 (4, 1, 'tkt_somchai_jaidee_2026', 'Somchai JaiDee', 'Siam Inno Group', 'Manager', 'somchai@siaminno.co.th', '085-555-4444', '2026-08-30 08:23:00+07'),
 (5, 1, 'tkt_nattapong_ruang_2026', 'Nattapong Ruang', 'NextGen Software', 'Developer', 'nattapong@nextgen.com', '086-777-8888', '2026-08-30 08:24:00+07'),
 (6, 1, 'tkt_pitchaya_srisai_2026', 'Pitchaya Srisai', 'Creative Studio', 'UX/UI Designer', 'pitchaya@creative.com', '087-999-0000', '2026-08-30 08:25:00+07'),
-(7, 1, 'tkt_chantana_mongkol_2026', 'Chantana Mongkol', 'FinTech Hub', 'Analyst', 'chantana@fintech.co.th', '2026-08-30 08:28:00+07', '083-444-5555'),
+(7, 1, 'tkt_chantana_mongkol_2026', 'Chantana Mongkol', 'FinTech Hub', 'Analyst', 'chantana@fintech.co.th', '083-444-5555', '2026-08-30 08:28:00+07'),
 (8, 1, 'tkt_tanawat_pon_2026', 'Tanawat Pon', 'Data Cloud Inc', 'Cloud Engineer', 'tanawat@datacloud.com', '084-222-3333', '2026-08-30 08:30:00+07'),
 (9, 1, 'tkt_nisachol_siri_2026', 'Nisachol Siri', 'Thai Bank PLC', 'Product Owner', 'nisachol@thaibank.co.th', '081-555-6666', '2026-08-30 08:32:00+07'),
 (10, 1, 'tkt_vipawan_tech_2026', 'Vipawan Tech', 'Cyber Security Ltd', 'Security Analyst', 'vipawan@cybersec.com', '089-444-3333', '2026-08-30 08:34:00+07'),
