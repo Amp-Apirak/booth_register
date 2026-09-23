@@ -338,6 +338,22 @@ export const api = {
     return data.data || [];
   },
 
+  // Save a new draw order (prize ids, first = ลำดับที่ 1)
+  async reorderPrizes(prizeIds: number[]): Promise<Prize[]> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/prizes/reorder`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ prize_ids: prizeIds }) });
+    const data = await handleResponse(res);
+    return data.data || [];
+  },
+
+  // Excel import: updates prizes matched by code/name, creates the rest. Throws with the server's message.
+  async importPrizes(rows: { row: number; sort_order: number; name: string; code: string; description: string; quantity: number; is_active: boolean; image: string }[]): Promise<{ created: number; updated: number }> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/prizes/import`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ prizes: rows }) });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.message || `API Error: ${res.status}`);
+    return data.data;
+  },
+
   async createPrize(prize: Prize): Promise<Prize> {
     const res = await fetch(`${API_BASE}/api/v1/events/1/prizes`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify(prize) });
     const data = await handleResponse(res);

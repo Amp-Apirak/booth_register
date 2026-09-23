@@ -48,6 +48,8 @@ router.get('/events/:event_id/lucky-draw/winners', (req, res) => luckyDrawContro
 router.get('/events/:event_id/lucky-draw/eligible', (req, res) => luckyDrawController.getEligible(req, res));
 router.get('/events/:event_id/prizes', (req, res) => prizeController.list(req, res));
 router.post('/events/:event_id/prizes', verifyToken, (req, res) => prizeController.create(req, res));
+router.put('/events/:event_id/prizes/reorder', verifyToken, (req, res) => prizeController.reorder(req, res));
+router.post('/events/:event_id/prizes/import', verifyToken, (req, res) => prizeController.importMany(req, res));
 router.put('/events/:event_id/prizes/:prize_id', verifyToken, (req, res) => prizeController.update(req, res));
 router.delete('/events/:event_id/prizes/:prize_id', verifyToken, (req, res) => prizeController.delete(req, res));
 

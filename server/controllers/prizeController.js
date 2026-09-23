@@ -41,6 +41,36 @@ module.exports = {
       res.json({ success: true, data: prize });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
   },
+  async reorder(req, res) {
+    const ids = req.body?.prize_ids;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every(id => Number.isInteger(id))) {
+      return res.status(400).json({ success: false, message: 'prize_ids ต้องเป็นรายการรหัสของรางวัล' });
+    }
+    try {
+      const eventId = Number(req.params.event_id);
+      await prizeRepository.reorder(eventId, ids);
+      req.app.get('io')?.emit('prizes:update', { event_id: eventId });
+      res.json({ success: true, data: await prizeRepository.findByEvent(eventId) });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  },
+  async importMany(req, res) {
+    const input = req.body?.prizes;
+    if (!Array.isArray(input) || input.length === 0) return res.status(400).json({ success: false, message: 'ไม่พบข้อมูลสำหรับนำเข้า' });
+    if (input.length > 500) return res.status(400).json({ success: false, message: 'นำเข้าได้สูงสุด 500 รายการต่อครั้ง' });
+    const rows = [];
+    for (let i = 0; i < input.length; i++) {
+      const data = { ...parsePrize(input[i]), sort_order: Number(input[i]?.sort_order) || 0 };
+      const error = validate(data);
+      if (error) return res.status(400).json({ success: false, message: `แถวที่ ${input[i]?.row ?? i + 2}: ${error}` });
+      rows.push(data);
+    }
+    try {
+      const eventId = Number(req.params.event_id);
+      const result = await prizeRepository.importMany(eventId, rows);
+      req.app.get('io')?.emit('prizes:update', { event_id: eventId });
+      res.json({ success: true, data: result });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+  },
   async delete(req, res) {
     try {
       const prize = await prizeRepository.delete(Number(req.params.event_id), Number(req.params.prize_id));

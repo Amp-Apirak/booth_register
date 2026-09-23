@@ -48,7 +48,9 @@ class PrizeRepository {
   async create(eventId, data) {
     const result = await db.query(`
       INSERT INTO lucky_draw_prizes (event_id, name, code, description, image, quantity, is_active, sort_order)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *
+      VALUES ($1,$2,$3,$4,$5,$6,$7,
+        COALESCE(NULLIF($8::int, 0), (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM lucky_draw_prizes WHERE event_id = $1)))
+      RETURNING *
     `, [eventId, data.name, data.code || '', data.description || '', data.image || null, data.quantity || 1, data.is_active !== false, data.sort_order || 0]);
     return result.rows[0];
   }
@@ -60,6 +62,77 @@ class PrizeRepository {
       WHERE event_id=$1 AND prize_id=$2 RETURNING *
     `, [eventId, prizeId, data.name, data.code || '', data.description || '', data.image || null, data.quantity || 1, data.is_active !== false, data.sort_order || 0]);
     return result.rows[0];
+  }
+
+  /** Sets sort_order to the position of each id in `orderedIds` (1-based). */
+  async reorder(eventId, orderedIds) {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (let i = 0; i < orderedIds.length; i++) {
+        await client.query(
+          'UPDATE lucky_draw_prizes SET sort_order=$3, updated_at=NOW() WHERE event_id=$1 AND prize_id=$2',
+          [eventId, orderedIds[i], i + 1]
+        );
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Excel import in one transaction. Rows match an existing prize by code, then by name;
+   * matches are updated, others created (appended to the draw order). Nothing is deleted.
+   * A row without `image` keeps the existing picture.
+   */
+  async importMany(eventId, rows) {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const existing = (await client.query(
+        'SELECT prize_id, name, code FROM lucky_draw_prizes WHERE event_id=$1', [eventId]
+      )).rows;
+      const byCode = new Map(existing.filter(p => p.code).map(p => [p.code.toLowerCase(), p.prize_id]));
+      const byName = new Map(existing.map(p => [p.name.toLowerCase(), p.prize_id]));
+      let nextOrder = (await client.query(
+        'SELECT COALESCE(MAX(sort_order), 0) AS max FROM lucky_draw_prizes WHERE event_id=$1', [eventId]
+      )).rows[0].max;
+
+      let created = 0;
+      let updated = 0;
+      for (const row of rows) {
+        const matchId = (row.code && byCode.get(row.code.toLowerCase())) || byName.get(row.name.toLowerCase());
+        const sortOrder = row.sort_order || null;
+        if (matchId) {
+          await client.query(`
+            UPDATE lucky_draw_prizes SET name=$3, code=$4, description=$5, image=COALESCE($6, image),
+              quantity=$7, is_active=$8, sort_order=COALESCE($9, sort_order), updated_at=NOW()
+            WHERE event_id=$1 AND prize_id=$2
+          `, [eventId, matchId, row.name, row.code, row.description, row.image || null, row.quantity, row.is_active, sortOrder]);
+          updated++;
+        } else {
+          const inserted = await client.query(`
+            INSERT INTO lucky_draw_prizes (event_id, name, code, description, image, quantity, is_active, sort_order)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING prize_id
+          `, [eventId, row.name, row.code, row.description, row.image || null, row.quantity, row.is_active, sortOrder || ++nextOrder]);
+          const id = inserted.rows[0].prize_id;
+          if (row.code) byCode.set(row.code.toLowerCase(), id);
+          byName.set(row.name.toLowerCase(), id);
+          created++;
+        }
+      }
+      await client.query('COMMIT');
+      return { created, updated };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async delete(eventId, prizeId) {
