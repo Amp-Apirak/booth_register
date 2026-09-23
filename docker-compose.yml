@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database Service
+  database:
+    image: postgres:15-alpine
+    container_name: event_postgres_db
+    restart: always
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:?Set DB_USER in .env (see .env.example)}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: booth_register_db
+    volumes:
+      # Mount schema and seed data to run automatically on container startup
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      # Persist database storage
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - event_network
+
+  # 2. Redis Caching & Real-time Pub/Sub Service
+  redis:
+    image: redis:7-alpine
+    container_name: event_redis_cache
+    restart: always
+    ports:
+      - "6385:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - event_network
+
+networks:
+  event_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

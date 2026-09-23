@@ -1,0 +1,558 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #060913;
+  --foreground: #f3f4f6;
+  --font-heading: 'Kanit', sans-serif;
+  --font-body: 'Prompt', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Custom Luxury Background Mesh ── */
+.bg-cyber-mesh {
+  background-color: #060913;
+  background-image: 
+    radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.18) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.15) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(236, 72, 153, 0.12) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(139, 92, 246, 0.14) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* ── 3D Card Perspective & Depth ── */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.card-3d {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.card-3d:hover {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25), 0 0 20px 0 rgba(6, 182, 212, 0.15);
+}
+
+/* ── Glassmorphism 2.0 ── */
+.glass-panel {
+  background: rgba(12, 18, 34, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-panel-glow {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── Holographic Shimmer ── */
+@keyframes hologram {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.holo-gradient {
+  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899, #06b6d4, #6366f1);
+  background-size: 300% 300%;
+  animation: hologram 6s ease infinite;
+}
+
+.holo-text {
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 35%, #38bdf8 70%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Laser Scanner Sweep ── */
+@keyframes laser-sweep {
+  0% { top: 0%; opacity: 0.8; }
+  50% { top: 100%; opacity: 1; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
+.animate-laser {
+  animation: laser-sweep 2s ease-in-out infinite;
+}
+
+/* ── Floating Pulse ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ── Live Overview motion system ── */
+@keyframes overview-scan {
+  0% { transform: translateY(-120%); opacity: 0; }
+  12% { opacity: .55; }
+  75% { opacity: .18; }
+  100% { transform: translateY(850%); opacity: 0; }
+}
+
+@keyframes overview-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .2; }
+  35% { transform: translate3d(18px, -24px, 0) scale(1.12); opacity: .75; }
+  70% { transform: translate3d(-12px, -45px, 0) scale(.9); opacity: .35; }
+}
+
+@keyframes overview-card-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes overview-shine {
+  0% { transform: translateX(-160%) skewX(-20deg); }
+  55%, 100% { transform: translateX(280%) skewX(-20deg); }
+}
+
+@keyframes overview-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes overview-number-pop {
+  0% { transform: scale(.82); filter: brightness(1.8); }
+  55% { transform: scale(1.08); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.overview-stage::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 14%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(34, 211, 238, .11), transparent);
+  animation: overview-scan 8s linear infinite;
+}
+
+.overview-particle {
+  animation: overview-drift var(--particle-speed, 7s) ease-in-out infinite;
+  animation-delay: var(--particle-delay, 0s);
+}
+
+.overview-stat-card {
+  animation: overview-card-float 5s ease-in-out infinite;
+  animation-delay: var(--card-delay, 0s);
+}
+
+.overview-stat-card::after,
+.overview-progress-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -35%;
+  width: 24%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+  animation: overview-shine 5.5s ease-in-out infinite;
+  animation-delay: var(--card-delay, 0s);
+}
+
+.overview-number-pop {
+  animation: overview-number-pop .65s cubic-bezier(.2,.8,.2,1);
+}
+
+.overview-orbit {
+  animation: overview-orbit 16s linear infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-stage::after,
+  .overview-particle,
+  .overview-stat-card,
+  .overview-stat-card::after,
+  .overview-progress-shine::after,
+  .overview-number-pop,
+  .overview-orbit {
+    animation: none !important;
+  }
+}
+
+/* ── Lucky draw operator arena ── */
+@keyframes prize-orbit-spin { to { transform: rotate(360deg); } }
+@keyframes prize-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-10px) scale(1.035); } }
+@keyframes arena-beam { 0%,100% { opacity: .15; transform: rotate(-18deg) scaleY(.9); } 50% { opacity: .42; transform: rotate(-10deg) scaleY(1.1); } }
+@keyframes selector-shine { 0% { transform: translateX(-120%); } 55%,100% { transform: translateX(180%); } }
+@keyframes prize-title-glow { 0%,100% { filter: drop-shadow(0 0 10px rgba(192,132,252,.18)); } 50% { filter: drop-shadow(0 0 24px rgba(34,211,238,.32)); } }
+.lucky-arena-grid { background-image: linear-gradient(rgba(129,140,248,.1) 1px,transparent 1px),linear-gradient(90deg,rgba(129,140,248,.1) 1px,transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(circle,black,transparent 78%); }
+.lucky-prize-orbit { animation: prize-orbit-spin 20s linear infinite; box-shadow: 0 0 70px rgba(168,85,247,.22), inset 0 0 35px rgba(34,211,238,.08); }
+.lucky-prize-orbit > * { animation: prize-orbit-spin 20s linear infinite reverse; }
+.lucky-prize-float { animation: prize-float 3.5s ease-in-out infinite !important; }
+.lucky-beam { top: -18%; width: 24%; height: 120%; background: linear-gradient(to bottom,rgba(216,180,254,.2),transparent 70%); filter: blur(18px); transform-origin: top; animation: arena-beam 6s ease-in-out infinite; }
+.lucky-beam-left { left: 8%; } .lucky-beam-right { right: 8%; transform: rotate(18deg); animation-delay: -3s; }
+.lucky-selector-shine { width: 32%; background: linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent); animation: selector-shine 7s ease-in-out infinite; }
+.lucky-prize-title { animation: prize-title-glow 3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .lucky-prize-orbit,.lucky-prize-orbit > *,.lucky-prize-float,.lucky-beam,.lucky-selector-shine,.lucky-prize-title { animation: none !important; } }
+
+/* ── Lucky draw stage effects ── */
+@keyframes lucky-ring-spin { to { transform: rotate(360deg); } }
+@keyframes lucky-ring-spin-reverse { to { transform: rotate(-360deg); } }
+@keyframes lucky-trophy-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); filter: drop-shadow(0 0 18px rgba(216,180,254,.35)); }
+  50% { transform: translateY(-12px) rotate(2deg); filter: drop-shadow(0 0 32px rgba(251,191,36,.5)); }
+}
+@keyframes lucky-title-glow {
+  0%, 100% { background-position: 0% 50%; filter: drop-shadow(0 0 15px rgba(168,85,247,.2)); }
+  50% { background-position: 100% 50%; filter: drop-shadow(0 0 30px rgba(34,211,238,.32)); }
+}
+@keyframes lucky-stage-light {
+  0%, 100% { opacity: .25; transform: scaleX(.78); }
+  50% { opacity: .58; transform: scaleX(1.08); }
+}
+@keyframes lucky-ready-pulse {
+  0%, 100% { transform: scale(1); letter-spacing: .22em; }
+  50% { transform: scale(1.045); letter-spacing: .27em; }
+}
+
+.lucky-stage::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 5%;
+  height: 20%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(168,85,247,.22), rgba(34,211,238,.07) 45%, transparent 72%);
+  filter: blur(18px);
+  animation: lucky-stage-light 5s ease-in-out infinite;
+  pointer-events: none;
+}
+.lucky-ring { animation: lucky-ring-spin 18s linear infinite; }
+.lucky-ring-reverse { animation: lucky-ring-spin-reverse 13s linear infinite; }
+.lucky-trophy { animation: lucky-trophy-float 3.8s ease-in-out infinite; }
+.lucky-title {
+  background: linear-gradient(110deg, #ffffff 5%, #d8b4fe 30%, #fbbf24 52%, #67e8f9 76%, #ffffff 95%);
+  background-size: 240% 240%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lucky-title-glow 5s ease-in-out infinite;
+}
+.lucky-ready { animation: lucky-ready-pulse 3s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lucky-stage::after,
+  .lucky-ring,
+  .lucky-ring-reverse,
+  .lucky-trophy,
+  .lucky-title,
+  .lucky-ready { animation: none !important; }
+}
+
+/* ── Agenda screen motion and depth ── */
+@keyframes agenda-card-enter {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes agenda-active-flow {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  60%, 100% { transform: translateX(360%) skewX(-18deg); }
+}
+
+@keyframes agenda-active-breathe {
+  0%, 100% { box-shadow: 0 0 32px rgba(34,211,238,.18), inset 0 0 22px rgba(99,102,241,.08); }
+  50% { box-shadow: 0 0 54px rgba(34,211,238,.3), inset 0 0 35px rgba(168,85,247,.12); }
+}
+
+@keyframes agenda-dot-pulse {
+  0%, 100% { transform: scale(.8); opacity: .55; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+
+.agenda-stage {
+  isolation: isolate;
+}
+
+.agenda-card {
+  animation: agenda-card-enter .6s cubic-bezier(.16,1,.3,1) both;
+  animation-delay: var(--agenda-delay, 0s);
+  transform-style: preserve-3d;
+}
+
+.agenda-card:not(.agenda-card-active):hover {
+  transform: translateY(-3px);
+  border-color: rgba(129,140,248,.3);
+  background-color: rgba(255,255,255,.065);
+}
+
+.agenda-card-active {
+  animation: agenda-card-enter .6s cubic-bezier(.16,1,.3,1) both, agenda-active-breathe 3.8s ease-in-out infinite .6s;
+}
+
+.agenda-card-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -28%;
+  width: 15%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.14), transparent);
+  animation: agenda-active-flow 5s ease-in-out infinite 1s;
+}
+
+.agenda-live-dot {
+  animation: agenda-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agenda-card,
+  .agenda-card-active,
+  .agenda-card-active::after,
+  .agenda-live-dot {
+    animation: none !important;
+  }
+}
+
+/* ── Welcome screen: restrained cinematic motion ── */
+@keyframes welcome-border-glow {
+  0%, 100% { box-shadow: 0 0 28px rgba(99,102,241,.12), inset 0 0 35px rgba(99,102,241,.025); }
+  50% { box-shadow: 0 0 48px rgba(34,211,238,.18), inset 0 0 55px rgba(34,211,238,.04); }
+}
+
+@keyframes welcome-spotlight {
+  0%, 100% { transform: translate3d(-5%, 0, 0) scale(1); opacity: .45; }
+  50% { transform: translate3d(12%, -3%, 0) scale(1.16); opacity: .72; }
+}
+
+@keyframes welcome-title-shimmer {
+  0%, 100% { background-position: 0% 50%; transform: translateY(0); filter: drop-shadow(0 0 16px rgba(129,140,248,.2)); }
+  50% { background-position: 100% 50%; transform: translateY(-4px); filter: drop-shadow(0 0 26px rgba(56,189,248,.35)); }
+}
+
+@keyframes welcome-guest-enter {
+  from { opacity: 0; transform: translateY(22px) scale(.975); filter: blur(5px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes welcome-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(245,158,11,0); }
+  50% { transform: scale(1.035); box-shadow: 0 0 24px rgba(245,158,11,.14); }
+}
+
+@keyframes welcome-twinkle {
+  0%, 100% { opacity: .12; transform: scale(.7); }
+  50% { opacity: .75; transform: scale(1.25); }
+}
+
+.welcome-stage {
+  animation: welcome-border-glow 7s ease-in-out infinite;
+}
+
+.welcome-spotlight {
+  animation: welcome-spotlight 9s ease-in-out infinite;
+}
+
+.welcome-title {
+  background-size: 220% 220%;
+  animation: welcome-title-shimmer 5.5s ease-in-out infinite;
+}
+
+.welcome-guest {
+  animation: welcome-guest-enter .85s cubic-bezier(.16,1,.3,1) both;
+}
+
+.welcome-live-badge {
+  animation: welcome-breathe 3.2s ease-in-out infinite;
+}
+
+.welcome-twinkle {
+  animation: welcome-twinkle var(--twinkle-speed, 3s) ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-stage,
+  .welcome-spotlight,
+  .welcome-title,
+  .welcome-guest,
+  .welcome-live-badge,
+  .welcome-twinkle {
+    animation: none !important;
+  }
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* ── Print Styles for Digital Pass ── */
+@keyframes registration-hero-breathe { 0%,100% { box-shadow: 0 25px 80px rgba(37,99,235,.16); transform: translateY(0); } 50% { box-shadow: 0 30px 95px rgba(34,211,238,.23); transform: translateY(-3px); } }
+@keyframes registration-info-enter { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.registration-hero-card { animation: registration-hero-breathe 6s ease-in-out infinite; }
+.registration-hero-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg,transparent 20%,rgba(255,255,255,.11) 42%,transparent 58%); transform: translateX(-120%); animation: winner-hall-sweep 8s ease-in-out infinite; pointer-events: none; }
+.registration-info-card { animation: registration-info-enter .7s cubic-bezier(.16,1,.3,1) both; }
+@media (prefers-reduced-motion: reduce) { .registration-hero-card,.registration-hero-card::after,.registration-info-card { animation: none !important; } }
+
+/* ── Print Styles for Digital Pass ── */
+@keyframes winner-card-enter { from { opacity: 0; transform: translateX(-28px) scale(.98); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes winner-card-glow { 0%,100% { box-shadow: 0 8px 24px rgba(15,23,42,.2); } 50% { box-shadow: 0 12px 40px rgba(245,158,11,.12); } }
+@keyframes winner-hall-sweep { from { transform: translateX(-130%) skewX(-18deg); } to { transform: translateX(430%) skewX(-18deg); } }
+@keyframes winner-live-pulse { 0%,100% { opacity: .55; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.25); box-shadow: 0 0 14px rgba(110,231,183,.8); } }
+.winner-hall-glow::before { content: ''; position: absolute; inset: -20% auto -20% -15%; width: 25%; background: linear-gradient(90deg,transparent,rgba(251,191,36,.075),transparent); animation: winner-hall-sweep 7s ease-in-out infinite; }
+.winner-log-card { opacity: 0; animation: winner-card-enter .65s cubic-bezier(.16,1,.3,1) forwards, winner-card-glow 4s ease-in-out infinite 1s; }
+.winner-log-card:hover { transform: translateY(-3px) scale(1.005); }
+.winner-rank { position: relative; overflow: hidden; }
+.winner-rank::after { content: ''; position: absolute; inset: -40%; background: conic-gradient(transparent,rgba(255,255,255,.28),transparent 25%); animation: prize-orbit-spin 5s linear infinite; }
+.winner-live-badge i { animation: winner-live-pulse 1.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .winner-hall-glow::before,.winner-log-card,.winner-rank::after,.winner-live-badge i { animation: none !important; } .winner-log-card { opacity: 1; } }
+
+/* ── Print Styles for Digital Pass ── */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  header, nav, footer {
+    display: none !important;
+  }
+  
+  /* Hide non-ticket elements in the register / ticket pages */
+  .max-w-2xl > div:not(.glass-panel-glow):not(.perspective-1000),
+  .max-w-2xl > form {
+    display: none !important;
+  }
+
+  /* Hide non-ticket elements inside the success / pass wrappers */
+  .glass-panel-glow > div:not(#printable-ticket),
+  .glass-panel-glow > button,
+  .perspective-1000 > div:not(#printable-ticket) {
+    display: none !important;
+  }
+
+  /* Reset layout wrappers to allow normal flow */
+  .max-w-2xl, .glass-panel-glow, .perspective-1000, main {
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  
+  #printable-ticket {
+    display: block !important;
+    width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 5mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px dashed #999999 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    text-align: center;
+    border-radius: 8px !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+  
+  #printable-ticket * {
+    color: #000000 !important;
+    text-shadow: none !important;
+    border-color: #000000 !important;
+  }
+  
+  #printable-ticket img {
+    filter: none !important;
+    display: block !important;
+    margin: 0 auto 5px auto !important;
+    width: 50mm !important;
+    height: 50mm !important;
+  }
+
+  /* ── Ticket page rich 3D pass: flatten for clean paper output ── */
+  #printable-ticket.card-3d {
+    width: 100% !important;
+    max-width: 150mm !important;
+    padding: 0 !important;
+    border: 1px dashed #999999 !important;
+    overflow: hidden !important;
+  }
+  /* Hide decorative overlays: blur glows, perforation notches, QR overlay */
+  #printable-ticket.card-3d .absolute {
+    display: none !important;
+  }
+  /* Give inner sections real padding once wrappers are reset */
+  #printable-ticket.card-3d > div {
+    padding: 5mm 6mm !important;
+    background: #ffffff !important;
+  }
+  /* Stack the date / venue coordinates into a single readable column */
+  #printable-ticket.card-3d .grid {
+    display: block !important;
+  }
+  #printable-ticket.card-3d .grid > div {
+    border: 1px solid #cccccc !important;
+    border-radius: 6px !important;
+    padding: 3mm !important;
+    margin-bottom: 3mm !important;
+  }
+  /* Keep header row on one line */
+  #printable-ticket.card-3d .flex {
+    flex-wrap: nowrap !important;
+  }
+}

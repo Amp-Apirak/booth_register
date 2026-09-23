@@ -1,0 +1,3681 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Event Registration - PM Presentation Portal</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Mermaid JS for ER Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose',
+            themeVariables: {
+                background: '#090d16',
+                primaryColor: '#6366f1',
+                primaryTextColor: '#f3f4f6',
+                lineColor: '#818cf8'
+            }
+        });
+    </script>
+
+    <!-- Socket.io Client for Mock Backend Real-time Connection -->
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --secondary: #06b6d4;
+            --secondary-light: #22d3ee;
+            --accent: #ec4899;
+            --bg-dark: #090d16;
+            --bg-darker: #05070b;
+            --card-bg: rgba(17, 24, 39, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-bright: #ffffff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Outfit', 'Sarabun', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-darker);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-bright);
+            font-weight: 700;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 30%, var(--primary-light) 70%, var(--secondary-light) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .gradient-accent-text {
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary-light) 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 2rem;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .logo-title h1 {
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-title p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .pm-badge {
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--primary-light);
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Main Tabs Layout */
+        .tab-nav {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+
+        .tab-btn:hover {
+            color: var(--text-bright);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--text-bright);
+            background: var(--primary);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards & Glassmorphism */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            transition: var(--transition);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Interactive Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 968px) {
+            .grid-2 {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* TAB 1: DASHBOARD & OVERVIEW */
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .hero-banner h2 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hero-banner p.subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        .hero-flow-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .flow-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 8px 20px;
+            border-radius: 99px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+        .flow-pill.active {
+            background: rgba(99, 102, 241, 0.25);
+            border-color: var(--primary-light);
+            color: var(--text-bright);
+        }
+
+        .flow-arrow {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        .quick-metrics {
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            text-align: center;
+            position: relative;
+        }
+
+        .metric-card .icon-wrap {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-card.registered .icon-wrap {
+            color: var(--primary-light);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .metric-card.checked .icon-wrap {
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .metric-card.pending .icon-wrap {
+            color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .metric-card .value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-bright);
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+
+        .metric-card .label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .feature-list {
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-card .icon {
+            background: var(--primary);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-card h4 {
+            margin-bottom: 4px;
+            font-size: 1.05rem;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* TAB 2: INTERACTIVE EVENT FLOW */
+        .flow-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 968px) {
+            .flow-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .flow-timeline {
+            position: relative;
+            padding-left: 24px;
+            border-left: 2px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .flow-step {
+            position: relative;
+            margin-bottom: 2rem;
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+        }
+
+        .flow-step:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .flow-step.active-step {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: var(--primary-light);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+        }
+
+        .step-number {
+            position: absolute;
+            left: -37px;
+            top: 20px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--bg-darker);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            z-index: 2;
+            transition: var(--transition);
+        }
+
+        .flow-step.active-step .step-number {
+            background: var(--primary);
+            border-color: var(--primary-light);
+            color: #fff;
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .step-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary-light);
+            margin-bottom: 4px;
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Live Simulator Box */
+        .simulator-box {
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .input-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-bright);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .sim-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: #fff;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .sim-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+        }
+
+        .sim-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Check-in beep animation success */
+        .check-in-feedback {
+            margin-top: 1.5rem;
+            padding: 16px;
+            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px dashed var(--success);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--success);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* TAB 3: 4 ZONES FLOOR PLAN */
+        .zone-selectors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .zone-card {
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            text-align: left;
+        }
+
+        .zone-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateY(-2px);
+        }
+
+        .zone-card.active-zone {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border-color: var(--primary-light);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.15);
+        }
+
+        .zone-label-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .z1-badge { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .z2-badge { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .z3-badge { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .z4-badge { background: rgba(245, 158, 11, 0.2); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .zone-detail-panel {
+            min-height: 250px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .zone-title {
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+
+        .zone-sub {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .zone-content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .zone-content-grid {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+        }
+
+        .feature-bullets {
+            list-style: none;
+        }
+
+        .feature-bullets li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .feature-bullets li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .zone-hardware-list {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .zone-hardware-list h5 {
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+        }
+
+        .hw-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
+        }
+
+        .hw-item:last-child {
+            border-bottom: none;
+        }
+
+        /* TAB 4: DIGITAL SIGNAGE SIMULATOR */
+        .simulator-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 1024px) {
+            .simulator-layout {
+                grid-template-columns: 320px 1fr;
+            }
+        }
+
+        .signage-nav-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .signage-nav-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .signage-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-bright);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .signage-nav-btn.active {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border-color: var(--primary-light);
+            color: var(--text-bright);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.1);
+        }
+
+        .signage-nav-btn .badge-pill {
+            font-size: 0.7rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .signage-nav-btn.active .badge-pill {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* TV/LED Frame */
+        .tv-frame {
+            background: #111422;
+            border: 14px solid #1f2937;
+            border-bottom: 24px solid #1f2937;
+            border-radius: 20px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                0 0 40px rgba(99, 102, 241, 0.15);
+            position: relative;
+            aspect-ratio: 16 / 9;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .tv-frame::before {
+            content: '';
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: #374151;
+            border-radius: 2px;
+            z-index: 10;
+        }
+
+        .tv-screen {
+            width: 100%;
+            height: 100%;
+            background: #02040a;
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        /* SIGNAGE SCREENS STYLING */
+        .screen-content {
+            display: none !important;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 5% 7%;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .screen-content.active {
+            display: flex !important;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .screen-content.active.session-screen {
+            display: grid !important;
+        }
+
+        .screen-content.active.announce-screen {
+            display: grid !important;
+        }
+
+        /* 1. Welcome Screen */
+        .welcome-screen-bg {
+            background: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #03001e 60%, #000000 100%);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .welcome-screen-bg::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 60%);
+            animation: rotateBg 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotateBg {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .welcome-tag {
+            font-size: 1.8vw;
+            color: var(--secondary-light);
+            text-transform: uppercase;
+            letter-spacing: 0.6vw;
+            font-weight: 700;
+            margin-bottom: 1.5vh;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+            animation: pulseText 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 20px rgba(6, 182, 212, 0.8); }
+        }
+
+        .welcome-name {
+            font-size: 4.8vw;
+            font-weight: 800;
+            margin-bottom: 1.5vh;
+            background: linear-gradient(to right, #fff, #818cf8, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .welcome-company {
+            font-size: 2.2vw;
+            color: #d1d5db;
+            font-weight: 400;
+            letter-spacing: 0.1vw;
+        }
+
+        /* 2. Event Overview Screen */
+        .overview-screen {
+            background: radial-gradient(circle at 10% 20%, #0f172a 0%, #020617 100%);
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .overview-title {
+            font-size: 2.5vw;
+            text-align: center;
+            letter-spacing: 0.2vw;
+            font-weight: 800;
+            margin-bottom: 2vh;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 1.5vh;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2vw;
+            flex-grow: 1;
+            align-items: center;
+        }
+
+        .overview-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 1vw;
+            padding: 3vh 1.5vw;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .overview-card .card-icon {
+            font-size: 2.5vw;
+            margin-bottom: 1.5vh;
+        }
+
+        .overview-card .card-value {
+            font-size: 4vw;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1vh;
+        }
+
+        .overview-card.registered-col { color: #818cf8; border-color: rgba(129, 140, 248, 0.2); }
+        .overview-card.checked-col { color: #34d399; border-color: rgba(52, 211, 153, 0.2); }
+        .overview-card.pending-col { color: #fbbf24; border-color: rgba(251, 191, 36, 0.2); }
+
+        .overview-card .card-label {
+            color: #9ca3af;
+            font-size: 1.2vw;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1vw;
+        }
+
+        /* 3. Agenda Screen */
+        .agenda-screen {
+            background: #0b0f19;
+        }
+
+        .agenda-title {
+            font-size: 2vw;
+            text-align: center;
+            margin-bottom: 3vh;
+            letter-spacing: 2px;
+            font-weight: 700;
+            color: var(--secondary-light);
+        }
+
+        .agenda-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh;
+        }
+
+        .agenda-item {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1.5vh 2vw;
+        }
+
+        .agenda-time {
+            font-size: 1.6vw;
+            font-weight: 800;
+            color: var(--primary-light);
+            width: 20%;
+            border-right: 2px solid rgba(255, 255, 255, 0.1);
+            margin-right: 4%;
+        }
+
+        .agenda-desc {
+            font-size: 1.5vw;
+            font-weight: 500;
+        }
+
+        /* 4. Next Session */
+        .session-screen {
+            background: linear-gradient(135deg, #1e1b4b 0%, #03001e 100%);
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 2vw;
+            align-items: center;
+        }
+
+        .session-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1vh;
+        }
+
+        .session-tag {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.2vw;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .session-time {
+            font-size: 3.5vw;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .session-name {
+            font-size: 2vw;
+            color: #e5e7eb;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .session-speaker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .speaker-avatar-mock {
+            width: 12vw;
+            height: 12vw;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4vw;
+            margin-bottom: 2vh;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .speaker-name-title {
+            font-size: 1.4vw;
+            font-weight: bold;
+        }
+
+        .speaker-comp-title {
+            font-size: 1vw;
+            color: var(--text-muted);
+        }
+
+        /* 5. Lucky Draw */
+        .luckydraw-screen {
+            background: radial-gradient(circle, #2e0854 0%, #0f0224 100%);
+            text-align: center;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .lucky-title {
+            font-size: 2.2vw;
+            color: #f59e0b;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 800;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+        }
+
+        .lucky-roller-box {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(245, 158, 11, 0.3);
+            border-radius: 12px;
+            padding: 3vh 3vw;
+            width: 80%;
+            margin: 2vh auto;
+            position: relative;
+            overflow: hidden;
+            height: 12vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lucky-name-display {
+            font-size: 3.5vw;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 1px;
+            transition: all 0.1s ease;
+        }
+
+        .lucky-name-display.winner-glow {
+            color: #34d399;
+            text-shadow: 0 0 20px rgba(52, 211, 153, 0.8);
+            transform: scale(1.1);
+            animation: dance 0.5s infinite alternate;
+        }
+
+        @keyframes dance {
+            from { transform: scale(1.08) rotate(-1deg); }
+            to { transform: scale(1.12) rotate(1deg); }
+        }
+
+        .lucky-footer {
+            font-size: 1.2vw;
+            color: #d1d5db;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1vh 2vw;
+            border-radius: 99px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .lucky-btn-inner {
+            background: #f59e0b;
+            color: #000;
+            border: none;
+            padding: 6px 14px;
+            font-size: 0.8vw;
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+        }
+        .lucky-btn-inner:hover {
+            background: #fbbf24;
+        }
+
+        /* Confetti Effect */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            z-index: 99;
+            animation: fall 3s linear infinite;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(400px) rotate(360deg); opacity: 0; }
+        }
+
+        /* 6. Sponsors Screen */
+        .sponsors-screen {
+            background: #080c14;
+        }
+
+        .sponsors-title {
+            font-size: 1.8vw;
+            text-align: center;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 4vh;
+        }
+
+        .sponsors-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2vw;
+        }
+
+        .sponsor-logo-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            aspect-ratio: 2 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4vw;
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+
+        .sponsor-logo-box.special {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            color: var(--primary-light);
+        }
+
+        /* 7. Announcement */
+        .announce-screen {
+            background: #0f172a;
+            grid-template-columns: 1fr 1fr;
+            gap: 3vw;
+            align-items: center;
+        }
+
+        .announce-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2vh;
+        }
+
+        .announce-head {
+            font-size: 2.5vw;
+            font-weight: 800;
+            color: var(--secondary-light);
+        }
+
+        .announce-body {
+            font-size: 1.5vw;
+            color: #d1d5db;
+        }
+
+        .announce-qr-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .announce-qr {
+            width: 14vw;
+            height: 14vw;
+            background: #fff;
+            padding: 1vw;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .announce-qr svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 8. Photo Wall Grid */
+        .photowall-screen {
+            background: #07090e;
+        }
+
+        .photowall-title {
+            font-size: 1.8vw;
+            text-align: center;
+            margin-bottom: 2vh;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent);
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1vw;
+            flex-grow: 1;
+        }
+
+        .photo-item {
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .photo-item::after {
+            content: "📸 Photo Wall";
+            font-size: 0.8vw;
+            color: var(--text-muted);
+        }
+
+        .photo-item:nth-child(even) {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(6, 182, 212, 0.03) 100%);
+        }
+
+        /* TAB 5: KPIS & BENEFITS */
+        .kpi-main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 968px) {
+            .kpi-main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .radial-progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .radial-progress {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .circle-svg {
+            position: relative;
+            width: 140px;
+            height: 140px;
+        }
+
+        .circle-svg svg {
+            width: 140px;
+            height: 140px;
+            transform: rotate(-90deg);
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 10;
+        }
+
+        .circle-bar {
+            fill: none;
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 377;
+            stroke-dashoffset: 377;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cb-blue { stroke: var(--primary); }
+        .cb-green { stroke: var(--success); }
+
+        .percentage-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .benefit-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .benefit-item {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+        }
+
+        .benefit-item:hover {
+            border-color: rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .benefit-icon-check {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        /* Participant Management CMS styles */
+        .cms-table-wrapper {
+            overflow-x: auto;
+            margin-top: 1.5rem;
+            max-height: 480px;
+            overflow-y: auto;
+        }
+
+        .cms-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .cms-table th, .cms-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .cms-table th {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-bright);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .cms-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .badge-status.checked-in {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-status.pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-action {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            margin-left: 4px;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-action.check-in { color: var(--success); }
+        .btn-action.check-out { color: var(--warning); }
+        .btn-action.edit { color: var(--primary-light); }
+        .btn-action.delete { color: var(--accent); }
+
+        .cms-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-input-wrap {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-input-wrap input {
+            width: 100%;
+            padding: 10px 16px;
+            padding-left: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-bright);
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .search-input-wrap input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 8px var(--primary-glow);
+        }
+
+        .search-input-wrap .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .cms-filter-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover {
+            color: var(--text-bright);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary-light);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .reset-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-family: inherit;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-bright);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Smartphone Simulation Frame */
+        .phone-simulator-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem 0;
+            width: 100%;
+        }
+
+        .phone-frame {
+            width: 320px;
+            height: 600px;
+            background: #0f131a;
+            border: 12px solid #232731;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(99, 102, 241, 0.15);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Speaker Notch */
+        .phone-notch {
+            width: 120px;
+            height: 18px;
+            background: #232731;
+            border-radius: 0 0 15px 15px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Phone Screen Content */
+        .phone-screen {
+            flex-grow: 1;
+            padding: 28px 16px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+            background: radial-gradient(circle at top, #111827 0%, #030712 100%);
+            scrollbar-width: none;
+        }
+        .phone-screen::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Phone Home Bottom Bar */
+        .phone-home-bar {
+            width: 100px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Forms inside phone */
+        .phone-input-group {
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .phone-input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .phone-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .phone-input:focus {
+            border-color: var(--primary-light);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .phone-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+            margin-top: 10px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .phone-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Digital Wallet Card inside Phone */
+        .wallet-card {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.95));
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 5px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .wallet-card-logo {
+            font-weight: 700;
+            font-size: 0.85rem;
+            background: linear-gradient(135deg, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .wallet-qr-container {
+            background: #fff;
+            padding: 8px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 8px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .wallet-qr {
+            width: 120px;
+            height: 120px;
+            display: block;
+        }
+
+        .wallet-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .wallet-company {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .phone-nav-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--primary-light);
+            cursor: pointer;
+            margin-bottom: 12px;
+            user-select: none;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo-area">
+                <div class="logo-icon">S</div>
+                <div class="logo-title">
+                    <h1>SMART EVENT REGISTRATION</h1>
+                    <p>Scan • Check-in • Show</p>
+                </div>
+            </div>
+            <div class="pm-badge">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10H7v-2h10v2zm0-4H7V7h10v2zm0 8H7v-2h10v2z"/>
+                </svg>
+                PM Requirements Presentation
+            </div>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-overview')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"></path></svg>
+                ภาพรวมโครงการ
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-flow')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                ขั้นตอนการทำงาน
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-zones')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                การจัดผังงาน (4 Zones)
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-signage')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                จำลองหน้าจอ Signage
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-kpi')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                ประโยชน์ & KPIs
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-management')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                จัดการข้อมูลผู้ร่วมงาน (CMS Mockup)
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-mobile-portal')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                พอร์ทัลมือถือ (Mobile Simulator)
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-roles-menus')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m8-10a4 4 0 100-8 4 4 0 000 8zm12 10v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"></path></svg>
+                บทบาท & เมนูระบบ
+            </button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-er-diagram')">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                ER Diagram & ฐานข้อมูล
+            </button>
+        </nav>
+
+        <!-- TAB 1: OVERVIEW -->
+        <div id="tab-overview" class="tab-content active">
+            <div class="hero-banner">
+                <h2>ระบบบริหารจัดการลงทะเบียนอัจฉริยะ</h2>
+                <p class="subtitle">เช็คอินเร็วลื่นไหล เชื่อมต่อข้อมูลขึ้นจอนำเสนอทันทีแบบ Real-time</p>
+                <div class="hero-flow-preview">
+                    <span class="flow-pill active">SCAN (ลงทะเบียน)</span>
+                    <span class="flow-arrow">➔</span>
+                    <span class="flow-pill active">CHECK-IN (สแกนเข้างาน)</span>
+                    <span class="flow-arrow">➔</span>
+                    <span class="flow-pill active">SHOW (ขึ้นจอทันที)</span>
+                </div>
+            </div>
+
+            <!-- Stats Overview Cards -->
+            <div class="quick-metrics grid-3">
+                <div class="glass-card metric-card registered">
+                    <div class="icon-wrap">👤</div>
+                    <div class="value" id="stat-registered">320</div>
+                    <div class="label">ผู้ลงทะเบียนทั้งหมด (Registered)</div>
+                </div>
+                <div class="glass-card metric-card checked">
+                    <div class="icon-wrap">✓</div>
+                    <div class="value" id="stat-checked">245</div>
+                    <div class="label">เช็คอินเข้าร่วมแล้ว (Checked-in)</div>
+                </div>
+                <div class="glass-card metric-card pending">
+                    <div class="icon-wrap">⏳</div>
+                    <div class="value" id="stat-pending">75</div>
+                    <div class="label">รอดำเนินการ (Pending)</div>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                    ไฮไลท์ฟังก์ชันเด่นของระบบ
+                </h3>
+                <div class="grid-3">
+                    <div class="feature-card">
+                        <div class="icon">📱</div>
+                        <div>
+                            <h4>Paperless Mobile Registration</h4>
+                            <p>ผู้เข้าร่วมสแกนผ่านช่องทางออนไลน์ กรอกข้อมูลง่าย และได้รับ QR Code ดิจิทัลโดยตรงทันที</p>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔌</div>
+                        <div>
+                            <h4>Instant Sync API / WebSocket</h4>
+                            <p>เบื้องหลังการทำงานด้วยการรับส่งข้อมูลทันใจ (Real-time Sync) เมื่อเจ้าหน้าที่สแกน รายชื่อจะขึ้นจอทีวีใน 1 วินาที</p>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🎯</div>
+                        <div>
+                            <h4>Engagement Activities</h4>
+                            <p>รองรับการจับรางวัลนำโชค (Lucky Draw) สุ่มคัดเลือกเฉพาะคนเช็คอินจริง เพื่อสร้างสีสันกิจกรรมหน้างาน</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: WORKFLOW & SIMULATOR -->
+        <div id="tab-flow" class="tab-content">
+            <div class="grid-2">
+                <!-- Left: Flow timeline -->
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">ขั้นตอนการจัดงาน (Workflow Timeline)</h3>
+                    
+                    <div class="flow-timeline">
+                        <div class="flow-step active-step" onclick="highlightStep(1)">
+                            <div class="step-number">1</div>
+                            <div class="step-tag">ขั้นตอนก่อนวันงาน</div>
+                            <div class="step-title">รับ Link / QR ประชาสัมพันธ์</div>
+                            <div class="step-desc">ผู้เข้าร่วมสแกน QR Code จากบัตรเชิญ อีเมล สื่อสังคมออนไลน์ หรือหน้าเว็บไซต์โครงการ</div>
+                        </div>
+                        <div class="flow-step" onclick="highlightStep(2)">
+                            <div class="step-number">2</div>
+                            <div class="step-tag">ขั้นตอนก่อนวันงาน</div>
+                            <div class="step-title">ลงทะเบียนเข้าสู่ระบบ (Online Registration)</div>
+                            <div class="step-desc">กรอกข้อมูลส่วนตัว: ชื่อ-นามสกุล, บริษัท, ตำแหน่งงาน, อีเมล, เบอร์โทรศัพท์ผ่านสมาร์ทโฟน</div>
+                        </div>
+                        <div class="flow-step" onclick="highlightStep(3)">
+                            <div class="step-number">3</div>
+                            <div class="step-tag">ขั้นตอนก่อนวันงาน</div>
+                            <div class="step-title">รับตั๋วผ่านประตู (Event QR Code)</div>
+                            <div class="step-desc">ระบบจะทำการ Generate รูปภาพ QR Code ลิงก์ข้อมูลส่วนบุคคลส่งให้ผู้ร่วมงานทันที</div>
+                        </div>
+                        <div class="flow-step" onclick="highlightStep(4)">
+                            <div class="step-number">4</div>
+                            <div class="step-tag">ขั้นตอนวันงาน</div>
+                            <div class="step-title">แสดง QR Code สแกนเข้างาน</div>
+                            <div class="step-desc">ผู้ร่วมงานเปิดรูปภาพ QR Code (Event Pass) บนสมาร์ทโฟนของตนเองเมื่อเดินเข้ามาถึงจุดประตูงาน</div>
+                        </div>
+                        <div class="flow-step" onclick="highlightStep(5)">
+                            <div class="step-number">5</div>
+                            <div class="step-tag">ขั้นตอนวันงาน</div>
+                            <div class="step-title">เจ้าหน้าที่สแกน Check-in รวดเร็ว</div>
+                            <div class="step-desc">เจ้าหน้าที่ใช้อุปกรณ์สแกนบาร์โค้ดสแกนหน้าจอ เพื่อส่งข้อมูลสถานะเช็คอินเข้าคลาวด์ดาต้าเบสแบบเรียลไทม์</div>
+                        </div>
+                        <div class="flow-step" onclick="highlightStep(6)">
+                            <div class="step-number">6</div>
+                            <div class="step-tag">ขั้นตอนวันงาน</div>
+                            <div class="step-title">แสดงผลต้อนรับขึ้นจอใหญ่แบบทันใด</div>
+                            <div class="step-desc">ระบบ Digital Signage CMS ดึงข้อมูลผ่าน WebSocket แสดงผลชื่อและกราฟฟิกต้อนรับสวยงามขึ้นจอ LED ทันที</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Check-in Simulator -->
+                <div class="glass-card simulator-box">
+                    <h3 style="margin-bottom: 1rem;" class="gradient-accent-text">จำลองเครื่องสแกนเช็คอินหน้างาน (Simulator)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+                        ทดลองกรอกชื่อเพื่อเช็คอินจริง! เมื่อกดส่ง ตัวเลขสถิติจะอัปเดต และหน้าจอ Signage (ในแท็บ 4) จะสลับไปแสดงหน้าจอ Welcome ต้อนรับคุณโดยอัตโนมัติ
+                    </p>
+
+                    <div class="input-group">
+                        <label for="sim-name">ชื่อ - นามสกุล (อังกฤษ หรือ ไทย)</label>
+                        <input type="text" id="sim-name" value="Yanisa" placeholder="กรอกชื่อเพื่อทดสอบ">
+                    </div>
+                    <div class="input-group">
+                        <label for="sim-company">บริษัท / องค์กร</label>
+                        <input type="text" id="sim-company" value="Zoom Information System" placeholder="กรอกชื่อบริษัท">
+                    </div>
+
+                    <button class="sim-btn" onclick="triggerSimulatedCheckin()">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v1m6 1.5l-.7.7m3.7 4.8h-1m-1.5 6l-.7-.7m-6 1.5v-1m-6-1.5l.7-.7m-3.7-4.8h1m1.5-6l.7.7M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
+                        สแกน QR Code (เช็คอิน)
+                    </button>
+
+                    <!-- Beep Success Notification -->
+                    <div class="check-in-feedback" id="sim-feedback">
+                        <div class="feedback-icon">✓</div>
+                        <div>
+                            <strong style="color: var(--text-bright); display: block;">เช็คอินสำเร็จ! (Beep ♪)</strong>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);" id="sim-feedback-desc">ยินดีต้อนรับ คุณ Yanisa</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: 4 ZONES FLOOR PLAN -->
+        <div id="tab-zones" class="tab-content">
+            <!-- Zone Selectors -->
+            <div class="zone-selectors">
+                <div class="zone-card active-zone" onclick="switchZone(1, this)">
+                    <span class="zone-label-badge z1-badge">Zone 1</span>
+                    <h4 style="margin-top: 4px;">Registration Zone</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">โซนลงทะเบียนตนเองด้วย QR</p>
+                </div>
+                <div class="zone-card" onclick="switchZone(2, this)">
+                    <span class="zone-label-badge z2-badge">Zone 2</span>
+                    <h4 style="margin-top: 4px;">Fast Check-in Zone</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">โซนตรวจเช็คอินด่วนโดยสตาฟ</p>
+                </div>
+                <div class="zone-card" onclick="switchZone(3, this)">
+                    <span class="zone-label-badge z3-badge">Zone 3</span>
+                    <h4 style="margin-top: 4px;">Digital Signage Zone</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">โซนจอประชาสัมพันธ์ส่วนกลาง</p>
+                </div>
+                <div class="zone-card" onclick="switchZone(4, this)">
+                    <span class="zone-label-badge z4-badge">Zone 4</span>
+                    <h4 style="margin-top: 4px;">Engagement Zone</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">โซนร่วมสนุกชิงของรางวัล</p>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div class="glass-card zone-detail-panel" id="zone-detail-panel">
+                <!-- Zone Content dynamically populated via JS -->
+            </div>
+        </div>
+
+        <!-- TAB 4: DIGITAL SIGNAGE SIMULATOR -->
+        <div id="tab-signage" class="tab-content">
+            <div class="simulator-layout">
+                <!-- Select Screen buttons -->
+                <div class="signage-nav-list">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px;">
+                        เลือกรูปแบบหน้าจอ Signage
+                    </h3>
+                    <button class="signage-nav-btn active" onclick="switchSignageScreen('screen-welcome', this)">
+                        1. Welcome Message
+                        <span class="badge-pill">ต้อนรับ</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-overview', this)">
+                        2. Event Overview
+                        <span class="badge-pill">สถิติ</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-agenda', this)">
+                        3. Event Agenda
+                        <span class="badge-pill">กำหนดการ</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-session', this)">
+                        4. Next Session
+                        <span class="badge-pill">บรรยายถัดไป</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-lucky', this)">
+                        5. Lucky Draw Spinner
+                        <span class="badge-pill">สุ่มรางวัล</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-sponsors', this)">
+                        6. Sponsor & Partners
+                        <span class="badge-pill">สปอนเซอร์</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-announce', this)">
+                        7. Announcement & Docs
+                        <span class="badge-pill">ประชาสัมพันธ์</span>
+                    </button>
+                    <button class="signage-nav-btn" onclick="switchSignageScreen('screen-photowall', this)">
+                        8. Live Photo Wall Grid
+                        <span class="badge-pill">แกลเลอรี</span>
+                    </button>
+                </div>
+
+                <!-- TV Screen Display -->
+                <div>
+                    <div class="tv-frame">
+                        <div class="tv-screen">
+                            
+                            <!-- 1. Welcome Message Screen -->
+                            <div id="screen-welcome" class="screen-content welcome-screen-bg active">
+                                <div class="welcome-tag">Welcome to the Event</div>
+                                <div class="welcome-name" id="display-welcome-name">Yanisa</div>
+                                <div class="welcome-company" id="display-welcome-company">Zoom Information System</div>
+                            </div>
+
+                            <!-- 2. Event Overview Screen -->
+                            <div id="screen-overview" class="screen-content overview-screen">
+                                <div class="overview-title">EVENT REGISTER OVERVIEW</div>
+                                <div class="overview-grid">
+                                    <div class="overview-card registered-col">
+                                        <div class="card-icon">👥</div>
+                                        <div class="card-value" id="board-registered">320</div>
+                                        <div class="card-label">Registered</div>
+                                    </div>
+                                    <div class="overview-card checked-col">
+                                        <div class="card-icon">✓</div>
+                                        <div class="card-value" id="board-checked">245</div>
+                                        <div class="card-label">Checked-In</div>
+                                    </div>
+                                    <div class="overview-card pending-col">
+                                        <div class="card-icon">⏳</div>
+                                        <div class="card-value" id="board-pending">75</div>
+                                        <div class="card-label">Pending</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Event Agenda Screen -->
+                            <div id="screen-agenda" class="screen-content agenda-screen">
+                                <div class="agenda-title">TODAY'S EVENT AGENDA</div>
+                                <div class="agenda-list">
+                                    <div class="agenda-item">
+                                        <div class="agenda-time">09:00 - 10:00</div>
+                                        <div class="agenda-desc">Registration & Coffee Reception</div>
+                                    </div>
+                                    <div class="agenda-item">
+                                        <div class="agenda-time">10:00 - 11:00</div>
+                                        <div class="agenda-desc">Opening Speech & Welcome Note</div>
+                                    </div>
+                                    <div class="agenda-item">
+                                        <div class="agenda-time">11:00 - 12:00</div>
+                                        <div class="agenda-desc">Keynote Session: Future of Technology</div>
+                                    </div>
+                                    <div class="agenda-item">
+                                        <div class="agenda-time">13:00 - 14:30</div>
+                                        <div class="agenda-desc">Interactive Tech Workshop</div>
+                                    </div>
+                                    <div class="agenda-item">
+                                        <div class="agenda-time">14:30 - 15:00</div>
+                                        <div class="agenda-desc">Coffee Break & Networking</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. Next Session Announcement -->
+                            <div id="screen-session" class="screen-content session-screen">
+                                <div class="session-info">
+                                    <div class="session-tag">Next Session</div>
+                                    <div class="session-time">10:00 AM</div>
+                                    <div class="session-name">KEYNOTE SESSION: Accelerating Innovation in the Digital Era</div>
+                                </div>
+                                <div class="session-speaker">
+                                    <div class="speaker-avatar-mock">👨‍💼</div>
+                                    <div class="speaker-name-title">Johnathan Davis</div>
+                                    <div class="speaker-comp-title">Global Innovation Speaker</div>
+                                </div>
+                            </div>
+
+                            <!-- 5. Lucky Draw Screen -->
+                            <div id="screen-lucky" class="screen-content luckydraw-screen">
+                                <button class="lucky-btn-inner" onclick="spinLuckyDraw()">SPIN</button>
+                                <div class="lucky-title">🎁 LUCKY DRAW TIME 🎁</div>
+                                <p style="font-size: 1.1vw; color: #a78bfa;">สุ่มผู้โชคดีเฉพาะผู้ที่ Check-in เข้าร่วมงานแล้วเท่านั้น</p>
+                                <div class="lucky-roller-box">
+                                    <div class="lucky-name-display" id="lucky-name">READY TO SPIN</div>
+                                </div>
+                                <div class="lucky-footer">
+                                    จับรางวัลเวลา 16:00 น. ขอให้ผู้โชคดีเตรียมสแตนด์บาย!
+                                </div>
+                            </div>
+
+                            <!-- 6. Sponsor / Partner Board -->
+                            <div id="screen-sponsors" class="screen-content sponsors-screen">
+                                <div class="sponsors-title">Thank you to our sponsors</div>
+                                <div class="sponsors-grid">
+                                    <div class="sponsor-logo-box special">LOGO 1</div>
+                                    <div class="sponsor-logo-box">LOGO 2</div>
+                                    <div class="sponsor-logo-box">LOGO 3</div>
+                                    <div class="sponsor-logo-box">LOGO 4</div>
+                                    <div class="sponsor-logo-box">LOGO 5</div>
+                                    <div class="sponsor-logo-box special">LOGO 6</div>
+                                    <div class="sponsor-logo-box">LOGO 7</div>
+                                    <div class="sponsor-logo-box">LOGO 8</div>
+                                </div>
+                            </div>
+
+                            <!-- 7. Announcement & Docs -->
+                            <div id="screen-announce" class="screen-content announce-screen">
+                                <div class="announce-info">
+                                    <div class="announce-head">DOWNLOAD DOCUMENTS</div>
+                                    <div class="announce-body">สแกน QR Code ด้านข้างเพื่อดาวน์โหลดไฟล์สไลด์ประกอบการบรรยาย และรับเอกสารประกอบการจัดงานทั้งหมด</div>
+                                </div>
+                                <div class="announce-qr-wrap">
+                                    <div class="announce-qr">
+                                        <!-- Simple inline svg QR Code representation -->
+                                        <svg viewBox="0 0 100 100">
+                                            <rect x="0" y="0" width="20" height="20" fill="black" />
+                                            <rect x="5" y="5" width="10" height="10" fill="white" />
+                                            <rect x="80" y="0" width="20" height="20" fill="black" />
+                                            <rect x="85" y="5" width="10" height="10" fill="white" />
+                                            <rect x="0" y="80" width="20" height="20" fill="black" />
+                                            <rect x="5" y="85" width="10" height="10" fill="white" />
+                                            <rect x="40" y="40" width="20" height="20" fill="black" />
+                                            <rect x="25" y="25" width="10" height="10" fill="black" />
+                                            <rect x="65" y="25" width="10" height="10" fill="black" />
+                                            <rect x="25" y="65" width="10" height="10" fill="black" />
+                                            <rect x="65" y="65" width="10" height="10" fill="black" />
+                                        </svg>
+                                    </div>
+                                    <span style="font-size: 0.9vw; color: var(--text-muted); margin-top: 10px;">SCAN FOR DOCUMENTS</span>
+                                </div>
+                            </div>
+
+                            <!-- 8. Photo Wall Grid -->
+                            <div id="screen-photowall" class="screen-content photowall-screen">
+                                <div class="photowall-title">LIVE PHOTO WALL & MOMENTS</div>
+                                <div class="photo-grid">
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                    <div class="photo-item"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: KPIS & BENEFITS -->
+        <div id="tab-kpi" class="tab-content">
+            <div class="kpi-main-grid">
+                <!-- Left: KPI Metrics Visualizer -->
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">สถิติผลลัพธ์สำคัญ (Key Performance Indicators)</h3>
+                    
+                    <div class="radial-progress-container">
+                        <!-- KPI 1 -->
+                        <div class="radial-progress">
+                            <div class="circle-svg">
+                                <svg>
+                                    <circle class="circle-bg" cx="70" cy="70" r="60"></circle>
+                                    <circle class="circle-bar cb-blue" cx="70" cy="70" r="60" id="circle-kpi-showup"></circle>
+                                </svg>
+                                <div class="percentage-text" id="text-kpi-showup">76%</div>
+                            </div>
+                            <div class="label" style="margin-top: 12px; font-weight: 600;">Show-up Rate</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">อัตราการเข้างานจริง</div>
+                        </div>
+
+                        <!-- KPI 2 -->
+                        <div class="radial-progress">
+                            <div class="circle-svg">
+                                <svg>
+                                    <circle class="circle-bg" cx="70" cy="70" r="60"></circle>
+                                    <circle class="circle-bar cb-green" cx="70" cy="70" r="60" id="circle-kpi-csat"></circle>
+                                </svg>
+                                <div class="percentage-text">4.6/5</div>
+                            </div>
+                            <div class="label" style="margin-top: 12px; font-weight: 600;">Customer Satisfaction</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">ความพึงพอใจระบบ</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2rem; background: rgba(255, 255, 255, 0.02); padding: 16px; border-radius: 8px; border: 1px solid var(--card-border);">
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            <strong>สรุปเชิงสถิติ:</strong> จากเป้าหมายลงทะเบียน <strong>320 คน</strong> ระบบสามารถตรวจทานเช็คอินสำเร็จ <strong>245 คน</strong> ในวันจัดงานจริง คิดเป็น Show-up Rate 76% โดยระยะเวลาเช็คอินเฉลี่ยต่อคนเร็วกว่า 5 วินาที ทำให้ได้คะแนนพึงพอใจการใช้ตั๋วดิจิทัล (CSAT) สูงถึง 4.6 จาก 5.0 คะแนน
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right: Business Benefits Checklist -->
+                <div class="glass-card">
+                    <h3 style="margin-bottom: 1.5rem;">ประโยชน์ที่องค์กรจะได้รับ (Business Value)</h3>
+                    
+                    <div class="benefit-checklist">
+                        <div class="benefit-item">
+                            <div class="benefit-icon-check">✓</div>
+                            <div>
+                                <h4 style="font-size: 1.05rem;">ลงทะเบียนง่าย สะดวกรวดเร็ว</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">เลิกการจัดทำเอกสารกระดาษหน้างาน 100% ลดการสะกดชื่อผิดพลาดของผู้เข้าร่วม</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon-check">✓</div>
+                            <div>
+                                <h4 style="font-size: 1.05rem;">เช็คอินด่วนพิเศษ (Fast-track check-in)</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">ลดคอขวดและแถวคิวยาวเหยียดหน้าเคาน์เตอร์ด้วยเครื่องสแกนบาร์โค้ดความเร็วสูง</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon-check">✓</div>
+                            <div>
+                                <h4 style="font-size: 1.05rem;">ข้อมูล Sync สดใหม่ทันเวลา</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">ผู้บริหารตรวจสอบสถิติจำนวนคนสะสมแบบรายวินาที และวิเคราะห์ประสิทธิภาพวันงานได้ทันที</p>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <div class="benefit-icon-check">✓</div>
+                            <div>
+                                <h4 style="font-size: 1.05rem;">สร้างความประทับใจและความเป็นมืออาชีพ</h4>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">สร้างประสบการณ์ต้อนรับเฉพาะตัว (Personalized Welcome) บนจอทีวีขนาดใหญ่ทันทีหลังเช็คอิน</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: PARTICIPANT CMS MOCKUP -->
+        <div id="tab-management" class="tab-content">
+            <div class="grid-2">
+                <!-- Left: Form Card -->
+                <div class="glass-card">
+                    <h3 id="form-title" style="margin-bottom: 1.5rem;">เพิ่มข้อมูลผู้เข้าร่วมงาน</h3>
+                    <form id="participant-form" onsubmit="handleFormSubmit(event)">
+                        <input type="hidden" id="part-id">
+                        
+                        <div class="input-group">
+                            <label for="part-name">ชื่อ - นามสกุล *</label>
+                            <input type="text" id="part-name" required placeholder="เช่น นายสมชาย ใจดี">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="part-company">บริษัท / องค์กร *</label>
+                            <input type="text" id="part-company" required placeholder="เช่น บริษัท ก้าวหน้า จำกัด">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="part-position">ตำแหน่ง</label>
+                                <input type="text" id="part-position" placeholder="เช่น Engineer / Manager">
+                            </div>
+                            <div class="input-group">
+                                <label for="part-status">สถานะเริ่มต้น</label>
+                                <select id="part-status" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-bright); padding: 12px; border-radius: 8px; font-family: inherit; font-size: 0.95rem; box-shadow: none; border-color: rgba(255, 255, 255, 0.1);">
+                                    <option value="Pending" style="background:#0f172a; color:#fff;">รอดำเนินการ (Pending)</option>
+                                    <option value="Checked-in" style="background:#0f172a; color:#fff;">เช็คอินแล้ว (Checked-in)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="part-email">อีเมล</label>
+                                <input type="email" id="part-email" placeholder="เช่น somchai@mail.com">
+                            </div>
+                            <div class="input-group">
+                                <label for="part-phone">เบอร์โทรศัพท์</label>
+                                <input type="text" id="part-phone" placeholder="เช่น 081-234-5678">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button type="submit" class="sim-btn" id="btn-submit-form" style="margin-top: 0; flex-grow: 1;">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"></path></svg>
+                                <span>เพิ่มรายชื่อผู้เข้าร่วม</span>
+                            </button>
+                            <button type="button" id="btn-cancel-edit" onclick="cancelEdit()" class="reset-btn" style="margin-top: 0; display: none; width: auto; padding: 0 20px;">
+                                ยกเลิก
+                            </button>
+                        </div>
+                    </form>
+                    <button class="reset-btn" onclick="resetParticipantsDatabase()">
+                        🔄 รีเซ็ตฐานข้อมูลเริ่มต้น
+                    </button>
+                </div>
+
+                <!-- Right: Database List -->
+                <div class="glass-card" style="display: flex; flex-direction: column;">
+                    <h3 style="margin-bottom: 1.5rem;">ฐานข้อมูลผู้ร่วมงานจำลอง (Live Mock Database)</h3>
+                    <div class="cms-controls">
+                        <div class="search-input-wrap">
+                            <svg class="search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <input type="text" id="cms-search" oninput="renderCMS()" placeholder="ค้นหาตามชื่อ บริษัท หรืออีเมล...">
+                        </div>
+                        <div class="cms-filter-buttons">
+                            <button class="filter-btn active" onclick="filterCMS('all', this)">ทั้งหมด</button>
+                            <button class="filter-btn" onclick="filterCMS('Pending', this)">รอดำเนินการ</button>
+                            <button class="filter-btn" onclick="filterCMS('Checked-in', this)">เช็คอินแล้ว</button>
+                        </div>
+                    </div>
+
+                    <div class="cms-table-wrapper" style="flex-grow: 1;">
+                        <table class="cms-table">
+                            <thead>
+                                <tr>
+                                    <th>ชื่อ - นามสกุล</th>
+                                    <th>บริษัท / ตำแหน่ง</th>
+                                    <th>อีเมล / เบอร์โทร</th>
+                                    <th>สถานะ</th>
+                                    <th style="text-align: right;">การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cms-tbody">
+                                <!-- Dynamic rows via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 9: MOBILE PORTAL SIMULATOR -->
+        <div id="tab-mobile-portal" class="tab-content">
+            <div class="hero-banner" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+                <h3 class="gradient-text" style="font-size: 1.5rem; margin-bottom: 4px;">สมาร์ทโฟนผู้เข้าร่วมงานจำลอง (Participant Mobile Simulator)</h3>
+                <p class="subtitle" style="font-size: 0.85rem;">ทดลองจำลองมุมมองฝั่งผู้ใช้: ทำการลงทะเบียนผ่านโทรศัพท์และระบบจะออกแบบฟอร์มคิวอาร์โค้ดเข้างานเพื่อนำมาใช้จำลองสแกน</p>
+            </div>
+            
+            <div class="grid-2" style="align-items: center; justify-items: center;">
+                <!-- Left: Smartphone Simulator -->
+                <div class="phone-simulator-container">
+                    <div class="phone-frame">
+                        <div class="phone-notch"></div>
+                        <div class="phone-home-bar"></div>
+                        
+                        <div class="phone-screen" id="phone-screen-container">
+                            <!-- Dynamic Phone Screen Content (JS) -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Explanatory and interactive helpers -->
+                <div class="glass-card" style="max-width: 500px; text-align: left; height: fit-content;">
+                    <h4 style="color: var(--secondary-light); margin-bottom: 12px;">💡 วิธีการสาธิตการทำงาน (Interactive Walkthrough Steps):</h4>
+                    <ol style="font-size: 0.85rem; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; color: var(--text-muted);">
+                        <li><strong style="color: #fff;">ขั้นที่ 1</strong>: กรอกข้อมูลลงทะเบียนในแบบฟอร์มบนหน้าจอโทรศัพท์จำลองทางซ้าย และกดปุ่ม <span style="color: var(--primary-light);">"ลงทะเบียนออนไลน์"</span></li>
+                        <li><strong style="color: #fff;">ขั้นที่ 2</strong>: หน้าจอโทรศัพท์จำลองจะเปลี่ยนเป็นหน้า <span style="color: var(--accent);">"ตั๋วดิจิทัล (Event Pass)"</span> ทันที โดยมีสถานะสีส้มเขียนว่า <strong>"รอดำเนินการ (Pending)"</strong></li>
+                        <li><strong style="color: #fff;">ขั้นที่ 3 (สแกนรับสิทธิ์)</strong>:
+                            - คุณสามารถกดปุ่ม <strong style="color: var(--success);">"จำลองการยิงสแกน QR Code นี้"</strong> ใต้ตั๋วบนหน้าจอมือถือได้ทันที
+                            - หรือหากเปิดเซิร์ฟเวอร์จำลองไว้ ให้เปิดสไลด์นำเสนอแท็บ *"จัดการข้อมูลผู้ร่วมงาน"* อีกหน้าต่างนึง จะพบว่ามีชื่อนี้เพิ่มเข้ามาใหม่ และเมื่อคุณกดเครื่องหมายถูก (เช็คอิน) จากแผงแอดมิน:
+                            - **ผลลัพธ์**: สถานะตั๋วบนโทรศัพท์จำลองจะสลับเป็นสีเขียว <strong>"เช็คอินสำเร็จ"</strong> พร้อมเล่นเสียงสัญญาณ Beep เตือน และบอร์ดแดชบอร์ด/จอ LED Welcome ใหญ่จะขยับขึ้นชื่อต้อนรับพร้อมกันทันที!
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 7: ROLES & PERMISSIONS -->
+        <div id="tab-roles-menus" class="tab-content">
+            <h3 style="margin-bottom: 1.5rem;" class="gradient-text">บทบาทผู้ใช้งานและโครงสร้างระบบ</h3>
+            
+            <!-- Cards of Roles -->
+            <div class="grid-3" style="margin-bottom: 2rem;">
+                <div class="glass-card" style="border-top: 4px solid var(--accent);">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">🛡️</div>
+                    <h4 style="font-size: 1.2rem; margin-bottom: 8px;">ผู้จัดงานหลัก (Super Admin)</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">ดูแลความเรียบร้อยของงาน จัดการการตั้งค่า และวิเคราะห์ข้อมูลในระดับสูงสุด</p>
+                    <ul style="font-size: 0.8rem; padding-left: 20px; color: var(--text-main);">
+                        <li>สิทธิ์จัดการข้อมูล สปอนเซอร์ กำหนดการ และบัญชีสตาฟ</li>
+                        <li>ควบคุมและสลับการแสดงหน้าจอ Signage 8 รูปแบบ</li>
+                        <li>วิเคราะห์รายงาน แดชบอร์ดสถิติสด และรัน Lucky Draw</li>
+                    </ul>
+                </div>
+                
+                <div class="glass-card" style="border-top: 4px solid var(--primary-light);">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
+                    <h4 style="font-size: 1.2rem; margin-bottom: 8px;">เจ้าหน้าที่จุดตรวจ (Staff / Checker)</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">ผู้ปฏิบัติงานหน้าเคาน์เตอร์ ณ จุดเข้างาน เน้นการทำงานรวดเร็วแบบเชี่ยวชาญ</p>
+                    <ul style="font-size: 0.8rem; padding-left: 20px; color: var(--text-main);">
+                        <li>สแกนเช็คอิน QR Code บัตรเข้างานด้วยความเร็วสูง</li>
+                        <li>ค้นหา คัดกรอง และดูรายชื่อ ตรวจสอบสถานะการลงทะเบียน</li>
+                        <li>จัดการแก้ไขโปรไฟล์พื้นฐานเมื่อมีข้อมูลพิมพ์ผิดหน้างาน</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card" style="border-top: 4px solid var(--secondary-light);">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📱</div>
+                    <h4 style="font-size: 1.2rem; margin-bottom: 8px;">ผู้เข้าร่วมงาน (Participant / Guest)</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">ผู้รับบริการหลักของงานอีเวนต์ สื่อสารผ่านสมาร์ทโฟนของตนเอง</p>
+                    <ul style="font-size: 0.8rem; padding-left: 20px; color: var(--text-main);">
+                        <li>สแกนลงทะเบียนด้วยตนเอง (Self-Registration)</li>
+                        <li>แสดง QR Code ประจำตัวเพื่อสแกนยืนยันผ่านประตู</li>
+                        <li>ร่วมกิจกรรม เล่นเกม ตอบแบบประเมิน CSAT ชิงรางวัล</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Permission Table -->
+            <div class="glass-card" style="margin-bottom: 2rem; overflow-x: auto;">
+                <h4 style="margin-bottom: 12px; color: var(--secondary-light);">ตารางสิทธิ์การใช้งานระบบ (Access Permission Matrix)</h4>
+                <table class="cms-table">
+                    <thead>
+                        <tr>
+                            <th>หน้าเมนู / ส่วนการทำงาน</th>
+                            <th>ผู้จัดงาน (Admin)</th>
+                            <th>เจ้าหน้าที่หน้างาน (Staff)</th>
+                            <th>ผู้เข้าร่วมงาน (Participant)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>ลงทะเบียนสมัครเข้าร่วมงาน (Online Register)</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(สร้าง/ดู)</span></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(สร้าง/ดู)</span></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ลงทะเบียนตัวเอง)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>แสดงตั๋วดิจิทัล & QR Code (Event Ticket)</strong></td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ดูเฉพาะตั๋วตนเอง)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Real-time Analytics Dashboard</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(สิทธิ์เต็ม)</span></td>
+                            <td>𐄂</td>
+                            <td>𐄂</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ระบบค้นหา จัดการรายชื่อผู้ร่วมงาน (CMS Table)</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(เพิ่ม/แก้ไข/ลบ)</span></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(สิทธิ์ดู/เช็คอิน)</span></td>
+                            <td>𐄂</td>
+                        </tr>
+                        <tr>
+                            <td><strong>จุดสแกนรับข้อมูลเช็คอิน (Scan Gate Operator)</strong></td>
+                            <td>✓</td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ใช้งานหลัก)</span></td>
+                            <td>𐄂</td>
+                        </tr>
+                        <tr>
+                            <td><strong>สลับแสดงผลหน้าจอ LED ใหญ่ (Signage Control)</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(เปลี่ยนจอ/ควบคุม)</span></td>
+                            <td>𐄂</td>
+                            <td>𐄂</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ระบบจับสลากสุ่มรางวัล (Lucky Draw Engine)</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(รันสุ่มรางวัล)</span></td>
+                            <td>𐄂</td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(เฉพาะเป็นผู้ลุ้นสิทธิ์)</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>ตอบแบบสำรวจกิจกรรม (CSAT & Engagement Survey)</strong></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ดูผลสรุป)</span></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ดูผลสรุป)</span></td>
+                            <td>✓ <span style="font-size: 0.75rem; color: var(--text-muted);">(ทำแบบประเมิน)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Expandable Menu Walkthrough -->
+            <div class="glass-card">
+                <h4 style="margin-bottom: 12px; color: var(--primary-light);">คู่มือการวางโครงร่างเมนูหน้าเว็บ (Menu Wireframe Outlines)</h4>
+                <div class="grid-2">
+                    <div style="background: rgba(255, 255, 255, 0.01); border: 1px dashed var(--card-border); border-radius: 8px; padding: 16px;">
+                        <h5 style="color: var(--secondary-light); margin-bottom: 8px;">🖥️ ระบบหลังบ้านหลัก (Admin & Staff Viewport)</h5>
+                        <ol style="font-size: 0.85rem; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--text-muted);">
+                            <li><strong style="color:#fff;">แถบเมนูข้าง (Sidebar)</strong>: ปุ่มแดชบอร์ด, จัดการผู้ร่วมงาน, เมนูสแกนเนอร์สตาฟ, ป้ายสวิตช์จอSignage, เมนูสุ่ม Lucky Draw, ข้อมูลสปอนเซอร์ & กำหนดการ</li>
+                            <li><strong style="color:#fff;">แถบควบคุมบน (Top Bar)</strong>: บัญชีเจ้าหน้าที่ที่ใช้งาน, ลิงก์สลับเข้าสู่หน้าจอ Signage และฟังก์ชันแจ้งเตือน (Notifications)</li>
+                            <li><strong style="color:#fff;">หน้าต่างหลัก (Content Panel)</strong>: แสดงกราฟิก ตารางรายชื่อ หรือฟอร์มกรอกข้อมูลตามเมนูที่เปิดเลือก</li>
+                        </ol>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.01); border: 1px dashed var(--card-border); border-radius: 8px; padding: 16px;">
+                        <h5 style="color: var(--accent); margin-bottom: 8px;">📱 ระบบเว็บแอปมือถือผู้เข้าร่วม (Participant Mobile Viewport)</h5>
+                        <ol style="font-size: 0.85rem; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--text-muted);">
+                            <li><strong style="color:#fff;">หน้าต่างเดี่ยว (Single View Container)</strong>: เน้นความกระชับ แสดงผลพอดีหน้าจอมือถือโดยไม่ต้องเลื่อนยาว</li>
+                            <li><strong style="color:#fff;">หน้าบัตรคิวอาร์ (My Ticket Pass Card)</strong>: ออกแบบในลักษณะบัตรผ่านประตูดิจิทัล (Wallet Pass) แสดง QR โดดเด่น ชัดเจน ตรวจสอบความสว่างหน้าจออัตโนมัติเพื่อให้เครื่องสแกนบาร์โค้ดอ่านง่าย</li>
+                            <li><strong style="color:#fff;">หน้าร่วมกิจกรรม (Engagement Action Panel)</strong>: ฟอร์มประเมินดาว 5 ดวงพร้อมช่องรับความคิดเห็นสั้นๆ และแจ้งเตือนตารางการจับรางวัลนำโชค</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 8: DATABASE SCHEMA & ER DIAGRAM -->
+        <div id="tab-er-diagram" class="tab-content">
+            <h3 style="margin-bottom: 1.5rem;" class="gradient-text">แบบจำลองความสัมพันธ์ข้อมูล (Database ER Diagram)</h3>
+            
+            <div class="grid-2">
+                <!-- Left: Mermaid ERD -->
+                <div class="glass-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <h4 style="margin-bottom: 1rem; width: 100%; text-align: left; color: var(--secondary-light);">แผนภาพโครงสร้างตารางระบบเช็คอิน (Entity Relations)</h4>
+                    
+                    <div class="mermaid" style="width: 100%; background: #07090e; padding: 20px; border-radius: 12px; border: 1px solid var(--card-border);">
+erDiagram
+    EVENT ||--o{ PARTICIPANT : "has"
+    EVENT ||--o{ SESSION : "has"
+    EVENT ||--o{ CHECKIN : "records"
+    EVENT ||--o{ LUCKY_DRAW_WINNER : "rewards"
+    
+    USER ||--o{ CHECKIN : "performs"
+    USER ||--o{ LUCKY_DRAW_WINNER : "draws"
+    
+    PARTICIPANT ||--o| CHECKIN : "completes"
+    PARTICIPANT ||--o| LUCKY_DRAW_WINNER : "wins"
+
+    EVENT {
+        int event_id PK
+        string title
+        string description
+        datetime start_date
+        datetime end_date
+        string location
+        string logo_url
+    }
+
+    USER {
+        int user_id PK
+        string username
+        string password_hash
+        string fullname
+        string role
+        string email
+        boolean active_status
+    }
+
+    PARTICIPANT {
+        int participant_id PK
+        int event_id FK
+        string ticket_code UK
+        string fullname
+        string company
+        string position
+        string email
+        string phone
+        datetime registered_at
+    }
+
+    CHECKIN {
+        int checkin_id PK
+        int participant_id FK, UK
+        int event_id FK
+        int scanned_by FK
+        datetime checked_in_at
+        string device_info
+    }
+
+    SESSION {
+        int session_id PK
+        int event_id FK
+        string title
+        string description
+        datetime start_time
+        datetime end_time
+        string speaker_name
+        string speaker_company
+        string speaker_avatar_url
+    }
+
+    LUCKY_DRAW_WINNER {
+        int winner_id PK
+        int participant_id FK, UK
+        int event_id FK
+        int drawn_by FK
+        datetime drawn_at
+        string prize_name
+    }
+                    </div>
+                </div>
+
+                <!-- Right: Table Spec Details -->
+                <div class="glass-card" style="max-height: 600px; overflow-y: auto;">
+                    <h4 style="margin-bottom: 12px; color: var(--primary-light);">พจนานุกรมข้อมูล (Data Dictionary Overview)</h4>
+                    
+                    <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                        <h5 style="color: #fff; font-size: 1rem; margin-bottom: 4px;">1. EVENT Table</h5>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">ตารางสำหรับระบุสัญญางานอีเวนต์หลัก สามารถรองรับการขยายระบบไปเป็นแบบ Multi-Event ในอนาคต</p>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                        <h5 style="color: #fff; font-size: 1rem; margin-bottom: 4px;">2. PARTICIPANT Table</h5>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">ตารางเก็บรายชื่อผู้ลงทะเบียน `ticket_code` คือรหัสสติกเกอร์/UUID ที่แสดงในรูปแบบ QR Code ใช้ในการอ้างอิงตอนแสกนเช็คอินเข้างาน (1 Event Pass/คน)</p>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                        <h5 style="color: #fff; font-size: 1rem; margin-bottom: 4px;">3. CHECKIN Table</h5>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">ตารางบันทึกการแสกนเช็คอินจริง มีข้อกำหนด `UK (Unique Key)` บน `participant_id` เพื่อบังคับสิทธิ์การเข้าใช้งานได้เพียง 1 ครั้งต่อคน (ป้องกันการนำ QR Code ให้ผู้อื่นสแกนซ้ำ)</p>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 10px;">
+                        <h5 style="color: #fff; font-size: 1rem; margin-bottom: 4px;">4. USER (STAFF) Table</h5>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">จัดเก็บบัญชีผู้ใช้งานฝั่งระบบของ Admin และ Staff ประจำแต่ละช่องสแกน เพื่อระบุประวัติย้อนหลัง (Audit Log) ว่าใครเป็นผู้ทำการผ่านสิทธิ์ผู้เข้าร่วมงานคนใด</p>
+                    </div>
+
+                    <div style="margin-bottom: 0.5rem;">
+                        <h5 style="color: #fff; font-size: 1rem; margin-bottom: 4px;">5. LUCKY_DRAW_WINNER Table</h5>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">จัดเก็บรายชื่อผู้สุ่มได้รางวัล `UK (Unique Key)` บน `participant_id` ป้องกันการสุ่มรับรางวัลซ้ำซ้อนของผู้ชนะคนเดิม โดยจะสุ่มดึงจากผู้ที่มีบันทึกในตาราง `CHECKIN` เท่านั้น</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript logic -->
+    <script>
+        // Participant Mock Database Base Offsets
+        const BASE_REGISTERED = 308;
+        const BASE_CHECKED = 239;
+        const BASE_PENDING = 69;
+
+        // Global state variable for participants
+        let participants = [
+            { id: 1, name: "Yanisa Prasert", company: "Zoom Information System", position: "IT Director", email: "yanisa@zoom.com", phone: "081-234-5678", status: "Checked-in" },
+            { id: 2, name: "Apirak Bampen", company: "DeepTech Solutions", position: "Software Engineer", email: "apirak@deeptech.io", phone: "089-876-5432", status: "Pending" },
+            { id: 3, name: "John Smith", company: "Global Tech Corp", position: "Speaker", email: "john.s@globaltech.com", phone: "082-111-2222", status: "Checked-in" },
+            { id: 4, name: "Somchai JaiDee", company: "Siam Inno Group", position: "Manager", email: "somchai@siaminno.co.th", phone: "085-555-4444", status: "Pending" },
+            { id: 5, name: "Nattapong Ruang", company: "NextGen Software", position: "Developer", email: "nattapong@nextgen.com", phone: "086-777-8888", status: "Checked-in" },
+            { id: 6, name: "Pitchaya Srisai", company: "Creative Studio", position: "UX/UI Designer", email: "pitchaya@creative.com", phone: "087-999-0000", status: "Checked-in" },
+            { id: 7, name: "Chantana Mongkol", company: "FinTech Hub", position: "Analyst", email: "chantana@fintech.co.th", phone: "083-444-5555", status: "Pending" },
+            { id: 8, name: "Tanawat Pon", company: "Data Cloud Inc", position: "Cloud Engineer", email: "tanawat@datacloud.com", phone: "084-222-3333", status: "Checked-in" },
+            { id: 9, name: "Nisachol Siri", company: "Thai Bank PLC", position: "Product Owner", email: "nisachol@thaibank.co.th", phone: "081-555-6666", status: "Pending" },
+            { id: 10, name: "Vipawan Tech", company: "Cyber Security Ltd", position: "Security Analyst", email: "vipawan@cybersec.com", phone: "089-444-3333", status: "Checked-in" },
+            { id: 11, name: "Kitipong Tan", company: "EdTech Startup", position: "Founder", email: "kitipong@edtech.com", phone: "082-999-8888", status: "Pending" },
+            { id: 12, name: "Anong Suk", company: "Green Energy Corp", position: "HR Specialist", email: "anong@greenenergy.com", phone: "083-777-6666", status: "Pending" }
+        ];
+
+        let currentFilter = 'all';
+
+        // Live stats counters derived dynamically
+        let registeredCount = 320;
+        let checkedCount = 245;
+        let pendingCount = 75;
+        
+        // Mock list of names checked-in for Lucky Draw (synchronized automatically)
+        let checkedInNamesList = [];
+
+        // 4 Zones details database
+        const zonesData = {
+            1: {
+                title: "1. REGISTRATION ZONE (โซนลงทะเบียนด้วยตนเอง)",
+                sub: "จุดสแกนสำหรับผู้เข้าร่วม Walk-in หรือไม่ได้ลงทะเบียนมาก่อนหน้า",
+                bullets: [
+                    "จัดทำป้ายบอร์ด Standee แสดงขั้นตอนและ QR Code ขนาดใหญ่ให้สังเกตชัดเจน",
+                    "ผู้เข้าร่วมงานใช้สมาร์ทโฟนของตนเองสแกนเพื่อลงทะเบียนบนเว็บ (ลดจำนวนเครื่องแท็บเล็ตและอุปกรณ์หน้างาน)",
+                    "มีคำแนะนำในการใช้อย่างรวดเร็ว ช่วยประหยัดเวลาและลดการใช้กระดาษฟอร์มเขียน",
+                    "ป้องกันปัญหาแถวยาวบริเวณทางเข้าหลักด้วยการแยกกระบวนการนี้เป็นสัดส่วน"
+                ],
+                hardware: [
+                    { name: "Standee บอร์ดป้ายโครงเหล็กขนาดใหญ่พร้อม QR Code", qty: "2 ชุด" },
+                    { name: "ป้ายไวนิลคำแนะนำขั้นตอนการสแกน", qty: "2 แผ่น" },
+                    { name: "อินเทอร์เน็ต WiFi ความเร็วสูงสำหรับจุดลงทะเบียน", qty: "1 จุดบริการ" }
+                ]
+            },
+            2: {
+                title: "2. FAST CHECK-IN ZONE (โซนเช็คอินด่วนความเร็วสูง)",
+                sub: "จุดสแกนบัตรผ่านเข้าร่วมงานสำหรับผู้ลงทะเบียนล่วงหน้าเรียบร้อยแล้ว",
+                bullets: [
+                    "เน้นความเร็วระดับสูงสุด ผู้เข้าร่วมถือหน้าจอ QR Code บนสมาร์ทโฟนยื่นให้พนักงานแสกนผ่าน",
+                    "ใช้เครื่องสแกนบาร์โค้ดคุณภาพสูงที่เชื่อมต่อส่งข้อมูลเข้า CMS ทันที",
+                    "มีช่องทางเข้าหลักชัดเจน แยกออกจากจุดลงทะเบียนปกติอย่างเป็นระบบ",
+                    "เฉลี่ยเวลาเช็คอิน 3-5 วินาทีต่อคน เพื่อความไหลลื่นของแถวคิว"
+                ],
+                hardware: [
+                    { name: "เครื่องสแกนเนอร์บาร์โค้ด / QR Code แบบ Wireless", qty: "3 เครื่อง" },
+                    { name: "เครื่องแท็บเล็ตแสดงผลข้อมูล (Staff Monitor)", qty: "3 เครื่อง" },
+                    { name: "เคาน์เตอร์เช็คอินแบ่งเป็นช่องบริการชัดเจน", qty: "3 ช่องทาง" }
+                ]
+            },
+            3: {
+                title: "3. DIGITAL SIGNAGE ZONE (โซนจอส่วนกลางนำเสนอแบบเรียลไทม์)",
+                sub: "แสดงผลข้อมูลต้อนรับผู้เข้าร่วมงานและภาพรวมแบบอัจฉริยะ",
+                bullets: [
+                    "ต้อนรับคนเข้าร่วมงานแบบส่วนบุคคล (Personalized Welcome Name) สดๆ เมื่อมีการสแกนสำเร็จ",
+                    "แสดง Dashboard สรุปจำนวนตัวเลขสะสม สถิติการมาร่วมงาน ตลอดจนตารางเวลาจัดงาน (Agenda)",
+                    "แสดงรายชื่อผู้สนับสนุน (Sponsors Highlight) และรูปถ่ายบรรยากาศในงาน (Photo Wall Grid)",
+                    "ดึงข้อมูลโดยตรงจากดาต้าเบสผ่าน Real-time Push API / WebSocket"
+                ],
+                hardware: [
+                    { name: "จอแสดงผล LED Wall ขนาดใหญ่พิเศษ / จอ TV ความคมชัดสูง", qty: "1-2 จอ" },
+                    { name: "เครื่องประมวลผลมีเดียเพลเยอร์หรือคอมพิวเตอร์ลูกข่าย", qty: "1-2 เครื่อง" },
+                    { name: "ระบบสัญญาณ WebSocket Server / Digital Signage CMS", qty: "1 ระบบ" }
+                ]
+            },
+            4: {
+                title: "4. ENGAGEMENT ZONE (โซนร่วมกิจกรรมและของสมนาคุณ)",
+                sub: "จัดกิจกรรมเพื่อดึงดูดผู้ร่วมงานให้มีส่วนร่วมกับแบรนด์ผู้จัดงาน",
+                bullets: [
+                    "จัดสุ่มจับสลากชื่อ (Lucky Draw Engine) โดยดึงข้อมูลเฉพาะผู้ที่ผ่านการเช็คอินหน้างานจริงเท่านั้น",
+                    "มีระบบตอบคำถาม ทำแบบทดสอบ หรือทำแบบสำรวจ CSAT เพื่อรับพ้อยท์พิเศษหรือหมุนวงล้อ",
+                    "เป็นพื้นที่ในการรับของรางวัล โปรโมชันพิเศษ หรือแลกเปลี่ยนของสมนาคุณของงาน",
+                    "กระตุ้นความน่าดึงดูดใจไม่ให้คนกลับเร็วและสร้างการจดจำที่ดีต่อภาพลักษณ์องค์กร"
+                ],
+                hardware: [
+                    { name: "วงล้อหมุนสุ่มรางวัลระบบแมนวล หรือแท่นสเกลอิเล็กทรอนิกส์", qty: "1 ชุด" },
+                    { name: "จอแสดงผลผลคะแนน / ระบบสุ่มเกม", qty: "1 จอ" },
+                    { name: "แท่นโชว์ของรางวัลและโปรโมชันพิเศษ", qty: "1 ชุด" }
+                ]
+            }
+        };
+
+        // Navigation Tabs Management
+        function switchTab(evt, tabId) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(tab => tab.classList.remove('active'));
+
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
+
+            if(tabId === 'tab-kpi') {
+                animateKPIProgress();
+            }
+
+            if(tabId === 'tab-er-diagram') {
+                // Re-run Mermaid initialization for rendering inside visible container
+                try {
+                    mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+                } catch(e) {
+                    console.log("Mermaid init delay:", e);
+                }
+            }
+        }
+
+        // Highlight timeline steps when clicked
+        function highlightStep(stepNum) {
+            const steps = document.querySelectorAll('.flow-step');
+            steps.forEach((step, idx) => {
+                if (idx + 1 === stepNum) {
+                    step.classList.add('active-step');
+                } else {
+                    step.classList.remove('active-step');
+                }
+            });
+        }
+
+        // Dynamic stats calculation & DOM updates
+        function updateDashboardStats() {
+            const activeChecked = participants.filter(p => p.status === 'Checked-in').length;
+            const activePending = participants.filter(p => p.status === 'Pending').length;
+            
+            registeredCount = BASE_REGISTERED + participants.length;
+            checkedCount = BASE_CHECKED + activeChecked;
+            pendingCount = BASE_PENDING + activePending;
+
+            // Update DOM labels
+            document.getElementById('stat-registered').innerText = registeredCount;
+            document.getElementById('stat-checked').innerText = checkedCount;
+            document.getElementById('stat-pending').innerText = pendingCount;
+            
+            document.getElementById('board-registered').innerText = registeredCount;
+            document.getElementById('board-checked').innerText = checkedCount;
+            document.getElementById('board-pending').innerText = pendingCount;
+
+            // Sync Lucky Draw Names List
+            checkedInNamesList = participants
+                .filter(p => p.status === 'Checked-in')
+                .map(p => p.name);
+
+            // Call Phone Simulator update
+            if (typeof phoneUser !== 'undefined' && phoneUser.status === 'Ticket') {
+                renderPhoneScreen();
+            }
+
+            // Update CSAT (fake CSAT based on default, keeps 4.6 constant or adjusts slightly)
+            const showupRate = Math.round((checkedCount / registeredCount) * 100);
+            
+            const textKpiShowup = document.getElementById('text-kpi-showup');
+            if (textKpiShowup) {
+                textKpiShowup.innerText = showupRate + '%';
+            }
+            
+            const showupCircle = document.getElementById('circle-kpi-showup');
+            if (showupCircle) {
+                const totalLength = 377;
+                const showupOffset = totalLength - (totalLength * (showupRate / 100));
+                showupCircle.style.strokeDashoffset = showupOffset;
+            }
+        }
+
+        // Live Simulated Check-in Action (Now synced with Mock Database)
+        function triggerSimulatedCheckin() {
+            const nameInput = document.getElementById('sim-name').value.trim();
+            const companyInput = document.getElementById('sim-company').value.trim();
+
+            if (!nameInput) {
+                alert("กรุณากรอกชื่อสำหรับการเช็คอิน!");
+                return;
+            }
+
+            // Fallback in-memory trigger
+            const performLocalCheckin = () => {
+                playBeepSound();
+                let match = participants.find(p => p.name.toLowerCase() === nameInput.toLowerCase());
+                if (match) {
+                    match.status = 'Checked-in';
+                    match.company = companyInput || match.company;
+                } else {
+                    const newId = participants.length > 0 ? Math.max(...participants.map(p => p.id)) + 1 : 1;
+                    match = {
+                        id: newId,
+                        name: nameInput,
+                        company: companyInput || "General Participant",
+                        position: "Walk-in",
+                        email: nameInput.toLowerCase().replace(/\s+/g, '') + "@example.com",
+                        phone: "089-xxx-xxxx",
+                        status: "Checked-in"
+                    };
+                    participants.push(match);
+                }
+                updateDashboardStats();
+                renderCMS();
+                document.getElementById('display-welcome-name').innerText = match.name;
+                document.getElementById('display-welcome-company').innerText = match.company;
+                document.getElementById('sim-feedback-desc').innerText = `ยินดีต้อนรับ คุณ ${match.name} (${match.company})`;
+                document.getElementById('sim-feedback').style.display = 'flex';
+                switchSignageScreen('screen-welcome', document.querySelector('[onclick*="screen-welcome"]'));
+            };
+
+            // Attempt backend REST POST check-in request if WebSocket is active
+            if (socket && socket.connected) {
+                fetch("http://localhost:3005/api/v1/checkin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticket_code: `tkt_${nameInput.replace(/\s+/g, '_')}_2026` })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('sim-feedback-desc').innerText = `ยินดีต้อนรับ คุณ ${data.data.fullname} (${data.data.company})`;
+                        document.getElementById('sim-feedback').style.display = 'flex';
+                    } else {
+                        performLocalCheckin();
+                    }
+                })
+                .catch(() => performLocalCheckin());
+            } else {
+                performLocalCheckin();
+            }
+
+            // Reset name input
+            document.getElementById('sim-name').value = "";
+            document.getElementById('sim-company').value = "";
+        }
+
+        // Audio Beep generator
+        function playBeepSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note (higher pitched beep)
+                gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18);
+                oscillator.stop(audioCtx.currentTime + 0.20);
+            } catch(e) {
+                console.log("Audio not supported or blocked by browser policies.");
+            }
+        }
+
+        // Zone navigation helper
+        function switchZone(zoneId, element) {
+            const zoneCards = document.querySelectorAll('.zone-card');
+            zoneCards.forEach(card => card.classList.remove('active-zone'));
+
+            element.classList.add('active-zone');
+
+            const data = zonesData[zoneId];
+            
+            let bulletsHtml = '<ul class="feature-bullets">';
+            data.bullets.forEach(bullet => {
+                bulletsHtml += `<li>${bullet}</li>`;
+            });
+            bulletsHtml += '</ul>';
+
+            let hwHtml = '<div class="zone-hardware-list"><h5>รายการอุปกรณ์ (Hardware list)</h5>';
+            data.hardware.forEach(hw => {
+                hwHtml += `
+                    <div class="hw-item">
+                        <span>${hw.name}</span>
+                        <strong style="color: var(--text-bright);">${hw.qty}</strong>
+                    </div>
+                `;
+            });
+            hwHtml += '</div>';
+
+            const panel = document.getElementById('zone-detail-panel');
+            panel.innerHTML = `
+                <div class="detail-header">
+                    <div>
+                        <h4 class="zone-title">${data.title}</h4>
+                        <span class="zone-sub">${data.sub}</span>
+                    </div>
+                </div>
+                <div class="zone-content-grid">
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--primary-light);">รายละเอียดข้อกำหนด (Requirements)</h4>
+                        ${bulletsHtml}
+                    </div>
+                    <div>
+                        ${hwHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Signage Switcher Simulator
+        function switchSignageScreen(screenId, element) {
+            const screens = document.querySelectorAll('.screen-content');
+            screens.forEach(screen => screen.classList.remove('active'));
+
+            const btns = document.querySelectorAll('.signage-nav-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(screenId).classList.add('active');
+            if (element) element.classList.add('active');
+        }
+
+        // Lucky Draw simulator engine
+        let spinInterval;
+        function spinLuckyDraw() {
+            // Attempt to trigger spin on the server if online
+            if (socket && socket.connected) {
+                fetch("http://localhost:3005/api/v1/events/1/lucky-draw/spin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(data.message || "เกิดข้อผิดพลาดในการรันระบบสุ่ม");
+                    }
+                })
+                .catch(() => {
+                    performLocalSpin();
+                });
+            } else {
+                performLocalSpin();
+            }
+        }
+
+        function triggerWebSocketSpin(winnerName) {
+            const display = document.getElementById('lucky-name');
+            display.classList.remove('winner-glow');
+            
+            const oldConfetti = document.querySelectorAll('.confetti');
+            oldConfetti.forEach(c => c.remove());
+
+            let counter = 0;
+            const spinBtn = document.querySelector('.lucky-btn-inner');
+            if (spinBtn) spinBtn.disabled = true;
+
+            // Make sure screen-lucky is active
+            switchSignageScreen('screen-lucky', document.querySelector('[onclick*="screen-lucky"]'));
+
+            spinInterval = setInterval(() => {
+                const randomName = checkedInNamesList.length > 0 
+                    ? checkedInNamesList[Math.floor(Math.random() * checkedInNamesList.length)] 
+                    : "SPINNING";
+                display.innerText = randomName.toUpperCase();
+                counter++;
+
+                if (counter > 25) {
+                    clearInterval(spinInterval);
+                    display.innerText = `👑 ${winnerName.toUpperCase()} 👑`;
+                    display.classList.add('winner-glow');
+                    if (spinBtn) spinBtn.disabled = false;
+                    
+                    createConfettiEffects();
+                }
+            }, 80);
+        }
+
+        function performLocalSpin() {
+            const display = document.getElementById('lucky-name');
+            display.classList.remove('winner-glow');
+            
+            const oldConfetti = document.querySelectorAll('.confetti');
+            oldConfetti.forEach(c => c.remove());
+
+            if (checkedInNamesList.length === 0) {
+                display.innerText = "NO PARTICIPANTS";
+                return;
+            }
+
+            let counter = 0;
+            const spinBtn = document.querySelector('.lucky-btn-inner');
+            spinBtn.disabled = true;
+
+            spinInterval = setInterval(() => {
+                const randomName = checkedInNamesList[Math.floor(Math.random() * checkedInNamesList.length)];
+                display.innerText = randomName.toUpperCase();
+                counter++;
+
+                if (counter > 25) {
+                    clearInterval(spinInterval);
+                    const winner = checkedInNamesList[Math.floor(Math.random() * checkedInNamesList.length)];
+                    display.innerText = `👑 ${winner.toUpperCase()} 👑`;
+                    display.classList.add('winner-glow');
+                    spinBtn.disabled = false;
+                    
+                    createConfettiEffects();
+                }
+            }, 80);
+        }
+
+        function createConfettiEffects() {
+            const screen = document.getElementById('screen-lucky');
+            for(let i = 0; i < 40; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = Math.random() * 90 + 5 + '%';
+                conf.style.backgroundColor = ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#3b82f6'][Math.floor(Math.random() * 5)];
+                conf.style.animationDelay = Math.random() * 2 + 's';
+                conf.style.animationDuration = Math.random() * 2 + 2 + 's';
+                screen.appendChild(conf);
+            }
+        }
+
+        // Animate KPI circular bars
+        function animateKPIProgress() {
+            const showupCircle = document.getElementById('circle-kpi-showup');
+            const csatCircle = document.getElementById('circle-kpi-csat');
+            
+            const totalLength = 377;
+            const showupRate = Math.round((checkedCount / registeredCount) * 100);
+            
+            const showupOffset = totalLength - (totalLength * (showupRate / 100));
+            if (showupCircle) showupCircle.style.strokeDashoffset = showupOffset;
+
+            const csatOffset = totalLength - (totalLength * (4.6 / 5));
+            if (csatCircle) csatCircle.style.strokeDashoffset = csatOffset;
+        }
+
+        // --- Participant CMS Mockup Functions ---
+
+        // Render CMS Table
+        function renderCMS() {
+            const tbody = document.getElementById('cms-tbody');
+            if (!tbody) return;
+
+            const searchQuery = document.getElementById('cms-search').value.toLowerCase();
+            let filtered = participants;
+
+            // Apply status filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(p => p.status === currentFilter);
+            }
+
+            // Apply search query filter
+            if (searchQuery) {
+                filtered = filtered.filter(p => 
+                    p.name.toLowerCase().includes(searchQuery) ||
+                    p.company.toLowerCase().includes(searchQuery) ||
+                    (p.email && p.email.toLowerCase().includes(searchQuery))
+                );
+            }
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">ไม่พบข้อมูลผู้เข้าร่วม</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(p => {
+                const statusBadgeClass = p.status === 'Checked-in' ? 'checked-in' : 'pending';
+                const statusBadgeText = p.status === 'Checked-in' ? 'เช็คอินแล้ว' : 'รอดำเนินการ';
+                
+                const checkIcon = p.status === 'Checked-in' 
+                    ? `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none;"><path d="M9 10l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                    : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none;"><path d="M5 13l4 4L19 7"></path></svg>`;
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong style="color: var(--text-bright);">${escapeHtml(p.name)}</strong>
+                        </td>
+                        <td>
+                            <div>${escapeHtml(p.company)}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(p.position || '-')}</div>
+                        </td>
+                        <td>
+                            <div>${escapeHtml(p.email || '-')}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(p.phone || '-')}</div>
+                        </td>
+                        <td>
+                            <span class="badge-status ${statusBadgeClass}">${statusBadgeText}</span>
+                        </td>
+                        <td style="text-align: right; white-space: nowrap;">
+                            <button class="btn-action ${p.status === 'Checked-in' ? 'check-out' : 'check-in'}" onclick="toggleCheckIn(${p.id})" title="${p.status === 'Checked-in' ? 'ยกเลิกเช็คอิน' : 'เช็คอิน'}">
+                                ${checkIcon}
+                            </button>
+                            <button class="btn-action edit" onclick="startEditParticipant(${p.id})" title="แก้ไข">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none;"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                            </button>
+                            <button class="btn-action delete" onclick="deleteParticipant(${p.id})" title="ลบ">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="pointer-events: none;"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Toggle Check-in status from CMS row
+        function toggleCheckIn(id) {
+            const p = participants.find(part => part.id === id);
+            if (!p) return;
+
+            const performLocalToggle = () => {
+                if (p.status === 'Pending') {
+                    p.status = 'Checked-in';
+                    playBeepSound();
+                    
+                    // Show Welcome screen on Digital Signage Simulator
+                    document.getElementById('display-welcome-name').innerText = p.name;
+                    document.getElementById('display-welcome-company').innerText = p.company;
+
+                    const welcomeBtn = document.querySelector('[onclick*="screen-welcome"]');
+                    if (welcomeBtn) {
+                        switchSignageScreen('screen-welcome', welcomeBtn);
+                    }
+                    
+                    // Show tab signage to present it
+                    const signageTabBtn = document.querySelector('[onclick*="tab-signage"]');
+                    if (signageTabBtn) {
+                        // Fake click
+                        const clickEvent = new MouseEvent('click', { view: window, bubbles: true, cancelable: true });
+                        signageTabBtn.dispatchEvent(clickEvent);
+                    }
+                } else {
+                    p.status = 'Pending';
+                }
+
+                updateDashboardStats();
+                renderCMS();
+            };
+
+            if (socket && socket.connected && p.status === 'Pending') {
+                fetch("http://localhost:3005/api/v1/checkin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticket_code: `tkt_${p.name.replace(/\s+/g, '_')}_2026` })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) performLocalToggle();
+                })
+                .catch(() => performLocalToggle());
+            } else {
+                performLocalToggle();
+            }
+        }
+
+        // Filter status tags in CMS
+        function filterCMS(status, btnElement) {
+            currentFilter = status;
+            
+            const buttons = document.querySelectorAll('.cms-filter-buttons .filter-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            btnElement.classList.add('active');
+            renderCMS();
+        }
+
+        // Form Submit for Add/Edit (Full REST API sync with local fallback)
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const idInput = document.getElementById('part-id').value;
+            const nameInput = document.getElementById('part-name').value.trim();
+            const companyInput = document.getElementById('part-company').value.trim();
+            const positionInput = document.getElementById('part-position').value.trim();
+            const statusInput = document.getElementById('part-status').value;
+            const emailInput = document.getElementById('part-email').value.trim();
+            const phoneInput = document.getElementById('part-phone').value.trim();
+
+            if (!nameInput || !companyInput) {
+                alert("กรุณากรอกชื่อและบริษัท!");
+                return;
+            }
+
+            const performLocalSubmit = () => {
+                if (idInput) {
+                    const id = parseInt(idInput);
+                    const p = participants.find(part => part.id === id);
+                    if (p) {
+                        const statusChangedToCheckin = (p.status === 'Pending' && statusInput === 'Checked-in');
+                        p.name = nameInput;
+                        p.company = companyInput;
+                        p.position = positionInput;
+                        p.status = statusInput;
+                        p.email = emailInput;
+                        p.phone = phoneInput;
+
+                        if (statusChangedToCheckin) {
+                            playBeepSound();
+                            document.getElementById('display-welcome-name').innerText = p.name;
+                            document.getElementById('display-welcome-company').innerText = p.company;
+                            const welcomeBtn = document.querySelector('[onclick*="screen-welcome"]');
+                            if (welcomeBtn) switchSignageScreen('screen-welcome', welcomeBtn);
+                        }
+                    }
+                } else {
+                    const newId = participants.length > 0 ? Math.max(...participants.map(p => p.id)) + 1 : 1;
+                    const newParticipant = {
+                        id: newId,
+                        name: nameInput,
+                        company: companyInput,
+                        position: positionInput,
+                        status: statusInput,
+                        email: emailInput,
+                        phone: phoneInput
+                    };
+                    participants.push(newParticipant);
+
+                    if (statusInput === 'Checked-in') {
+                        playBeepSound();
+                        document.getElementById('display-welcome-name').innerText = newParticipant.name;
+                        document.getElementById('display-welcome-company').innerText = newParticipant.company;
+                        const welcomeBtn = document.querySelector('[onclick*="screen-welcome"]');
+                        if (welcomeBtn) switchSignageScreen('screen-welcome', welcomeBtn);
+                    }
+                }
+                cancelEdit();
+                updateDashboardStats();
+                renderCMS();
+            };
+
+            if (socket && socket.connected) {
+                const payload = {
+                    name: nameInput,
+                    company: companyInput,
+                    position: positionInput,
+                    status: statusInput,
+                    email: emailInput,
+                    phone: phoneInput
+                };
+                const url = idInput ? `http://localhost:3005/api/v1/participants/${idInput}` : "http://localhost:3005/api/v1/participants";
+                const method = idInput ? "PUT" : "POST";
+
+                fetch(url, {
+                    method: method,
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        cancelEdit();
+                    } else {
+                        performLocalSubmit();
+                    }
+                })
+                .catch(() => performLocalSubmit());
+            } else {
+                performLocalSubmit();
+            }
+        }
+
+        // Edit Mode Loader
+        function startEditParticipant(id) {
+            const p = participants.find(part => part.id === id);
+            if (!p) return;
+
+            document.getElementById('part-id').value = p.id;
+            document.getElementById('part-name').value = p.name;
+            document.getElementById('part-company').value = p.company;
+            document.getElementById('part-position').value = p.position || '';
+            document.getElementById('part-status').value = p.status;
+            document.getElementById('part-email').value = p.email || '';
+            document.getElementById('part-phone').value = p.phone || '';
+
+            document.getElementById('form-title').innerText = "แก้ไขข้อมูลผู้เข้าร่วมงาน";
+            document.getElementById('btn-submit-form').querySelector('span').innerText = "บันทึกการแก้ไข";
+            document.getElementById('btn-cancel-edit').style.display = 'block';
+
+            document.getElementById('form-title').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Cancel Edit Mode
+        function cancelEdit() {
+            document.getElementById('participant-form').reset();
+            document.getElementById('part-id').value = '';
+            
+            document.getElementById('form-title').innerText = "เพิ่มข้อมูลผู้เข้าร่วมงาน";
+            document.getElementById('btn-submit-form').querySelector('span').innerText = "เพิ่มรายชื่อผู้เข้าร่วม";
+            document.getElementById('btn-cancel-edit').style.display = 'none';
+        }
+
+        // Delete Row (REST API with local fallback)
+        function deleteParticipant(id) {
+            if (confirm("คุณแน่ใจว่าต้องการลบผู้เข้าร่วมรายนี้ใช่หรือไม่?")) {
+                const performLocalDelete = () => {
+                    participants = participants.filter(part => part.id !== id);
+                    updateDashboardStats();
+                    renderCMS();
+                };
+
+                if (socket && socket.connected) {
+                    fetch(`http://localhost:3005/api/v1/participants/${id}`, {
+                        method: "DELETE"
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.success) performLocalDelete();
+                    })
+                    .catch(() => performLocalDelete());
+                } else {
+                    performLocalDelete();
+                }
+            }
+        }
+
+        // Reset CMS DB
+        function resetParticipantsDatabase() {
+            if (confirm("ต้องการรีเซ็ตรายชื่อผู้เข้าร่วมกลับเป็นค่าเริ่มต้นหรือไม่?")) {
+                participants = [
+                    { id: 1, name: "Yanisa Prasert", company: "Zoom Information System", position: "IT Director", email: "yanisa@zoom.com", phone: "081-234-5678", status: "Checked-in" },
+                    { id: 2, name: "Apirak Bampen", company: "DeepTech Solutions", position: "Software Engineer", email: "apirak@deeptech.io", phone: "089-876-5432", status: "Pending" },
+                    { id: 3, name: "John Smith", company: "Global Tech Corp", position: "Speaker", email: "john.s@globaltech.com", phone: "082-111-2222", status: "Checked-in" },
+                    { id: 4, name: "Somchai JaiDee", company: "Siam Inno Group", position: "Manager", email: "somchai@siaminno.co.th", phone: "085-555-4444", status: "Pending" },
+                    { id: 5, name: "Nattapong Ruang", company: "NextGen Software", position: "Developer", email: "nattapong@nextgen.com", phone: "086-777-8888", status: "Checked-in" },
+                    { id: 6, name: "Pitchaya Srisai", company: "Creative Studio", position: "UX/UI Designer", email: "pitchaya@creative.com", phone: "087-999-0000", status: "Checked-in" },
+                    { id: 7, name: "Chantana Mongkol", company: "FinTech Hub", position: "Analyst", email: "chantana@fintech.co.th", phone: "083-444-5555", status: "Pending" },
+                    { id: 8, name: "Tanawat Pon", company: "Data Cloud Inc", position: "Cloud Engineer", email: "tanawat@datacloud.com", phone: "084-222-3333", status: "Checked-in" },
+                    { id: 9, name: "Nisachol Siri", company: "Thai Bank PLC", position: "Product Owner", email: "nisachol@thaibank.co.th", phone: "081-555-6666", status: "Pending" },
+                    { id: 10, name: "Vipawan Tech", company: "Cyber Security Ltd", position: "Security Analyst", email: "vipawan@cybersec.com", phone: "089-444-3333", status: "Checked-in" },
+                    { id: 11, name: "Kitipong Tan", company: "EdTech Startup", position: "Founder", email: "kitipong@edtech.com", phone: "082-999-8888", status: "Pending" },
+                    { id: 12, name: "Anong Suk", company: "Green Energy Corp", position: "HR Specialist", email: "anong@greenenergy.com", phone: "083-777-6666", status: "Pending" }
+                ];
+                cancelEdit();
+                updateDashboardStats();
+                renderCMS();
+            }
+        }
+
+        // HTML Sanitizer
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // REST fetch to pull participants from Backend Server when connected
+        function fetchParticipants() {
+            if (socket && socket.connected) {
+                fetch("http://localhost:3005/api/v1/participants")
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            participants = data.data;
+                            updateDashboardStats();
+                            renderCMS();
+                        }
+                    })
+                    .catch(err => console.log("Fetch participants error:", err));
+            }
+        }
+
+        // WebSocket client integration
+        let socket;
+        function initWebSocket() {
+            try {
+                socket = io("http://localhost:3005", { timeout: 2000, reconnectionAttempts: 2 });
+                
+                socket.on("connect", () => {
+                    console.log("Connected to local Mock Backend server.");
+                    fetchParticipants();
+                });
+
+                socket.on("welcome:new_checkin", (data) => {
+                    playBeepSound();
+                    
+                    // Update welcome text on Signage Screen
+                    document.getElementById('display-welcome-name').innerText = data.fullname;
+                    document.getElementById('display-welcome-company').innerText = data.company;
+
+                    // Automatically switch Signage screen to welcome view
+                    const welcomeBtn = document.querySelector('[onclick*="screen-welcome"]');
+                    if (welcomeBtn) switchSignageScreen('screen-welcome', welcomeBtn);
+
+                    // Flash signage tab to draw attention if not active
+                    const activeTabBtn = document.querySelector('.tab-btn.active');
+                    if (activeTabBtn && !activeTabBtn.getAttribute('onclick').includes('tab-signage') && !activeTabBtn.getAttribute('onclick').includes('tab-flow')) {
+                        const sBtn = document.querySelector('[onclick*="tab-signage"]');
+                        if (sBtn) {
+                            sBtn.style.animation = 'pulseText 1s infinite alternate';
+                            setTimeout(() => { sBtn.style.animation = ''; }, 3000);
+                        }
+                    }
+                });
+
+                socket.on("overview:update", (data) => {
+                    registeredCount = data.registered;
+                    checkedCount = data.checked_in;
+                    pendingCount = data.pending;
+                    
+                    updateDashboardStats();
+                });
+
+                socket.on("participants:update", (eventData) => {
+                    console.log("WebSocket Received DB Update event:", eventData.action);
+                    participants = eventData.data;
+                    renderCMS();
+                });
+
+                socket.on("lucky-draw:winner", (data) => {
+                    console.log("WebSocket Received Lucky Draw Winner:", data);
+                    triggerWebSocketSpin(data.winner_name);
+                });
+
+            } catch(e) {
+                console.log("Mock Backend Server offline. Running client-side simulation.");
+            }
+        }
+
+        // Phone Simulator logic
+        let phoneUser = { name: '', company: '', email: '', phone: '', position: '', status: 'Register' };
+
+        function renderPhoneScreen() {
+            const container = document.getElementById('phone-screen-container');
+            if (!container) return;
+
+            if (phoneUser.status === 'Register') {
+                container.innerHTML = `
+                    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                        <h4 style="font-size: 1.1rem; color: #fff; margin-bottom: 4px;">ลงทะเบียนด่วน</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">กรอกข้อมูลเพื่อรับตั๋วผ่านประตูแบบดิจิทัล</p>
+                    </div>
+                    <form onsubmit="submitPhoneRegister(event)">
+                        <div class="phone-input-group">
+                            <label>ชื่อ - นามสกุล</label>
+                            <input type="text" id="phone-reg-name" class="phone-input" required placeholder="เช่น Somchai JaiDee">
+                        </div>
+                        <div class="phone-input-group">
+                            <label>บริษัท / สังกัด</label>
+                            <input type="text" id="phone-reg-company" class="phone-input" required placeholder="เช่น Siam Inno Group">
+                        </div>
+                        <div class="phone-input-group">
+                            <label>ตำแหน่งงาน</label>
+                            <input type="text" id="phone-reg-position" class="phone-input" placeholder="เช่น IT Manager">
+                        </div>
+                        <div class="phone-input-group">
+                            <label>อีเมล</label>
+                            <input type="email" id="phone-reg-email" class="phone-input" placeholder="เช่น name@company.com">
+                        </div>
+                        <div class="phone-input-group">
+                            <label>เบอร์โทรศัพท์</label>
+                            <input type="text" id="phone-reg-phone" class="phone-input" placeholder="เช่น 089-xxx-xxxx">
+                        </div>
+                        <div style="margin: 12px 0 8px 0; text-align: left; display: flex; gap: 8px; align-items: flex-start;">
+                            <input type="checkbox" id="phone-reg-consent" required style="margin-top: 3px; cursor: pointer;">
+                            <label for="phone-reg-consent" style="font-size: 0.62rem; color: var(--text-muted); line-height: 1.25; cursor: pointer; user-select: none;">
+                                ฉันยินยอมให้ระบบจัดเก็บและประมวลผลข้อมูลส่วนบุคคล เพื่อการติดต่อสื่อสารและประชาสัมพันธ์กิจกรรมสัมมนาในอนาคตตามนโยบายความเป็นส่วนตัว
+                            </label>
+                        </div>
+                        <button type="submit" class="phone-btn">ลงทะเบียนออนไลน์</button>
+                    </form>
+                `;
+            } else if (phoneUser.status === 'Ticket') {
+                const liveUser = participants.find(p => p.name.toLowerCase() === phoneUser.name.toLowerCase());
+                const statusStr = liveUser ? liveUser.status : 'Pending';
+                
+                const statusBadgeClass = statusStr === 'Checked-in' ? 'checked-in' : 'pending';
+                const statusBadgeText = statusStr === 'Checked-in' ? 'เช็คอินสำเร็จ' : 'รอดำเนินการ';
+                
+                const tktCode = liveUser ? `tkt_${liveUser.name.replace(/\s+/g, '_')}_2026` : `tkt_${phoneUser.name.replace(/\s+/g, '_')}_2026`;
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${tktCode}`;
+
+                container.innerHTML = `
+                    <div class="phone-nav-back" onclick="resetPhonePortal()">
+                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M15 19l-7-7 7-7"></path></svg>
+                        กลับหน้าลงทะเบียน
+                    </div>
+                    
+                    <div class="wallet-card">
+                        <div class="wallet-card-logo">EVENT PASS TICKET</div>
+                        
+                        <div class="wallet-qr-container">
+                            <img class="wallet-qr" src="${qrUrl}" alt="Ticket QR Code">
+                        </div>
+                        
+                        <div class="wallet-name">${escapeHtml(phoneUser.name)}</div>
+                        <div class="wallet-company">${escapeHtml(phoneUser.company)}</div>
+                        
+                        <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px;">
+                            ${escapeHtml(phoneUser.position || 'Participant')}
+                        </div>
+                        
+                        <div style="margin-top: 12px; display: flex; justify-content: center;">
+                            <span class="badge-status ${statusBadgeClass}">${statusBadgeText}</span>
+                        </div>
+                    </div>
+
+                    <button class="phone-btn" onclick="scanPhoneTicket()" style="background: linear-gradient(135deg, var(--success), #059669); margin-top: 15px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+                        จำลองสแกน QR Code นี้
+                    </button>
+                `;
+            }
+        }
+
+        function submitPhoneRegister(event) {
+            event.preventDefault();
+            const name = document.getElementById('phone-reg-name').value.trim();
+            const company = document.getElementById('phone-reg-company').value.trim();
+            const position = document.getElementById('phone-reg-position').value.trim();
+            const email = document.getElementById('phone-reg-email').value.trim();
+            const phone = document.getElementById('phone-reg-phone').value.trim();
+
+            if (!name || !company) return;
+
+            phoneUser = {
+                name,
+                company,
+                position,
+                email,
+                phone,
+                status: 'Ticket'
+            };
+
+            const performLocalAdd = () => {
+                const newId = participants.length > 0 ? Math.max(...participants.map(p => p.id)) + 1 : 1;
+                participants.push({
+                    id: newId,
+                    name,
+                    company,
+                    position,
+                    email,
+                    phone,
+                    status: 'Pending'
+                });
+                updateDashboardStats();
+                renderCMS();
+                renderPhoneScreen();
+            };
+
+            if (socket && socket.connected) {
+                fetch("http://localhost:3005/api/v1/participants", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name,
+                        company,
+                        position,
+                        email,
+                        phone,
+                        status: 'Pending'
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        renderPhoneScreen();
+                    } else {
+                        performLocalAdd();
+                    }
+                })
+                .catch(() => performLocalAdd());
+            } else {
+                performLocalAdd();
+            }
+        }
+
+        function scanPhoneTicket() {
+            const liveUser = participants.find(p => p.name.toLowerCase() === phoneUser.name.toLowerCase());
+            if (!liveUser) return;
+            
+            const tktCode = `tkt_${liveUser.name.replace(/\s+/g, '_')}_2026`;
+            
+            const performLocalCheckin = () => {
+                toggleCheckIn(liveUser.id);
+                renderPhoneScreen();
+            };
+
+            if (socket && socket.connected) {
+                fetch("http://localhost:3005/api/v1/checkin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticket_code: tktCode })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        renderPhoneScreen();
+                    } else {
+                        performLocalCheckin();
+                    }
+                })
+                .catch(() => performLocalCheckin());
+            } else {
+                performLocalCheckin();
+            }
+        }
+
+        function resetPhonePortal() {
+            phoneUser.status = 'Register';
+            renderPhoneScreen();
+        }
+
+        // Initialize default zone and database on load
+        window.addEventListener('load', () => {
+            const defaultCard = document.querySelector('.zone-card');
+            switchZone(1, defaultCard);
+
+            updateDashboardStats();
+            renderCMS();
+            
+            // Connect to local server if running
+            initWebSocket();
+
+            // Render mobile simulator initially
+            renderPhoneScreen();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "booth_register_backend",
+  "version": "1.0.0",
+  "description": "Mock Backend API & WebSocket Server for Smart Event Registration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nodemailer": "^6.9.13",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.8.3"
+  }
+}
