@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Stats, Participant, AgendaItem } from './api';
+import api, { Stats, Participant, AgendaItem, LuckyWinnerData } from './api';
+
+export type { LuckyWinnerData };
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 
@@ -23,6 +25,7 @@ interface WebSocketState {
   latestCheckin: LatestCheckinData | null;
   participants: Participant[];
   agenda: AgendaItem[] | null;
+  latestWinner: LuckyWinnerData | null;
 }
 
 export function useWebSocket() {
@@ -33,6 +36,7 @@ export function useWebSocket() {
     latestCheckin: null,
     participants: [],
     agenda: null,
+    latestWinner: null,
   });
 
   useEffect(() => {
@@ -43,6 +47,9 @@ export function useWebSocket() {
     socket.on('connect', () => {
       console.log('🔌 WebSocket connected to', SOCKET_URL);
       setState(prev => ({ ...prev, socket, connected: true }));
+      // The server only pushes stats when something changes, so load the
+      // current numbers on every (re)connect instead of showing zeros.
+      api.getStats().then(stats => setState(prev => ({ ...prev, stats })));
     });
 
     socket.on('disconnect', () => {
@@ -73,6 +80,18 @@ export function useWebSocket() {
 
     socket.on('agenda:update', (data: { event_id: number; items: AgendaItem[] }) => {
       setState(prev => ({ ...prev, agenda: data.items }));
+    });
+
+    socket.on('luckydraw:winner_announced', (data: Partial<LuckyWinnerData> & { fullname?: string; prize_name: string }) => {
+      setState(prev => ({
+        ...prev,
+        latestWinner: {
+          ...data,
+          name: data.name || data.fullname || '',
+          company: data.company || '',
+          drawn_at: data.drawn_at || new Date().toISOString(),
+        },
+      }));
     });
 
     return () => {

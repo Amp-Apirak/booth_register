@@ -93,6 +93,19 @@ export const formatEventLocation = (s: {
   return [s.event_venue, s.event_building, s.event_floor, s.event_address].filter(Boolean).join(', ');
 };
 
+// Winner as shown on the LED signage (socket event and public winners list)
+export interface LuckyWinnerData {
+  name: string;
+  company: string;
+  position?: string;
+  profile_picture?: string | null;
+  attendee_type?: string;
+  prize_name: string;
+  prize_image?: string | null;
+  prize_description?: string;
+  drawn_at?: string;
+}
+
 export interface LuckyDrawWinner {
   winner_id: number;
   fullname: string;
@@ -305,6 +318,17 @@ export const api = {
       return data.data || null;
     } catch {
       return null;
+    }
+  },
+
+  // Public: past winners (newest last), used by the LED signage
+  async getLuckyDrawWinners(): Promise<LuckyWinnerData[]> {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/winners`);
+      const data = await handleResponse(res);
+      return data.data || [];
+    } catch {
+      return [];
     }
   },
 

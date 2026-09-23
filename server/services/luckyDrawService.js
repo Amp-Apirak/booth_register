@@ -20,7 +20,8 @@ class LuckyDrawService {
 
     // 1. Build eligible pool: checked-in participants who haven't won yet
     const poolQuery = `
-      SELECT p.participant_id AS id, p.fullname AS name, p.company, p.position, p.email
+      SELECT p.participant_id AS id, p.fullname AS name, p.company, p.position, p.email,
+             p.profile_picture, p.attendee_type
       FROM participants p
       INNER JOIN checkins c ON p.participant_id = c.participant_id
       WHERE p.event_id = $1
@@ -56,16 +57,28 @@ class LuckyDrawService {
 
       await client.query('COMMIT');
 
+      // Prize artwork for the LED stage (prizes are matched by name, like awarded_count)
+      const prizeResult = await db.query(
+        `SELECT image, description FROM lucky_draw_prizes WHERE event_id = $1 AND name = $2 ORDER BY prize_id LIMIT 1`,
+        [eventId, prizeName]
+      );
+      const prize = prizeResult.rows[0] || {};
+
       console.log(`🎉 Lucky Draw Winner: ${winner.name} (ID: ${winner.id}) won "${prizeName}"`);
 
       return {
         winner_id: insertResult.rows[0].winner_id,
         participant_id: winner.id,
         name: winner.name,
+        fullname: winner.name, // the Lucky Draw page reads `fullname`
         company: winner.company,
         position: winner.position,
         email: winner.email,
+        profile_picture: winner.profile_picture || null,
+        attendee_type: winner.attendee_type || 'General',
         prize_name: prizeName,
+        prize_image: prize.image || null,
+        prize_description: prize.description || '',
         drawn_at: insertResult.rows[0].drawn_at
       };
     } catch (error) {
@@ -82,10 +95,17 @@ class LuckyDrawService {
    */
   async getWinners(eventId) {
     const queryStr = `
-      SELECT w.winner_id, w.participant_id, p.fullname AS name, p.company,
-             w.prize_name, w.drawn_at
+      SELECT w.winner_id, w.participant_id, p.fullname AS name, p.company, p.position,
+             p.profile_picture, p.attendee_type,
+             w.prize_name, w.drawn_at,
+             pr.image AS prize_image, pr.description AS prize_description
       FROM lucky_draw_winners w
       JOIN participants p ON w.participant_id = p.participant_id
+      LEFT JOIN LATERAL (
+        SELECT image, description FROM lucky_draw_prizes
+        WHERE event_id = w.event_id AND name = w.prize_name
+        ORDER BY prize_id LIMIT 1
+      ) pr ON TRUE
       WHERE w.event_id = $1
       ORDER BY w.drawn_at ASC;
     `;

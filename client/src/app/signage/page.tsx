@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, Suspense, type CSSProperties } from 'react';
 import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useWebSocket from '@/lib/useWebSocket';
-import api, { AgendaItem } from '@/lib/api';
+import api, { AgendaItem, LuckyWinnerData } from '@/lib/api';
+import LuckyWinnerReveal from '@/components/LuckyWinnerReveal';
 import { getAgendaForDate, getAgendaStatus } from '@/lib/agenda';
 import { useSettings } from '@/contexts/SettingsContext';
 import confetti from 'canvas-confetti';
@@ -24,17 +26,36 @@ import {
 } from 'lucide-react';
 
 type ScreenType = 'welcome' | 'overview' | 'agenda' | 'lucky';
+const SCREENS: ScreenType[] = ['welcome', 'overview', 'agenda', 'lucky'];
 
+// The selected screen lives in the URL (/signage?screen=overview) so each
+// physical display can be pointed at its own link and never switches by itself.
 export default function SignagePage() {
-  const [screen, setScreen] = useState<ScreenType>('welcome');
+  return (
+    <Suspense>
+      <SignageDisplay />
+    </Suspense>
+  );
+}
+
+function SignageDisplay() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get('screen') as ScreenType | null;
+  const screen: ScreenType = requested && SCREENS.includes(requested) ? requested : 'welcome';
+  const setScreen = (next: ScreenType) => router.replace(`/signage?screen=${next}`, { scroll: false });
+  const screenRef = useRef(screen);
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
+
   const { settings } = useSettings();
-  const { stats, latestCheckin, connected, agenda: liveAgenda } = useWebSocket();
+  const { stats, latestCheckin, connected, agenda: liveAgenda, latestWinner } = useWebSocket();
   const [fetchedAgenda, setFetchedAgenda] = useState<AgendaItem[]>([]);
   const [now, setNow] = useState(() => new Date());
-  const [welcomeQueue, setWelcomeQueue] = useState<{ fullname: string; company: string; position?: string; profile_picture?: string; attendee_type?: string }[]>([
-    { fullname: "Dr. Yanisa Prasert", company: "Zoom Information System", position: "Keynote Speaker", attendee_type: "VIP" },
-    { fullname: "Kitipong Tan", company: "EdTech Startup Group", position: "Founder & CEO" }
-  ]);
+  const [welcomeQueue, setWelcomeQueue] = useState<{ fullname: string; company: string; position?: string; profile_picture?: string; attendee_type?: string }[]>([]);
+  const [lastKnownWinner, setLastKnownWinner] = useState<LuckyWinnerData | null>(null);
+  const shownWinner = latestWinner ?? lastKnownWinner;
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,6 +77,11 @@ export default function SignagePage() {
 
   useEffect(() => {
     api.getAgenda().then(setFetchedAgenda);
+    // Show the most recent winner (if any) until a new draw happens
+    api.getLuckyDrawWinners().then(winners => {
+      const last = winners[winners.length - 1];
+      if (last) setLastKnownWinner(last);
+    });
     const timer = window.setInterval(() => setNow(new Date()), 15_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -86,8 +112,9 @@ export default function SignagePage() {
         ];
       });
       setCurrentIdx(0); // Force UI to show the newest person immediately
-      setScreen('welcome');
-      
+
+      // Celebrate only on the Welcome screen — other displays keep their view untouched
+      if (screenRef.current !== 'welcome') return;
       // Fire confetti! Use the canvas-bound instance so it shows in fullscreen.
       const fire = confettiFireRef.current ?? confetti;
       const isVip = latestCheckin.attendee_type === 'VIP';
@@ -122,6 +149,17 @@ export default function SignagePage() {
       }
     }
   }, [latestCheckin]);
+
+  // Celebrate each new lucky draw result (only on the Lucky screen)
+  useEffect(() => {
+    if (!latestWinner || screenRef.current !== 'lucky') return;
+    const fire = confettiFireRef.current ?? confetti;
+    fire({ particleCount: 180, spread: 110, origin: { y: 0.55 }, colors: ['#F59E0B', '#FCD34D', '#A855F7', '#22D3EE'], zIndex: 100 });
+    const timer = setTimeout(() => {
+      fire({ particleCount: 120, spread: 140, origin: { y: 0.55 }, colors: ['#F59E0B', '#FCD34D', '#FFFBEB'], zIndex: 100 });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [latestWinner]);
 
   const activePerson = welcomeQueue[currentIdx] || welcomeQueue[0];
   const agenda = liveAgenda ?? fetchedAgenda;
@@ -252,7 +290,7 @@ export default function SignagePage() {
 
           <div className={`inline-flex items-center gap-2 rounded-full bg-white/[0.05] border border-white/10 font-mono tracking-widest text-cyan-300 uppercase shadow-inner ${isFullscreen ? 'px-6 py-2 text-base mb-10' : 'px-4 py-1.5 text-xs mb-8'}`}>
             <Zap className={`text-cyan-400 ${isFullscreen ? 'w-5 h-5' : 'w-3.5 h-3.5'}`} />
-            <span>Tech Innovation Summit 2026</span>
+            <span>{settings.event_name || 'Smart Event Registration'}</span>
           </div>
 
           <div className={`space-y-4 mx-auto ${isFullscreen ? 'max-w-6xl' : 'max-w-4xl'}`}>
@@ -377,7 +415,7 @@ export default function SignagePage() {
                     <div className="text-lg lg:text-xl font-bold text-white">Show-up Progress</div>
                     <div className="text-sm text-slate-400 mt-0.5">อัตราผู้เข้าร่วมงานจริง ณ เวลาปัจจุบัน</div>
                   </div>
-                  <div className="flex items-center gap-2 text-emerald-300 text-xs font-mono"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />SYNCED</div>
+                  <div className={`flex items-center gap-2 text-xs font-mono ${connected ? 'text-emerald-300' : 'text-rose-300'}`}><span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />{connected ? 'SYNCED' : 'OFFLINE'}</div>
                 </div>
                 <div className="relative h-6 rounded-full bg-white/[0.05] border border-white/10 overflow-hidden p-1 shadow-inner">
                   <div className="overview-progress-shine relative h-full rounded-full holo-gradient transition-[width] duration-1000 ease-out shadow-[0_0_24px_rgba(34,211,238,.45)] overflow-hidden" style={{ width: `${showUpRate}%` }}>
@@ -486,7 +524,7 @@ export default function SignagePage() {
 
       {/* ── Screen 4: Lucky Standby ── */}
       {screen === 'lucky' && (
-        <div className={`lucky-stage flex-1 relative flex flex-col items-center justify-center text-center overflow-hidden glass-panel-glow rounded-3xl border border-purple-400/30 shadow-[0_25px_90px_rgba(88,28,135,.28)] animate-fade-in my-auto ${isFullscreen ? 'p-16' : 'p-10 sm:p-12'}`}>
+        <div className={`lucky-stage flex-1 relative flex flex-col items-center justify-center text-center overflow-hidden glass-panel-glow rounded-3xl border border-purple-400/30 shadow-[0_25px_90px_rgba(88,28,135,.28)] animate-fade-in my-auto ${shownWinner ? (isFullscreen ? 'p-10' : 'p-6 sm:p-8') : (isFullscreen ? 'p-16' : 'p-10 sm:p-12')}`}>
           <div className="absolute inset-0 opacity-[0.12] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, rgba(216,180,254,.7) 1px, transparent 1.5px)', backgroundSize: '44px 44px', maskImage: 'radial-gradient(circle at center, black, transparent 72%)' }} />
           <div className="absolute -top-48 left-[8%] w-[34rem] h-[34rem] rounded-full bg-purple-600/20 blur-[120px] animate-pulse pointer-events-none" />
           <div className="absolute -bottom-52 right-[5%] w-[38rem] h-[38rem] rounded-full bg-cyan-500/14 blur-[130px] animate-float pointer-events-none" />
@@ -494,12 +532,16 @@ export default function SignagePage() {
             ['13%', '22%', '5px', '7s', '-2s'], ['26%', '74%', '4px', '9s', '-5s'], ['72%', '18%', '6px', '8s', '-3s'], ['87%', '68%', '4px', '6s', '-1s'], ['63%', '82%', '5px', '10s', '-7s'],
           ].map(([left, top, size, speed, delay], index) => <span key={index} className="overview-particle absolute rounded-full bg-amber-200 shadow-[0_0_16px_rgba(251,191,36,.8)] pointer-events-none" style={{ left, top, width: size, height: size, '--particle-speed': speed, '--particle-delay': delay } as CSSProperties} />)}
 
+          {shownWinner ? (
+            <LuckyWinnerReveal key={`${shownWinner.name}-${shownWinner.prize_name}-${shownWinner.drawn_at ?? ''}`} winner={shownWinner} isFullscreen={isFullscreen} />
+          ) : (
           <div className="relative z-10 flex flex-col items-center">
             <div className={`lucky-ready inline-flex items-center gap-2 rounded-full bg-amber-400/10 border border-amber-300/25 text-amber-200 font-mono font-bold uppercase ${isFullscreen ? 'px-6 py-2.5 text-base mb-9' : 'px-4 py-2 text-xs mb-7'}`}>
               <Sparkles className="w-4 h-4" /> Get Ready · Grand Prize
             </div>
 
-            <div className={`relative flex items-center justify-center ${isFullscreen ? 'w-[26rem] h-[26rem] mb-5' : 'w-64 h-64 sm:w-72 sm:h-72 mb-5'}`}>
+            {/* Trophy size is capped by viewport height so it fits on any display */}
+            <div className={`relative flex items-center justify-center ${isFullscreen ? 'w-[min(26rem,38vh)] h-[min(26rem,38vh)] mb-5' : 'w-[min(18rem,30vh)] h-[min(18rem,30vh)] mb-5'}`}>
               <div className="lucky-ring absolute inset-0 rounded-full border border-dashed border-purple-300/35" />
               <div className="lucky-ring-reverse absolute inset-[8%] rounded-full border-2 border-dotted border-cyan-300/30" />
               <div className="absolute inset-[15%] rounded-full bg-gradient-to-br from-purple-500/30 via-fuchsia-500/15 to-amber-400/15 border border-white/10 shadow-[0_0_75px_rgba(168,85,247,.42)]" />
@@ -527,6 +569,7 @@ export default function SignagePage() {
               กดปุ่มสุ่มรางวัล (SPIN) จากแผงควบคุมระบบ เพื่อเริ่มการหมุนวงล้อ
             </div>
           </div>
+          )}
         </div>
       )}
     </div>
