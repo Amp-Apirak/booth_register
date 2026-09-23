@@ -73,6 +73,15 @@ booth_register/
 
 หน้าสไลด์นำเสนอหลัก `presentation.html` ถูกออกแบบมาให้เชื่อมต่อกับเซิร์ฟเวอร์หลังบ้านแบบเรียลไทม์โดยตรง หากเปิดระบบจำลองไว้ จะสามารถซิงค์การเช็คอินและการสั่งสุ่ม Lucky Draw ข้ามหน้าต่างเบราว์เซอร์ได้ทันที:
 
+### 0. ตั้งค่าไฟล์ Environment (ทำครั้งแรกครั้งเดียว)
+คัดลอกไฟล์ตัวอย่าง แล้วแก้ค่า `DB_PASSWORD` (ให้ตรงกันทั้ง 2 ไฟล์) และ `JWT_SECRET`:
+```bash
+cp .env.example .env                  # รหัสผ่าน DB สำหรับ Docker Compose
+cp server/.env.example server/.env    # ค่าตั้งค่าเซิร์ฟเวอร์ (DB, JWT, SMTP)
+openssl rand -hex 32                  # สร้างค่า JWT_SECRET แบบสุ่ม
+```
+*ไฟล์ `.env` ถูก ignore ไม่ขึ้น Git — หากไม่ได้ตั้ง `DB_USER`, `DB_PASSWORD` หรือ `JWT_SECRET` เซิร์ฟเวอร์จะไม่ยอมเปิดและแจ้งว่าขาดค่าใด*
+
 ### 1. การเปิดระบบฐานข้อมูลทดสอบ (Start PostgreSQL & Redis with Docker)
 เปิดใช้งานตู้คอนเทนเนอร์ PostgreSQL และ Redis ด้วย Docker Compose:
 ```bash

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, Dev]
+  pull_request:
+    branches: [main, Dev]
+
+jobs:
+  server:
+    name: Server tests (Jest + PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: booth_register_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: ci_user
+      DB_PASSWORD: ci_password
+      DB_NAME: booth_register_db
+      JWT_SECRET: ci_only_jwt_secret
+      PGPASSWORD: ci_password
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Load database schema and seed
+        run: |
+          psql -h localhost -U ci_user -d booth_register_db -v ON_ERROR_STOP=1 -f ../database/schema.sql
+          psql -h localhost -U ci_user -d booth_register_db -v ON_ERROR_STOP=1 -f ../database/seed.sql
+      - run: npm ci
+      - run: npx jest --forceExit
+
+  client:
+    name: Client typecheck + unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: node --test tests/agenda.test.mjs
