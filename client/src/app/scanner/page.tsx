@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import jsQR from 'jsqr';
 import api, { Participant } from '@/lib/api';
 import useWebSocket from '@/lib/useWebSocket';
 import {
@@ -12,8 +13,15 @@ import {
   UserCheck,
   Clock,
   Volume2,
-  VolumeX
+  VolumeX,
+  Camera,
+  CameraOff
 } from 'lucide-react';
+
+// Ignore repeat reads of the same QR while it is still in front of the camera
+const SAME_CODE_COOLDOWN_MS = 3000;
+// Decode a few times per second — plenty for a gate, and keeps CPU low
+const SCAN_INTERVAL_MS = 150;
 
 export default function ScannerPage() {
   const [ticketCode, setTicketCode] = useState('');
@@ -24,6 +32,17 @@ export default function ScannerPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const { stats, connected } = useWebSocket();
+
+  // Camera QR scanning
+  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [cameraId, setCameraId] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const busyRef = useRef(false);
+  const lastScanRef = useRef({ code: '', at: 0 });
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -67,11 +86,12 @@ export default function ScannerPage() {
     }
   };
 
-  const handleCheckin = async (e?: React.FormEvent, codeToUse?: string) => {
+  const handleCheckin = async (e?: React.FormEvent | null, codeToUse?: string) => {
     if (e) e.preventDefault();
     const code = codeToUse || ticketCode;
     if (!code.trim()) return;
 
+    busyRef.current = true;
     setLoading(true);
     setError('');
     setSuccess(false);
@@ -91,10 +111,104 @@ export default function ScannerPage() {
       setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเกตเวย์เซิร์ฟเวอร์');
       playBeep(true);
     } finally {
+      busyRef.current = false;
       setLoading(false);
       inputRef.current?.focus();
     }
   };
+
+  // The scan loop runs outside React renders, so it calls the latest handler via a ref
+  const checkinRef = useRef(handleCheckin);
+  useEffect(() => {
+    checkinRef.current = handleCheckin;
+  });
+
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraOn(false);
+  }, []);
+
+  const startCamera = useCallback(async (deviceId?: string) => {
+    setCameraError('');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง (ต้องเปิดผ่าน localhost หรือ https)');
+      return;
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId
+          ? { deviceId: { exact: deviceId } }
+          : { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraOn(true);
+      setCameraId(stream.getVideoTracks()[0]?.getSettings().deviceId || deviceId || '');
+      // Device labels are only available after permission is granted
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      setCameras(devices.filter((d) => d.kind === 'videoinput'));
+    } catch (err) {
+      const name = (err as DOMException)?.name;
+      setCameraError(
+        name === 'NotAllowedError'
+          ? 'ไม่ได้รับอนุญาตให้ใช้กล้อง — กดไอคอนกล้องที่แถบ URL แล้วเลือก "อนุญาต"'
+          : name === 'NotFoundError'
+            ? 'ไม่พบกล้องบนเครื่องนี้'
+            : name === 'NotReadableError'
+              ? 'กล้องถูกใช้งานโดยโปรแกรมอื่นอยู่ (เช่น Zoom / Teams)'
+              : 'ไม่สามารถเปิดกล้องได้'
+      );
+      setCameraOn(false);
+    }
+  }, []);
+
+  // Decode QR codes from the live video
+  useEffect(() => {
+    if (!cameraOn) return;
+    let rafId = 0;
+    let lastTick = 0;
+
+    const tick = (now: number) => {
+      rafId = requestAnimationFrame(tick);
+      const video = videoRef.current;
+      if (!video || video.readyState < video.HAVE_ENOUGH_DATA) return;
+      if (now - lastTick < SCAN_INTERVAL_MS || busyRef.current) return;
+      lastTick = now;
+
+      // Downscale large frames before decoding
+      const scale = Math.min(1, 640 / video.videoWidth);
+      const w = Math.round(video.videoWidth * scale);
+      const h = Math.round(video.videoHeight * scale);
+      const canvas = (canvasRef.current ??= document.createElement('canvas'));
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, w, h);
+      const result = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'dontInvert' });
+      const code = result?.data.trim();
+      if (!code) return;
+
+      const last = lastScanRef.current;
+      if (code === last.code && now - last.at < SAME_CODE_COOLDOWN_MS) return;
+      lastScanRef.current = { code, at: now };
+      setTicketCode(code);
+      checkinRef.current(null, code);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [cameraOn]);
+
+  // Release the camera when leaving the page
+  useEffect(() => stopCamera, [stopCamera]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
@@ -188,7 +302,15 @@ export default function ScannerPage() {
         <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* HUD Scanner Box Visual */}
-        <div className="relative w-full max-w-[300px] sm:max-w-sm mx-auto aspect-square rounded-2xl bg-gradient-to-br from-[#0b1120] via-[#090d16] to-[#0b1a1f] border border-cyan-500/20 mb-6 flex items-center justify-center overflow-hidden shadow-[inset_0_0_40px_rgba(6,182,212,0.08)]">
+        <div className="relative w-full max-w-[300px] sm:max-w-sm mx-auto aspect-square rounded-2xl bg-gradient-to-br from-[#0b1120] via-[#090d16] to-[#0b1a1f] border border-cyan-500/20 mb-4 flex items-center justify-center overflow-hidden shadow-[inset_0_0_40px_rgba(6,182,212,0.08)]">
+          {/* Live Camera Feed */}
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            className={`absolute inset-0 w-full h-full object-cover ${cameraOn ? '' : 'hidden'}`}
+          />
+
           {/* Grid Overlay */}
           <div
             className="absolute inset-0 opacity-[0.12] pointer-events-none"
@@ -209,7 +331,8 @@ export default function ScannerPage() {
           <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br-lg shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
 
           {/* Center Target Icon */}
-          <div className="relative text-center space-y-2">
+          {!cameraOn && (
+          <div className="relative text-center space-y-2 px-4">
             <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
               <span className="absolute inset-0 rounded-full border border-cyan-400/30 animate-ping" />
               <ScanLine className="w-9 h-9 text-cyan-400 relative" />
@@ -217,7 +340,38 @@ export default function ScannerPage() {
             <p className="text-[11px] font-mono tracking-widest text-slate-400 uppercase">
               OPTICAL BARCODE / QR SENSOR READY
             </p>
+            {cameraError && <p className="text-xs text-rose-300">{cameraError}</p>}
           </div>
+          )}
+        </div>
+
+        {/* Camera Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+          <button
+            type="button"
+            onClick={() => (cameraOn ? stopCamera() : startCamera(cameraId || undefined))}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+              cameraOn
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-300 hover:bg-rose-500/20'
+                : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20'
+            }`}
+          >
+            {cameraOn ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+            <span>{cameraOn ? 'ปิดกล้อง' : 'เปิดกล้องสแกน QR'}</span>
+          </button>
+          {cameraOn && cameras.length > 1 && (
+            <select
+              value={cameraId}
+              onChange={(e) => startCamera(e.target.value)}
+              className="px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/15 text-sm text-slate-200 max-w-[260px]"
+            >
+              {cameras.map((c, i) => (
+                <option key={c.deviceId} value={c.deviceId} className="bg-slate-900">
+                  {c.label || `กล้อง ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Input Barcode Scanner */}
