@@ -219,16 +219,7 @@ class ParticipantController {
    */
   async getStats(req, res) {
     try {
-      const summary = await getStatsSummary();
-      return res.json({
-        success: true,
-        data: {
-          registered: summary.registered_count,
-          checked_in: summary.checkin_count,
-          pending: summary.registered_count - summary.checkin_count,
-          show_up_percent: summary.show_up_rate
-        }
-      });
+      return res.json({ success: true, data: await getStatsSummary() });
     } catch (err) {
       return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: err.message });
     }
@@ -288,17 +279,18 @@ class ParticipantController {
 }
 
 /**
- * Utility helper to gather registration statistics for WebSockets broadcast
+ * Event stats — the single shape shared by GET /events/:id/stats and the
+ * `overview:update` socket event (client type: Stats in client/src/lib/api.ts).
  */
 async function getStatsSummary() {
   const all = await participantRepository.getAll();
   const total = all.length;
   const checkedIn = all.filter(p => p.status === 'Checked-in').length;
-  const showUpRate = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
   return {
-    registered_count: total,
-    checkin_count: checkedIn,
-    show_up_rate: showUpRate
+    registered: total,
+    checked_in: checkedIn,
+    pending: total - checkedIn,
+    show_up_percent: total > 0 ? Math.round((checkedIn / total) * 100) : 0
   };
 }
 
