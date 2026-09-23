@@ -11,10 +11,25 @@ import api, { AgendaItem } from '@/lib/api';
 
 type SpreadsheetRow = Record<string, string | number | boolean | Date | null | undefined>;
 
-const emptyItem = (): AgendaItem => ({
+// isNew marks cards added on this page and not saved yet (shown on top, never sent to the API)
+type EditableAgendaItem = AgendaItem & { isNew?: boolean };
+
+const emptyItem = (): EditableAgendaItem => ({
   title: '', description: '', speaker: '', location: '', start_at: '', end_at: '',
-  speaker_image: '', is_highlight: false,
+  speaker_image: '', is_highlight: false, isNew: true,
 });
+
+// Display order: unsaved new cards first (latest added on top), then saved items in their order
+const displayOrder = (items: EditableAgendaItem[]) => items
+  .map((item, index) => ({ item, index }))
+  .sort((a, b) => Number(!!b.item.isNew) - Number(!!a.item.isNew) || (a.item.isNew ? b.index - a.index : a.index - b.index));
+
+const formatCardTime = (start: string, end: string) => {
+  if (!start) return 'ยังไม่ได้ระบุเวลา';
+  const [date, time] = start.split('T');
+  const [y, m, d] = date.split('-');
+  return `${d}/${m}/${y} · ${time}${end ? `–${end.slice(11, 16)}` : ''}`;
+};
 
 const toLocalInput = (value: string | Date): string => {
   const date = value instanceof Date ? value : new Date(value);
@@ -66,6 +81,22 @@ const combineExcelDateTime = (dayValue: unknown, timeValue: unknown): string => 
   return day && time ? `${day}T${time}` : '';
 };
 
+// Export writes this instead of the (huge) uploaded image data; import maps it back to the stored photo
+const PHOTO_IN_SYSTEM = 'จัดเก็บรูปในระบบแล้ว';
+
+const TEMPLATE_GUIDE = [
+  ['คอลัมน์', 'จำเป็น', 'รูปแบบ', 'ตัวอย่าง'],
+  ['วันที่', 'ใช่', 'วัน/เดือน/ปี ค.ศ. หรือ พ.ศ.', '21/09/2026'],
+  ['เวลาเริ่ม', 'ใช่', 'ชั่วโมง:นาที (24 ชม.)', '09:00'],
+  ['เวลาสิ้นสุด', 'ใช่', 'ชั่วโมง:นาที ต้องหลังเวลาเริ่ม', '10:30'],
+  ['หัวข้อ', 'ใช่', 'ข้อความ', 'พิธีเปิดงาน'],
+  ['รายละเอียดย่อ', '', 'ข้อความสั้น ๆ แสดงบนจอ LED', 'กล่าวต้อนรับโดยประธานจัดงาน'],
+  ['วิทยากร', '', 'ข้อความ', 'ดร.สมชาย ใจดี'],
+  ['สถานที่', '', 'ข้อความ', 'Main Stage (Hall 5)'],
+  ['ไฮไลต์', '', 'ใช่ / ไม่', 'ใช่'],
+  ['รูปวิทยากร', '', 'ลิงก์รูป (https://...) หรือเว้นว่างแล้วอัปโหลดในหน้าเว็บ', ''],
+];
+
 const parseBoolean = (value: unknown) => ['true', '1', 'yes', 'y', 'ใช่'].includes(String(value).trim().toLowerCase());
 
 const alertTheme = {
@@ -77,7 +108,7 @@ const alertTheme = {
 type ValidationError = { index: number; field: keyof AgendaItem; title: string; detail: string; example: string };
 
 export default function AgendaManager() {
-  const [items, setItems] = useState<AgendaItem[]>([]);
+  const [items, setItems] = useState<EditableAgendaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState('');
@@ -133,14 +164,14 @@ export default function AgendaManager() {
       setFilterDate('');
       setTimeFrom('');
       setTimeTo('');
-      setPage(Math.floor(error.index / pageSize) + 1);
+      setPage(Math.floor(displayOrder(items).findIndex(entry => entry.index === error.index) / pageSize) + 1);
       await Swal.fire({ ...alertTheme, icon: 'error', title: error.title, html: `<p>${error.detail}</p><p style="margin-top:10px;color:#67e8f9">${error.example}</p>`, confirmButtonText: 'กลับไปแก้ไข' });
       window.setTimeout(() => document.getElementById(`agenda-${error.index}-${error.field}`)?.focus(), 100);
       return;
     }
     setSaving(true);
     try {
-      const payload = items.map(item => ({ ...item, start_at: new Date(item.start_at).toISOString(), end_at: new Date(item.end_at).toISOString() }));
+      const payload = items.map(item => ({ ...item, isNew: undefined, start_at: new Date(item.start_at).toISOString(), end_at: new Date(item.end_at).toISOString() }));
       const saved = await api.replaceAgenda(payload);
       setItems(saved.map(item => ({ ...item, start_at: toLocalInput(item.start_at), end_at: toLocalInput(item.end_at) })));
       await Swal.fire({ ...alertTheme, icon: 'success', title: 'บันทึกสำเร็จ', text: `บันทึกกำหนดการ ${saved.length} รายการและอัปเดตจอ LED แล้ว`, confirmButtonText: 'ตกลง' });
@@ -150,6 +181,24 @@ export default function AgendaManager() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const downloadTemplate = () => {
+    const now = new Date();
+    const day = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+    const header = ['วันที่', 'เวลาเริ่ม', 'เวลาสิ้นสุด', 'หัวข้อ', 'รายละเอียดย่อ', 'วิทยากร', 'สถานที่', 'ไฮไลต์', 'รูปวิทยากร'];
+    const sheet = XLSX.utils.aoa_to_sheet([
+      header,
+      [day, '09:00', '10:00', 'พิธีเปิดงาน', 'กล่าวต้อนรับโดยประธานจัดงาน', 'ดร.สมชาย ใจดี', 'Main Stage (Hall 5)', 'ใช่', ''],
+      [day, '10:15', '11:30', 'เสวนา: อนาคตของ AI บนมือถือ', 'ผู้เชี่ยวชาญ 3 ท่านร่วมพูดคุย', 'คุณสมหญิง รักงาน', 'Conference Room A', 'ไม่', ''],
+    ]);
+    sheet['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 48 }, { wch: 28 }, { wch: 24 }, { wch: 10 }, { wch: 36 }];
+    const guide = XLSX.utils.aoa_to_sheet(TEMPLATE_GUIDE);
+    guide['!cols'] = [{ wch: 16 }, { wch: 8 }, { wch: 52 }, { wch: 28 }];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Agenda');
+    XLSX.utils.book_append_sheet(workbook, guide, 'คำอธิบาย');
+    XLSX.writeFile(workbook, 'agenda-import-template.xlsx');
   };
 
   const exportExcel = () => {
@@ -163,7 +212,7 @@ export default function AgendaManager() {
       วิทยากร: item.speaker,
       สถานที่: item.location,
       ไฮไลต์: item.is_highlight ? 'ใช่' : 'ไม่',
-      รูปวิทยากร: item.speaker_image?.startsWith('data:') ? 'จัดเก็บรูปในระบบแล้ว' : (item.speaker_image || ''),
+      รูปวิทยากร: item.speaker_image?.startsWith('data:') ? PHOTO_IN_SYSTEM : (item.speaker_image || ''),
     }));
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{
       ลำดับ: 1, วันที่: '', เวลาเริ่ม: '', เวลาสิ้นสุด: '', หัวข้อ: '', รายละเอียดย่อ: '', วิทยากร: '', สถานที่: '', ไฮไลต์: 'ไม่', รูปวิทยากร: '',
@@ -180,6 +229,8 @@ export default function AgendaManager() {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<SpreadsheetRow>(sheet, { defval: '' });
+      // Re-importing an exported file: restore uploaded photos by matching title + start time
+      const storedPhotos = new Map(items.filter(item => item.speaker_image).map(item => [`${item.title.trim()}|${item.start_at}`, item.speaker_image]));
       const imported = rows.map((row, index) => {
         const day = pick(row, ['วันที่', 'date', 'Date']);
         const startValue = pick(row, ['เวลาเริ่ม', 'start_at', 'Start', 'Start Time']);
@@ -196,11 +247,14 @@ export default function AgendaManager() {
         end_at: endAt,
         is_highlight: parseBoolean(pick(row, ['ไฮไลต์', 'is_highlight', 'Highlight'])),
         speaker_image: String(pick(row, ['รูปวิทยากร', 'speaker_image', 'Speaker Image'])).trim(),
-      }}).filter(item => item.title || item.start_at || item.end_at);
+      }}).map(item => item.speaker_image === PHOTO_IN_SYSTEM
+        ? { ...item, speaker_image: storedPhotos.get(`${item.title}|${item.start_at}`) || '' }
+        : item
+      ).filter(item => item.title || item.start_at || item.end_at);
       if (!imported.length) throw new Error('EMPTY_WORKBOOK');
       setItems(imported);
       setPage(1);
-      await Swal.fire({ ...alertTheme, icon: 'success', title: 'นำเข้า Excel สำเร็จ', text: `นำเข้า ${imported.length} รายการแล้ว กรุณาตรวจสอบและกดบันทึก`, confirmButtonText: 'ตรวจสอบข้อมูล' });
+      await Swal.fire({ ...alertTheme, icon: 'success', title: 'นำเข้า Excel สำเร็จ', text: `นำเข้า ${imported.length} รายการ (แทนที่รายการเดิมบนหน้านี้) — ตรวจสอบแล้วกด "บันทึก" เพื่อใช้งานจริง หากไม่ต้องการให้รีเฟรชหน้าเพื่อยกเลิก`, confirmButtonText: 'ตรวจสอบข้อมูล' });
     } catch (error) {
       const reason = error instanceof Error && error.message !== 'EMPTY_WORKBOOK' ? error.message : 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบไฟล์ไม่ถูกต้อง';
       await Swal.fire({ ...alertTheme, icon: 'error', title: 'นำเข้า Excel ไม่สำเร็จ', text: `${reason}\nตัวอย่าง: วันที่ 21/09/2026, เวลาเริ่ม 15:30, เวลาสิ้นสุด 16:30, หัวข้อ บรรยายเปิดงาน`, confirmButtonText: 'กลับไปตรวจไฟล์' });
@@ -209,7 +263,7 @@ export default function AgendaManager() {
     }
   };
 
-  const filteredItems = useMemo(() => items.map((item, index) => ({ item, index })).filter(({ item }) => {
+  const filteredItems = useMemo(() => displayOrder(items).filter(({ item }) => {
     const normalizedQuery = query.trim().toLocaleLowerCase('th');
     const normalizedSpeaker = speakerQuery.trim().toLocaleLowerCase('th');
     const startDate = item.start_at.slice(0, 10);
@@ -229,8 +283,14 @@ export default function AgendaManager() {
   };
   const addItem = () => {
     resetFilters();
-    setPage(Math.floor(items.length / pageSize) + 1);
+    setPage(1);
+    const newIndex = items.length;
     setItems(current => [...current, emptyItem()]);
+    window.setTimeout(() => {
+      const input = document.getElementById(`agenda-${newIndex}-title`);
+      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input?.focus({ preventScroll: true });
+    }, 50);
   };
 
   if (loading) return <div className="glass-panel rounded-3xl p-12 text-center text-slate-400"><Loader2 className="w-7 h-7 animate-spin mx-auto mb-3" />กำลังโหลดกำหนดการ...</div>;
@@ -246,11 +306,14 @@ export default function AgendaManager() {
           <div className="flex flex-wrap gap-2">
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={event => importExcel(event.target.files?.[0])} className="hidden" />
             <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 font-semibold text-sm"><Upload className="w-4 h-4" />นำเข้า Excel</button>
+            <button type="button" onClick={downloadTemplate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 font-semibold text-sm"><FileSpreadsheet className="w-4 h-4 text-emerald-400" />ไฟล์ตัวอย่าง</button>
             <button type="button" onClick={exportExcel} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 font-semibold text-sm"><Download className="w-4 h-4" />ส่งออก Excel</button>
             <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 font-semibold text-sm"><CalendarPlus className="w-4 h-4" />เพิ่มกำหนดการ</button>
           </div>
         </div>
-        <p className="text-xs text-slate-500 mt-4">คอลัมน์ Excel: วันที่, เวลาเริ่ม, เวลาสิ้นสุด, หัวข้อ, รายละเอียดย่อ, วิทยากร, สถานที่, ไฮไลต์, รูปวิทยากร (URL หรือ Data URL)</p>
+        <p className="text-xs text-slate-500 mt-4">
+          ดาวน์โหลด <b className="text-slate-300">ไฟล์ตัวอย่าง</b> (มีชีต &quot;คำอธิบาย&quot; บอกวิธีกรอก) หรือใช้ไฟล์จาก <b className="text-slate-300">ส่งออก Excel</b> มาแก้แล้วนำเข้ากลับได้ · คอลัมน์ที่ต้องมี: วันที่, เวลาเริ่ม, เวลาสิ้นสุด, หัวข้อ · การนำเข้าจะแทนที่รายการทั้งหมด (ยังไม่บันทึกจนกว่าจะกด &quot;บันทึก&quot;)
+        </p>
       </div>
 
       <div className="glass-panel rounded-3xl p-5 border border-white/10 space-y-4">
@@ -291,8 +354,14 @@ export default function AgendaManager() {
           <button type="button" onClick={resetFilters} className="mt-3 text-sm text-cyan-300 hover:text-cyan-200">ล้างตัวกรองทั้งหมด</button>
         </div>
       ) : visibleItems.map(({ item, index }) => (
-        <div key={item.id ?? index} className="glass-panel rounded-3xl p-5 sm:p-6 border border-white/10 relative overflow-hidden">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-cyan-400" />
+        <div key={item.id ?? `new-${index}`} className={`glass-panel rounded-3xl p-5 sm:p-6 border relative overflow-hidden ${item.isNew ? 'border-emerald-400/50 shadow-[0_0_30px_rgba(52,211,153,.12)]' : 'border-white/10'}`}>
+          <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${item.isNew ? 'from-emerald-400 to-cyan-400' : 'from-indigo-500 to-cyan-400'}`} />
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className={`inline-flex items-center justify-center min-w-9 h-9 px-2 rounded-xl text-sm font-extrabold ${item.isNew ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40' : 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/30'}`}>{index + 1}</span>
+            <span className="text-sm font-bold text-white">ลำดับที่ {index + 1}</span>
+            {item.isNew && <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">ใหม่ · ยังไม่บันทึก</span>}
+            <span className="ml-auto text-xs font-mono text-cyan-300/80">{formatCardTime(item.start_at, item.end_at)}</span>
+          </div>
           <div className="flex items-start gap-4">
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
               {item.speaker_image ? (

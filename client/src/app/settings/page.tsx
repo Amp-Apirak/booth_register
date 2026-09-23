@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Save, Image as ImageIcon, Settings, LayoutTemplate, RefreshCcw, Check, X as XIcon, MapPin, Map, Building2, Layers, CalendarClock, CalendarRange, Gift, PanelsTopLeft } from 'lucide-react';
 import api from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -45,8 +45,24 @@ const formatDT = (v: string): string => {
   return d.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
 };
 
+type SettingsTab = 'general' | 'registration' | 'agenda' | 'prizes';
+const SETTINGS_TABS: SettingsTab[] = ['general', 'registration', 'agenda', 'prizes'];
+
+// The active tab lives in the URL (/settings?tab=agenda) so it survives a refresh
 export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab') as SettingsTab | null;
+  const activeTab: SettingsTab = requestedTab && SETTINGS_TABS.includes(requestedTab) ? requestedTab : 'general';
+  const setActiveTab = (tab: SettingsTab) => router.replace(`/settings?tab=${tab}`, { scroll: false });
   const { settings, updateSettingsContext } = useSettings();
   const [eventName, setEventName] = useState('');
   const [eventLogo, setEventLogo] = useState('');
@@ -58,7 +74,6 @@ export default function SettingsPage() {
   const [eventEnd, setEventEnd] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [activeTab, setActiveTab] = useState<'general' | 'registration' | 'agenda' | 'prizes'>('general');
 
   // Cropper state
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
