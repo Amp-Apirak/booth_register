@@ -21,7 +21,7 @@
 *   **เป้าหมายหลัก**: ผู้เข้าร่วมงานสามารถแสกนลงทะเบียนเข้าฐานข้อมูลหลัก และได้รับสติกเกอร์ QR Code ส่งเข้าอีเมล
 *   **Backlog Items**:
     1.  **[Task-101] Database Initialization (2 SP)**
-        *   *รายละเอียด*: จัดทำ PostgreSQL Instance บนคลาวด์ รันสคริปต์ [schema.sql](file:///Users/apirak.ba/Developer/booth_register/schema.sql) และโหลดข้อมูลชุดทดสอบจาก [seed.sql](file:///Users/apirak.ba/Developer/booth_register/seed.sql)
+        *   *รายละเอียด*: จัดทำ PostgreSQL Instance บนคลาวด์ รันสคริปต์ [schema.sql](../database/schema.sql) และโหลดข้อมูลชุดทดสอบจาก [seed.sql](../database/seed.sql)
         *   *ผู้รับผิดชอบ*: SA / Backend Developer
     2.  **[Task-102] Backend Register API (3 SP)**
         *   *รายละเอียด*: เขียน API endpoint `POST /api/v1/events/:event_id/register` เพื่อรับข้อมูล บันทึก และออกรหัสตั๋วแบบไม่ซ้ำ

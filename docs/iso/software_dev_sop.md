@@ -49,7 +49,7 @@
 
 ### 5.2 การทดสอบระดับบูรณาการ (Integration & API Testing)
 *   **เครื่องมือ**: ใช้ `Postman` หรือ `Supertest` เพื่อทดสอบยิง Endpoints API ในการอ่าน เขียน แก้ไข ข้อมูล และตรวจสอบการเชื่อมต่อ Database / Redis
-*   **เกณฑ์ผ่านการรับรอง**: JSON Response Payload ต้องมีความสอดคล้องตามข้อกำหนดในเอกสารข้อกำหนด API ([api_spec.md](file:///Users/apirak.ba/Developer/booth_register/docs/api_spec.md)) 100%
+*   **เกณฑ์ผ่านการรับรอง**: JSON Response Payload ต้องมีความสอดคล้องตามข้อกำหนดในเอกสารข้อกำหนด API ([api_spec.md](../api_spec.md)) 100%
 
 ### 5.3 บันทึกประวัติการทดสอบระบบ (Test Execution Log)
 ทุกครั้งที่ตรวจรับมอบงานเพื่อออกเวอร์ชันใหม่ สตาฟควบคุมคุณภาพ (QA Tester) จะต้องบันทึกประวัติการทดสอบ ผลลัพธ์ วันเวลาที่ทดสอบ และชื่อผู้ทดสอบ ลงในระบบ Document Control กลาง เพื่อรองรับการเข้าตรวจประเมินของ Auditor เสมอ

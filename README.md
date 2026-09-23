@@ -73,11 +73,14 @@ booth_register/
 
 หน้าสไลด์นำเสนอหลัก `presentation.html` ถูกออกแบบมาให้เชื่อมต่อกับเซิร์ฟเวอร์หลังบ้านแบบเรียลไทม์โดยตรง หากเปิดระบบจำลองไว้ จะสามารถซิงค์การเช็คอินและการสั่งสุ่ม Lucky Draw ข้ามหน้าต่างเบราว์เซอร์ได้ทันที:
 
+> **เครื่องใหม่ (แนะนำ):** `./scripts/setup.sh` แล้วสร้างบัญชีเจ้าหน้าที่ด้วย `cd server && node scripts/create-admin.js admin '<password>' Admin` — รายละเอียดทั้งหมดอยู่ที่ [docs/runbook.md](docs/runbook.md) · นักพัฒนาที่รับงานต่อเริ่มที่ [docs/HANDOFF.md](docs/HANDOFF.md)
+
 ### 0. ตั้งค่าไฟล์ Environment (ทำครั้งแรกครั้งเดียว)
 คัดลอกไฟล์ตัวอย่าง แล้วแก้ค่า `DB_PASSWORD` (ให้ตรงกันทั้ง 2 ไฟล์) และ `JWT_SECRET`:
 ```bash
 cp .env.example .env                  # รหัสผ่าน DB สำหรับ Docker Compose
 cp server/.env.example server/.env    # ค่าตั้งค่าเซิร์ฟเวอร์ (DB, JWT, SMTP)
+cp client/.env.example client/.env.local  # URL ของ API ที่เบราว์เซอร์เรียก
 openssl rand -hex 32                  # สร้างค่า JWT_SECRET แบบสุ่ม
 ```
 *ไฟล์ `.env` ถูก ignore ไม่ขึ้น Git — หากไม่ได้ตั้ง `DB_USER`, `DB_PASSWORD` หรือ `JWT_SECRET` เซิร์ฟเวอร์จะไม่ยอมเปิดและแจ้งว่าขาดค่าใด*
@@ -94,8 +97,8 @@ docker compose up -d
 ```bash
 cd server
 npm install
-npm start          # เปิดเซิร์ฟเวอร์จริงที่ http://localhost:3005
-npm test           # รันชุดทดสอบ Jest Integration Tests (19 Tests Passed - ISO 9002)
+npm start          # เปิดเซิร์ฟเวอร์จริงที่ http://localhost:3005 (ระหว่างพัฒนาใช้ npm run dev)
+npm test           # Jest Integration Tests (ปัจจุบันผ่าน 10/19 — ดู docs/qa.md)
 ```
 *เซิร์ฟเวอร์หลักจะทำงานบนพอร์ต `http://localhost:3005` พร้อมเปิดช่องสัญญาณ WebSockets เชื่อมโยงเข้ากับ PostgreSQL ทันที*
 
@@ -104,7 +107,7 @@ npm test           # รันชุดทดสอบ Jest Integration Tests (1
 ```bash
 cd client
 npm install
-npm run dev        # รัน Development Server (เช่น http://localhost:3080)
+npm run dev        # รัน Development Server ที่ http://localhost:3000
 ```
 *ระบบ Client มีหน้าเว็บครบวงจร: `/register` (ลงทะเบียน), `/ticket` (ตั๋วคิวอาร์), `/scanner` (สแกนผ่านประตู), `/signage` (จอ LED), `/lucky-draw` (วงล้อสุ่ม), `/dashboard` (CMS สตาฟ)*
 
@@ -143,7 +146,7 @@ Staff สามารถเข้าเมนู `/settings` และเลื�
 คอลัมน์ Excel ที่รองรับ: `วันที่`, `เวลาเริ่ม`, `เวลาสิ้นสุด`, `หัวข้อ`, `รายละเอียดย่อ`, `วิทยากร`, `สถานที่`, `ไฮไลต์`, `รูปวิทยากร` โดยต้องระบุวันที่ทุกแถว และรูปวิทยากรใน Excel ใช้ URL/Data URL หรืออัปโหลดรูปจากหน้า Settings หลังนำเข้าได้
 
 ### 4. การเปิดสไลด์นำเสนอสำหรับ PM & ลูกค้า (Open Presentation Portal)
-*   เปิดไฟล์ **[`presentation.html`](file:///Users/apirak.ba/Developer/booth_register/presentation.html)** ด้วยเว็บบราวเซอร์ใดๆ
+*   เปิดไฟล์ **[`presentation.html`](presentation.html)** ด้วยเว็บบราวเซอร์ใดๆ
 *   สไลด์จะเชื่อมต่อกับ Backend ที่พอร์ต 3005 อัตโนมัติ เพื่อจำลองและสาธิตการทำงานจริงแก่ Stakeholders ได้แบบ Real-time
 
 ---
@@ -151,15 +154,29 @@ Staff สามารถเข้าเมนู `/settings` และเลื�
 ## 🛠️ เอกสารอ้างอิงรายไฟล์เชิงลึก (Direct References)
 
 *   **ผู้บริหารและลูกค้า (Client & Stakeholders)**: 
-    *   ดูสรุปความต้องการโครงการที่: **[requirements.md](file:///Users/apirak.ba/Developer/booth_register/docs/requirements.md)**
-    *   ดูคู่มือส่งมอบงานและลำดับขั้นตอนเดินเครื่องจำลองที่: **[handoff_guide.md](file:///Users/apirak.ba/Developer/booth_register/docs/handoff_guide.md)**
-    *   ทดลองเล่นและเปิดสไลด์นำเสนอที่: **[presentation.html](file:///Users/apirak.ba/Developer/booth_register/presentation.html)**
+    *   ดูสรุปความต้องการโครงการที่: **[requirements.md](docs/requirements.md)**
+    *   ดูคู่มือส่งมอบงานและลำดับขั้นตอนเดินเครื่องจำลองที่: **[handoff_guide.md](docs/handoff_guide.md)**
+    *   ทดลองเล่นและเปิดสไลด์นำเสนอที่: **[presentation.html](presentation.html)**
 *   **Systems Analyst (SA) & Backend Developers**:
-    *   ดูโครงร่างฐานข้อมูลและแบบผัง DDL ได้ที่: **[schema.sql](file:///Users/apirak.ba/Developer/booth_register/database/schema.sql)** และ **[system_design.md](file:///Users/apirak.ba/Developer/booth_register/docs/system_design.md)**
-    *   ตรวจสอบ Payload ข้อกำหนด API ได้ที่: **[api_spec.md](file:///Users/apirak.ba/Developer/booth_register/docs/api_spec.md)**
-    *   ดูตัวอย่างสคริปต์ส่งอีเมลตั๋วคิวอาร์โค้ดพร้อมเทมเพลตพรีเมียมได้ที่: **[email_sender.js](file:///Users/apirak.ba/Developer/booth_register/mock-server/utils/email_sender.js)**
+    *   ดูโครงร่างฐานข้อมูลและแบบผัง DDL ได้ที่: **[schema.sql](database/schema.sql)** และ **[system_design.md](docs/system_design.md)**
+    *   ตรวจสอบ Payload ข้อกำหนด API ได้ที่: **[api_spec.md](docs/api_spec.md)**
+    *   ดูตัวอย่างสคริปต์ส่งอีเมลตั๋วคิวอาร์โค้ดพร้อมเทมเพลตพรีเมียมได้ที่: **[email_sender.js](mock-server/utils/email_sender.js)**
 *   **Lead Developers & DevOps**:
-    *   ตรวจสอบระบบเทคโนโลยีและการสเกลขยายคลาวด์ได้ที่: **[tech_stack.md](file:///Users/apirak.ba/Developer/booth_register/docs/tech_stack.md)**
-    *   วางแผนจัดแต้ม Story Points ลง Jira ได้ที่: **[project_plan.md](file:///Users/apirak.ba/Developer/booth_register/docs/project_plan.md)**
-    *   ดูผังการตั้งค่าเน็ตเวิร์กและฮาร์ดแวร์ LAN หน้างานได้ที่: **[network_deployment.md](file:///Users/apirak.ba/Developer/booth_register/docs/network_deployment.md)**
-# booth_register
+    *   ตรวจสอบระบบเทคโนโลยีและการสเกลขยายคลาวด์ได้ที่: **[tech_stack.md](docs/tech_stack.md)**
+    *   วางแผนจัดแต้ม Story Points ลง Jira ได้ที่: **[project_plan.md](docs/project_plan.md)**
+    *   ดูผังการตั้งค่าเน็ตเวิร์กและฮาร์ดแวร์ LAN หน้างานได้ที่: **[network_deployment.md](docs/network_deployment.md)**
+
+---
+
+## 📚 เอกสารสำหรับนักพัฒนาและผู้ดูแลระบบ
+
+| เอกสาร | เนื้อหา |
+|---|---|
+| [docs/HANDOFF.md](docs/HANDOFF.md) | **เริ่มที่นี่** — สถานะระบบ งานค้าง ข้อตกลงการทำงาน แผนที่เอกสาร |
+| [docs/runbook.md](docs/runbook.md) | ติดตั้ง เปิดระบบ เช็กลิสต์วันงาน แก้ปัญหา สำรองข้อมูล |
+| [docs/configuration.md](docs/configuration.md) | ตัวแปร `.env`, ค่าตั้งค่าในระบบ, พอร์ต, บัญชีเจ้าหน้าที่ |
+| [docs/user_manual.md](docs/user_manual.md) | คู่มือการใช้งานสำหรับผู้จัดงานและเจ้าหน้าที่ |
+| [docs/api_spec.md](docs/api_spec.md) | REST API และ WebSocket events |
+| [docs/decision.md](docs/decision.md) | บันทึกการตัดสินใจ (สรุป ADR) |
+| [docs/qa.md](docs/qa.md) | คำสั่งทดสอบ ผลการตรวจรับ ปัญหาที่ทราบ |
+| [CHANGELOG.md](CHANGELOG.md) | รายการเปลี่ยนแปลงแต่ละรอบ |

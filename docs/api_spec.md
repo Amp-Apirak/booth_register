@@ -162,14 +162,14 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
     {
       "success": true,
       "data": {
-        "registered_total": 320,
-        "checked_in_total": 245,
-        "pending_total": 75,
-        "show_up_rate_percent": 76.5,
-        "csat_score": 4.6
+        "registered": 320,
+        "checked_in": 245,
+        "pending": 75,
+        "show_up_percent": 77
       }
     }
     ```
+*   **สิทธิ์**: Public (ใช้โดยจอ LED) · รูปแบบนี้**เหมือนกับ** payload ของ WebSocket `overview:update` ทุกฟิลด์ (สร้างจากฟังก์ชัน `getStatsSummary()` ตัวเดียว)
 
 ---
 
@@ -190,14 +190,22 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
       "data": {
         "winner_id": 9,
         "participant_id": 44,
+        "name": "Narong Decha",
         "fullname": "Narong Decha",
         "company": "NextGen Software",
-        "ticket_code": "tkt_992e8400-e29b-41d4-a716-446655449999",
-        "drawn_at": "2026-08-30T17:20:00Z",
-        "prize_name": "IPAD PRO M4"
+        "position": "CTO",
+        "email": "narong@nextgen.com",
+        "profile_picture": "data:image/jpeg;base64,... | null",
+        "attendee_type": "General",
+        "prize_name": "IPAD PRO M4",
+        "prize_image": "data:image/png;base64,... | https://... | null",
+        "prize_description": "ของรางวัลพิเศษ",
+        "drawn_at": "2026-08-30T17:20:00Z"
       }
     }
     ```
+*   **หมายเหตุ**: ส่งทั้ง `name` และ `fullname` (หน้า `/lucky-draw` อ่าน `fullname`) · `prize_image`/`prize_description` จับคู่จาก `lucky_draw_prizes` ด้วยชื่อรางวัล
+*   **รายชื่อผู้โชคดีทั้งหมด (Public)**: `GET /api/v1/events/:event_id/lucky-draw/winners` → array ของ object รูปแบบเดียวกัน (ไม่มี email) เรียงจากเก่าไปใหม่ ใช้โดยจอ LED แท็บ Lucky เพื่อแสดงผู้โชคดีล่าสุดหลังรีเฟรช
 
 ---
 
@@ -351,7 +359,9 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
     }
     ```
 
-#### 3.2.3 `signage:layout_change` (สั่งเปลี่ยนสลับหน้าจอใหญ่จากระยะไกล)
+#### 3.2.3 `signage:layout_change` (สั่งเปลี่ยนสลับหน้าจอใหญ่จากระยะไกล) — ⚠️ ยังไม่ได้ implement
+> ระบบปัจจุบัน**ไม่ส่ง** event นี้ แต่ละจอเลือกแท็บด้วย URL เช่น `/signage?screen=overview` และจะไม่เปลี่ยนแท็บเอง (ดู [ADR-0007](adr/0007-signage-screen-in-url.md))
+
 *   **ทริกเกอร์จาก**: แอดมินหลักใช้แผงควบคุม Signage CMS สั่งสลับเปลี่ยนหน้าจอ TV ส่วนกลาง เช่น สลับไปตารางกำหนดการ (Agenda)
 *   **การใช้งาน**: เครื่อง Media Player ของหน้าจอใหญ่จะคอยฟังเพื่อทำการ Redirect หน้าเว็บเทมเพลตอัตโนมัติ
 *   **Payload (ข้อมูลส่งออก)**:
@@ -380,7 +390,9 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
     }
     ```
 
-#### 3.2.5 `lucky-draw:winner` (คำสั่งประกาศผลการสุ่มและเล่นแอนิเมชันล้อหมุน)
+#### 3.2.5 `luckydraw:spin` และ `luckydraw:winner_announced` (ประกาศผลการสุ่ม)
+> ชื่อ event จริงในโค้ดคือ `luckydraw:spin` (payload ด้านล่าง) และ `luckydraw:winner_announced` (payload = object ผู้ชนะแบบเดียวกับ response ของข้อ 2.5 รวมรูปผู้โชคดีและรูปรางวัล) · server ส่งหลังจากหน้า `/lucky-draw` หมุนเสร็จแล้วเรียก API จึงไม่เฉลยชื่อก่อนวงล้อหยุด · จอ LED แท็บ Lucky ฟัง `luckydraw:winner_announced` เพื่อแสดงหน้าประกาศผู้โชคดี
+
 *   **ทริกเกอร์จาก**: เมื่อแอดมินเรียกใช้งาน API `POST /api/v1/events/:event_id/lucky-draw/spin`
 *   **การใช้งาน**: หน้าจอทีวีสลากนำโชค (Lucky Draw Screen) จะจับสัญญาณเพื่อสั่งเริ่มหมุนแอนิเมชันรายชื่อด่วน และจะทำการหยุดล้อหมุน (Stop Spinner) เมื่อพบชื่อผู้ชนะตรงกับข้อมูลใน Payload พร้อมโปรยกระดาษสีเฉลิมฉลองขึ้นจอใหญ่
 *   **Payload (ข้อมูลส่งออก)**:
@@ -403,3 +415,29 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 - `DELETE /api/v1/events/:event_id/prizes/:prize_id` — ลบของรางวัล (Staff JWT)
 
 ข้อมูลรองรับ `name`, `code`, `description`, `image`, `quantity`, `is_active` และ `sort_order`; ผลลัพธ์รายการมี `awarded_count` และ `remaining_count` ซึ่งคำนวณจากประวัติผู้ชนะด้วย
+
+### รางวัล: ลำดับการสุ่มและ Excel
+- `PUT /api/v1/events/:event_id/prizes/reorder` (Staff JWT) — body `{ "prize_ids": [3, 1, 2] }` ตั้ง `sort_order` = ตำแหน่ง (1, 2, 3…) คืนรายการรางวัลทั้งหมด
+- `POST /api/v1/events/:event_id/prizes/import` (Staff JWT) — body `{ "prizes": [{ "row": 2, "sort_order": 1, "name": "…", "code": "GRAND-01", "description": "", "quantity": 1, "is_active": true, "image": "" }] }` สูงสุด 500 แถว
+  - จับคู่รางวัลเดิมด้วย `code` ก่อน แล้วค่อย `name` (ไม่สนตัวพิมพ์เล็ก-ใหญ่) → อัปเดต; ไม่พบ → สร้างใหม่ต่อท้ายลำดับ; **ไม่ลบ** รางวัลที่ไม่มีในไฟล์
+  - `image` ว่าง = คงรูปเดิม · ทำใน transaction เดียว แถวผิดแถวเดียวจะไม่บันทึกอะไรเลย (400 พร้อมเลขแถว)
+  - Response: `{ "success": true, "data": { "created": 1, "updated": 5 } }`
+- `POST /prizes` ที่ไม่ส่ง `sort_order` (หรือส่ง 0) จะต่อท้ายลำดับสุดท้ายอัตโนมัติ
+- ทุกการเปลี่ยนแปลงส่ง WebSocket `prizes:update` `{ "event_id": 1 }`
+
+# Participants: นำเข้าจาก Excel
+
+`POST /api/v1/participants/import` (Staff JWT)
+
+- Body: `{ "participants": [{ "row": 2, "name": "สมชาย ใจดี", "company": "ACME", "position": "", "email": "a@x.co", "phone": "0812345678", "attendee_type": "VIP" }] }` สูงสุด 5,000 แถว
+- ข้ามแถวที่ไม่มีชื่อ/บริษัท (`MISSING_REQUIRED_FIELDS`), อีเมลผิดรูปแบบ (`INVALID_EMAIL`), อีเมลซ้ำกับในระบบหรือแถวก่อนหน้า (`DUPLICATE_EMAIL`)
+- แถวที่ผ่านบันทึกใน transaction เดียว สร้างรหัสตั๋ว `SERYYYYMMDDxxxx` ที่ไม่ชนกับของเดิม ไม่ส่งอีเมลตั๋ว
+- Response (201): `{ "success": true, "data": { "imported_count": 117, "skipped_count": 3, "skipped": [{ "row": 9, "reason": "DUPLICATE_EMAIL" }] } }`
+- ส่ง WebSocket `participants:update` (`action: "import"`) และ `overview:update` ครั้งเดียวหลังนำเข้า
+
+# Settings (ตั้งค่าระบบ)
+
+- `GET /api/v1/settings` (Public) — object key/value ของทุกค่าตั้งค่า
+- `PUT /api/v1/settings` (Staff JWT) — ส่งเฉพาะ key ที่ต้องการแก้ ระบบรับเฉพาะ key ในรายการที่อนุญาต แล้วส่ง WebSocket `settings:update`
+- รายการ key ทั้งหมดและความหมายอยู่ที่ [configuration.md](configuration.md#2-ค่าตั้งค่าในระบบ-settings) · `event_map_url` ต้องขึ้นต้นด้วย `http(s)://` มิฉะนั้นตอบ 400
+

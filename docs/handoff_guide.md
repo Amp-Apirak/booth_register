@@ -1,4 +1,6 @@
 # คู่มือส่งมอบและแผนนำเสนอโครงการ (Smart Event Registration Handoff Guide)
+
+> **นักพัฒนาที่รับงานต่อ:** เอกสารนี้เป็นคู่มือสาธิต (ใช้ `mock-server` + `presentation.html`) สถานะระบบจริง งานค้าง และวิธีติดตั้งปัจจุบันอยู่ที่ [HANDOFF.md](HANDOFF.md)
 ## สำหรับ: Project Manager (PM), Systems Analyst (SA) และทีมพัฒนาซอฟต์แวร์ (Developers)
 
 เอกสารฉบับนี้สรุปแนวทางการนำระบบจำลองไปนำเสนอเพื่อผ่านอนุมัติงบประมาณ (Executive Pitch) และโครงสร้างการส่งมอบงานเพื่อให้ทีมเทคนิคนำไปพัฒนาจริงต่อทันที
@@ -19,7 +21,7 @@
     cd mock-server
     npm start
     ```
-2.  เปิดหน้าเว็บ **[`presentation.html`](file:///Users/apirak.ba/Developer/booth_register/presentation.html)** แยกเป็น **2 หน้าต่างเบราว์เซอร์** วางเทียบข้างคู่กันซ้าย-ขวา
+2.  เปิดหน้าเว็บ **[`presentation.html`](../presentation.html)** แยกเป็น **2 หน้าต่างเบราว์เซอร์** วางเทียบข้างคู่กันซ้าย-ขวา
 
 ### ขั้นตอนที่ 2: จำลองพฤติกรรมผู้ร่วมงาน (Participant Experience)
 1.  ที่หน้าต่างที่ 1 (ฝั่งขวา) สลับไปที่แท็บ **"พอร์ทัลมือถือ (Mobile Simulator)"** (Tab 9) ซึ่งมีกรอบโทรศัพท์ iPhone แสดงอยู่
@@ -48,12 +50,12 @@
 
 | หัวข้อระบบ | ลิงก์สเปกการออกแบบ (System Design Docs) | ไฟล์สคริปต์ต้นแบบ (Code Implementation) |
 | :--- | :--- | :--- |
-| **โครงสร้างฐานข้อมูล** | [system_design.md](file:///Users/apirak.ba/Developer/booth_register/docs/system_design.md) (หัวข้อ ER Diagram) | [schema.sql](file:///Users/apirak.ba/Developer/booth_register/database/schema.sql) และ [seed.sql](file:///Users/apirak.ba/Developer/booth_register/database/seed.sql) |
-| **การทดสอบโครงสร้าง DB** | - | [docker-compose.yml](file:///Users/apirak.ba/Developer/booth_register/docker-compose.yml) (ยิง PostgreSQL & Redis ในชุดคำสั่งเดียว) |
-| **ข้อกำหนด Endpoints API** | [api_spec.md](file:///Users/apirak.ba/Developer/booth_register/docs/api_spec.md) (JSON payload & WS Events) | [server.js](file:///Users/apirak.ba/Developer/booth_register/mock-server/server.js) (Express endpoints & Socket.io events) |
-| **สคริปต์ยิงเมลตั๋วและเทมเพลต** | [project_plan.md](file:///Users/apirak.ba/Developer/booth_register/docs/project_plan.md) (Task-104) | [email_sender.js](file:///Users/apirak.ba/Developer/booth_register/mock-server/utils/email_sender.js) (HTML Email & Nodemailer setup) |
-| **แนวทางวางระบบ LAN** | [network_deployment.md](file:///Users/apirak.ba/Developer/booth_register/docs/network_deployment.md) (LAN & Hardware setup) | [docs/adr/0001](file:///Users/apirak.ba/Developer/booth_register/docs/adr/0001-hybrid-local-sync-server.md) (บันทึกสถาปัตยกรรม Hybrid Local Server) |
-| **คำศัพท์ที่ใช้ในการโค้ด** | [CONTEXT.md](file:///Users/apirak.ba/Developer/booth_register/CONTEXT.md) (พจนานุกรมประมวลคำศัพท์) | ตัวแปรคลาสและชื่อฟิลด์ภายในสคริปต์ JavaScript / SQL |
+| **โครงสร้างฐานข้อมูล** | [system_design.md](./system_design.md) (หัวข้อ ER Diagram) | [schema.sql](../database/schema.sql) และ [seed.sql](../database/seed.sql) |
+| **การทดสอบโครงสร้าง DB** | - | [docker-compose.yml](../docker-compose.yml) (ยิง PostgreSQL & Redis ในชุดคำสั่งเดียว) |
+| **ข้อกำหนด Endpoints API** | [api_spec.md](./api_spec.md) (JSON payload & WS Events) | [server.js](../mock-server/server.js) (Express endpoints & Socket.io events) |
+| **สคริปต์ยิงเมลตั๋วและเทมเพลต** | [project_plan.md](./project_plan.md) (Task-104) | [email_sender.js](../mock-server/utils/email_sender.js) (HTML Email & Nodemailer setup) |
+| **แนวทางวางระบบ LAN** | [network_deployment.md](./network_deployment.md) (LAN & Hardware setup) | [docs/adr/0001](./adr/0001-hybrid-local-sync-server.md) (บันทึกสถาปัตยกรรม Hybrid Local Server) |
+| **คำศัพท์ที่ใช้ในการโค้ด** | [CONTEXT.md](../CONTEXT.md) (พจนานุกรมประมวลคำศัพท์) | ตัวแปรคลาสและชื่อฟิลด์ภายในสคริปต์ JavaScript / SQL |
 
 ---
 

@@ -7,6 +7,18 @@
 
 ---
 
+## 0. สิ่งที่ใช้จริงในโค้ดปัจจุบัน (ตรวจ 2026-09-23)
+
+เอกสารด้านล่างเป็นข้อเสนอแนะ ตารางนี้คือสิ่งที่ติดตั้งอยู่จริง
+
+| ส่วน | ใช้จริง |
+|---|---|
+| Frontend | Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4, lucide-react, socket.io-client |
+| ไลบรารีฝั่งหน้าเว็บ | `xlsx` (นำเข้า/ส่งออก Excel), `jsqr` (อ่าน QR จากกล้อง), `qrcode.react`, `react-easy-crop`, `sweetalert2`, `canvas-confetti`, `html-to-image` |
+| Backend | Node.js + Express 4, Socket.io 4, `pg`, `jsonwebtoken`, `bcryptjs`, `helmet`, `nodemailer` |
+| Database | PostgreSQL 15 (Docker) · Redis 7 อยู่ใน docker-compose แต่ยังไม่ถูกใช้ |
+| ทดสอบ / CI | Jest + supertest (server), `node --test` (client), GitHub Actions |
+
 ## 1. ระบบฝั่งหน้าบ้าน (Frontend Client Stack)
 
 แบ่งหน้าจอการใช้งานออกเป็น 3 ส่วนหลัก:
