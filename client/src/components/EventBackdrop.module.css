@@ -1,0 +1,185 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.viewport {
+  position: fixed;
+  background: #060913;
+}
+
+.aurora {
+  position: absolute;
+  width: 80%;
+  height: 90%;
+  border-radius: 50%;
+  filter: blur(38px);
+  animation: auroraDrift 22s ease-in-out infinite alternate;
+}
+
+.indigo {
+  left: -34%;
+  top: -22%;
+  background: radial-gradient(ellipse, #6366f14d, #7c3aed1f 42%, transparent 70%);
+}
+
+.cyan {
+  right: -36%;
+  top: 6%;
+  background: radial-gradient(ellipse, #06b6d442, #0e74901c 44%, transparent 70%);
+  animation-name: cyanDrift;
+  animation-duration: 18s;
+  animation-delay: -7s;
+}
+
+.violet {
+  width: 95%;
+  height: 65%;
+  bottom: -35%;
+  left: 12%;
+  background: radial-gradient(ellipse, #a855f745, #6366f124 40%, transparent 70%);
+  animation-duration: 26s;
+  animation-delay: -13s;
+}
+
+.ribbon {
+  position: absolute;
+  width: 120%;
+  height: 60%;
+  border-radius: 50%;
+  border: 1px solid #818cf81a;
+  box-shadow: 0 -9px 24px -12px #a855f7a0, inset 0 12px 25px -22px #818cf8;
+  animation: ribbonFlow 20s ease-in-out infinite alternate;
+}
+
+.ribbonOne {
+  top: 12%;
+  left: -32%;
+  rotate: -32deg;
+}
+
+.ribbonTwo {
+  bottom: -12%;
+  right: -30%;
+  rotate: -28deg;
+  border-color: #22d3ee15;
+  box-shadow: 0 -9px 28px -12px #22d3ee80, inset 0 12px 25px -22px #06b6d4;
+  animation-delay: -10s;
+  animation-direction: alternate-reverse;
+}
+
+.dust { position: absolute; inset: 0; }
+.dust i {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #a5b4fc;
+  box-shadow: 0 0 8px #818cf880;
+  opacity: .35;
+  animation: dustRise var(--duration) var(--delay) ease-in-out infinite;
+}
+.dust i:nth-child(3n) { background: #67e8f9; box-shadow: 0 0 10px #22d3ee70; }
+.dust i:nth-child(4n) { background: #d8b4fe; }
+
+.trails { position: absolute; inset: 0; }
+.trails i {
+  position: absolute;
+  top: 12%;
+  left: 52%;
+  width: 140px;
+  height: 1px;
+  rotate: -32deg;
+  background: linear-gradient(90deg, transparent, #818cf840, #a5f3fcaa);
+  opacity: 0;
+  animation: lightTrail 16s ease-out infinite;
+}
+.trails i:nth-child(2) { top: 58%; left: 4%; animation-delay: -6s; animation-duration: 21s; }
+.trails i:nth-child(3) { top: 86%; left: 68%; animation-delay: -11s; animation-duration: 25s; }
+
+.shade { position: absolute; inset: 0; }
+.viewport .shade { background: radial-gradient(ellipse at center, #06091370, transparent 75%); }
+.hero .shade { background: linear-gradient(90deg, #06091380, #06091330 50%, transparent); }
+.hero .indigo { left: -20%; top: -38%; }
+.hero .cyan { right: -25%; }
+.hero .ribbonOne { left: 10%; top: -20%; }
+.hero .ribbonTwo { bottom: -20%; }
+.subtle .shade { background: radial-gradient(ellipse at 50% 45%, #060913b8, #06091360 45%, transparent 80%); }
+
+.motionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 14px;
+  color: #c7d2fe;
+  background: #0c1222cc;
+  border: 1px solid #818cf840;
+  border-radius: 24px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.motionButton:hover { color: #ffffff; border-color: #22d3ee80; }
+.motionButton:focus-visible { outline: 2px solid #22d3ee; outline-offset: 4px; }
+
+.floatingControl {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 40;
+}
+.floatingControl .motionButton {
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px #06091399, 0 0 0 1px #6366f11a;
+}
+
+.paused *, .paused *::before, .paused *::after { animation-play-state: paused !important; }
+
+@keyframes auroraDrift {
+  from { transform: translate3d(-5%, 0, 0) rotate(-12deg) scale(.95); opacity: .65; }
+  to { transform: translate3d(18%, 16%, 0) rotate(15deg) scale(1.15); opacity: 1; }
+}
+@keyframes cyanDrift {
+  from { transform: translate3d(8%, -8%, 0) scale(1); opacity: .65; }
+  to { transform: translate3d(-20%, 17%, 0) scale(1.18); opacity: 1; }
+}
+@keyframes ribbonFlow {
+  from { transform: translate3d(-4%, -7%, 0) rotate(-7deg) scale(.96); opacity: .35; }
+  to { transform: translate3d(6%, 10%, 0) rotate(9deg) scale(1.08); opacity: .85; }
+}
+@keyframes dustRise {
+  0%, 100% { transform: translate3d(0, 30px, 0); opacity: 0; }
+  20% { opacity: .35; }
+  60% { opacity: .6; }
+  90% { transform: translate3d(24px, -100px, 0); opacity: 0; }
+}
+@keyframes lightTrail {
+  0%, 72% { transform: translateX(-80px); opacity: 0; }
+  77% { opacity: .65; }
+  92%, 100% { transform: translateX(190px); opacity: 0; }
+}
+
+@media (max-width: 900px) {
+  .aurora { filter: blur(24px); }
+  .dust i:nth-child(n + 13), .trails i:nth-child(n + 2) { display: none; }
+  .ribbon { width: 170%; }
+}
+
+@media (max-width: 640px) {
+  .floatingControl .motionButton { width: 44px; height: 44px; padding: 0; justify-content: center; }
+  .floatingControl .motionLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop *, .backdrop *::before, .backdrop *::after { animation: none !important; }
+  .trails { display: none; }
+}
+
+@media print {
+  .backdrop, .floatingControl { display: none !important; }
+}

@@ -264,6 +264,7 @@ function RegisterPageContent() {
   };
 
   return (
+    <>
     <div className="max-w-5xl mx-auto space-y-7 pb-12 pt-8">
       {settings.registration_hero_image && (
         <div className="registration-hero-card relative aspect-[16/7] rounded-xl overflow-hidden border border-cyan-300/20 shadow-[0_25px_80px_rgba(37,99,235,.2)] animate-fade-in">
@@ -583,6 +584,8 @@ function RegisterPageContent() {
         </section>
       )}
 
+    </div>
+
       {/* Cropping Modal */}
       {isCropping && imageSrc && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col">
@@ -630,7 +633,7 @@ function RegisterPageContent() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

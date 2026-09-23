@@ -3,6 +3,7 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import MainLayoutWrapper from "@/components/MainLayoutWrapper";
 import { SettingsProvider } from "@/contexts/SettingsContext";
+import { SiteBackdropProvider } from "@/components/SiteBackdrop";
 
 export const metadata: Metadata = {
   title: "Smart Event Registration • SCAN • CHECK-IN • SHOW",
@@ -18,10 +19,12 @@ export default function RootLayout({
     <html lang="th" className="dark">
       <body className="bg-cyber-mesh min-h-screen text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
         <SettingsProvider>
-          <Navigation />
-          <MainLayoutWrapper>
-            {children}
-          </MainLayoutWrapper>
+          <SiteBackdropProvider>
+            <Navigation />
+            <MainLayoutWrapper>
+              {children}
+            </MainLayoutWrapper>
+          </SiteBackdropProvider>
         </SettingsProvider>
       </body>
     </html>
