@@ -180,3 +180,7 @@ Staff สามารถเข้าเมนู `/settings` และเลื�
 | [docs/decision.md](docs/decision.md) | บันทึกการตัดสินใจ (สรุป ADR) |
 | [docs/qa.md](docs/qa.md) | คำสั่งทดสอบ ผลการตรวจรับ ปัญหาที่ทราบ |
 | [CHANGELOG.md](CHANGELOG.md) | รายการเปลี่ยนแปลงแต่ละรอบ |
+
+## Deploy ขึ้น Production
+
+ดู [deploy/README.md](deploy/README.md) — Docker + Caddy (เครื่องทั่วไป) หรือ k3s + Istio

@@ -1,0 +1,63 @@
+# Production on a single machine with plain Docker (no Kubernetes).
+#   cd deploy/docker && cp .env.example .env   # fill DOMAIN, DB_PASSWORD, JWT_SECRET
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Caddy gets a Let's Encrypt cert for $DOMAIN automatically (ports 80/443 must be free).
+services:
+  database:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-event_admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: booth_register_db
+    volumes:
+      - ../../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../../database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d booth_register_db"]
+      interval: 5s
+      retries: 20
+
+  server:
+    build: ../../server
+    restart: always
+    depends_on:
+      database: { condition: service_healthy }
+    environment:
+      PORT: 3005
+      NODE_ENV: production
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-event_admin}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: booth_register_db
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CORS_ORIGIN: https://${DOMAIN:?set DOMAIN in .env}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+
+  client:
+    build:
+      context: ../../client
+      args:
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}
+    restart: always
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [server, client]
+
+volumes:
+  postgres_data:
+  caddy_data:

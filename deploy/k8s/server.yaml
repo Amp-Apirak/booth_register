@@ -1,0 +1,46 @@
+# API + Socket.io — keep replicas: 1 (Socket.io state is in-memory, no Redis adapter)
+apiVersion: v1
+kind: Service
+metadata:
+  name: booth-server
+  namespace: booth
+spec:
+  selector: { app: booth-server }
+  ports:
+    - name: http
+      port: 3005
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booth-server
+  namespace: booth
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: booth-server }
+  template:
+    metadata:
+      labels: { app: booth-server }
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: server
+          image: localhost/booth-server:${TAG}
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef: { name: booth-server-env }
+          ports:
+            - containerPort: 3005
+          readinessProbe:
+            httpGet: { path: /api/v1/ping, port: 3005 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/v1/ping, port: 3005 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 384Mi }

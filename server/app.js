@@ -8,7 +8,12 @@ const app = express();
 
 // ── Security & Utility Middlewares ──
 app.use(helmet());
-app.use(cors());
+// CORS_ORIGIN: comma-separated allowed origins (e.g. https://event-bbk.com); unset = allow all (dev)
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : '*';
+app.set('corsOrigin', corsOrigin);
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 

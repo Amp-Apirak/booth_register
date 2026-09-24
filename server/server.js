@@ -14,7 +14,7 @@ const server = http.createServer(app);
 // Attach Socket.io Engine
 const io = socketIo(server, {
   cors: {
-    origin: "*",
+    origin: app.get('corsOrigin'),
     methods: ["GET", "POST"]
   }
 });

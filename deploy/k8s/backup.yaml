@@ -1,0 +1,54 @@
+# Daily pg_dump at 02:00 (Asia/Bangkok) to PVC booth-backups, keeps 14 days
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: booth-backups
+  namespace: booth
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests: { storage: 5Gi }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: booth-db-backup
+  namespace: booth
+spec:
+  schedule: "0 2 * * *"
+  timeZone: Asia/Bangkok
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:15-alpine
+              env:
+                - name: PGUSER
+                  valueFrom: { secretKeyRef: { name: booth-db, key: DB_USER } }
+                - name: PGPASSWORD
+                  valueFrom: { secretKeyRef: { name: booth-db, key: DB_PASSWORD } }
+              command:
+                - sh
+                - -c
+                - |
+                  set -e
+                  f=/backups/booth_$(date +%Y%m%d_%H%M).sql.gz
+                  pg_dump -h booth-postgres booth_register_db | gzip > "$f"
+                  find /backups -name 'booth_*.sql.gz' -mtime +14 -delete
+                  ls -lh /backups
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+              volumeMounts:
+                - { name: backups, mountPath: /backups }
+          volumes:
+            - name: backups
+              persistentVolumeClaim: { claimName: booth-backups }

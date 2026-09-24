@@ -1,0 +1,39 @@
+# Web (Next.js). NEXT_PUBLIC_API_URL is baked into the image at build time (deploy.sh)
+apiVersion: v1
+kind: Service
+metadata:
+  name: booth-client
+  namespace: booth
+spec:
+  selector: { app: booth-client }
+  ports:
+    - name: http
+      port: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booth-client
+  namespace: booth
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: booth-client }
+  template:
+    metadata:
+      labels: { app: booth-client }
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: client
+          image: localhost/booth-client:${TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            tcpSocket: { port: 3000 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 96Mi }
+            limits: { memory: 384Mi }

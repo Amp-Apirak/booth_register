@@ -1,0 +1,27 @@
+# Let's Encrypt cert. Own Issuer because the shared ClusterIssuer solves HTTP-01
+# only on the *.k-lynx.com listener.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-booth
+  namespace: istio-system
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef: { name: letsencrypt-booth-account }
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - { group: gateway.networking.k8s.io, kind: Gateway, name: ingressgateway, namespace: istio-system, sectionName: http-booth }
+              - { group: gateway.networking.k8s.io, kind: Gateway, name: ingressgateway, namespace: istio-system, sectionName: http-booth-www }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: booth-tls
+  namespace: istio-system
+spec:
+  secretName: booth-tls
+  dnsNames: ["${DOMAIN}", "www.${DOMAIN}"]
+  issuerRef: { kind: Issuer, name: letsencrypt-booth }

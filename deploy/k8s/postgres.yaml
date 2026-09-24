@@ -1,0 +1,60 @@
+# PostgreSQL 15 — schema/seed from ConfigMap booth-db-init run only on first start (empty volume)
+apiVersion: v1
+kind: Service
+metadata:
+  name: booth-postgres
+  namespace: booth
+spec:
+  selector: { app: booth-postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: booth-postgres
+  namespace: booth
+spec:
+  serviceName: booth-postgres
+  replicas: 1
+  selector:
+    matchLabels: { app: booth-postgres }
+  template:
+    metadata:
+      labels: { app: booth-postgres }
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          env:
+            - name: POSTGRES_DB
+              value: booth_register_db
+            - name: POSTGRES_USER
+              valueFrom: { secretKeyRef: { name: booth-db, key: DB_USER } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: booth-db, key: DB_PASSWORD } }
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec: { command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d booth_register_db"] }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: init, mountPath: /docker-entrypoint-initdb.d, readOnly: true }
+      volumes:
+        - name: init
+          configMap: { name: booth-db-init }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests: { storage: 5Gi }
