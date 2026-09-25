@@ -1,12 +1,22 @@
 // Maps spreadsheet rows (Excel / CSV) to Lucky Draw prizes for import/export.
 // Kept free of UI and XLSX code so it can be unit-tested with `node --test`.
+import type { Lang } from '@/i18n';
 
 export type PrizeField = 'sort_order' | 'name' | 'code' | 'description' | 'quantity' | 'is_active' | 'image';
 
-// Written by export instead of the (large) uploaded picture; import keeps the stored image
-export const PRIZE_PHOTO_IN_SYSTEM = 'มีรูปในระบบ';
+// Display text for these codes is in i18n/<lang>/prizes.ts (importAlert.errors)
+export type PrizeImportError = 'MISSING_NAME' | 'BAD_QUANTITY' | 'BAD_IMAGE';
 
-// First entry of each list is the column name used by export and the template
+// Written by export (in the UI language) instead of the (large) uploaded picture;
+// import recognises the marker of every language and keeps the stored image
+export const PRIZE_PHOTO_IN_SYSTEM: Record<Lang, string> = {
+  th: 'มีรูปในระบบ',
+  en: 'Stored in system',
+};
+const PHOTO_MARKERS = new Set(Object.values(PRIZE_PHOTO_IN_SYSTEM));
+
+// Header names accepted on import (compared case/space-insensitively).
+// The first entry of each list is the Thai header of the template / Excel export.
 export const PRIZE_HEADERS: Record<PrizeField, string[]> = {
   sort_order: ['ลำดับ', 'order', 'sort_order', 'no', 'no.'],
   name: ['ชื่อของรางวัล', 'ชื่อรางวัล', 'รางวัล', 'name', 'prize', 'prize name'],
@@ -17,6 +27,22 @@ export const PRIZE_HEADERS: Record<PrizeField, string[]> = {
   image: ['รูปภาพ', 'รูป', 'image', 'image url', 'photo'],
 };
 
+// English header of the template / export. Each one must also match an alias above,
+// so a file downloaded in English imports back.
+export const PRIZE_HEADERS_EN: Record<PrizeField, string> = {
+  sort_order: 'Order',
+  name: 'Prize name',
+  code: 'Code',
+  description: 'Description',
+  quantity: 'Quantity',
+  is_active: 'Active',
+  image: 'Image',
+};
+
+// Column header written to the template / export for the current UI language
+export const prizeColumnHeader = (field: PrizeField, lang: Lang): string =>
+  lang === 'en' ? PRIZE_HEADERS_EN[field] : PRIZE_HEADERS[field][0];
+
 export interface PrizeImportRow {
   row: number; // Spreadsheet row number (header is row 1)
   sort_order: number; // 0 = keep current / append
@@ -26,7 +52,7 @@ export interface PrizeImportRow {
   quantity: number;
   is_active: boolean;
   image: string; // '' = keep the current picture
-  error?: string;
+  error?: PrizeImportError;
 }
 
 const normalizeHeader = (h: string) => h.toLowerCase().replace(/[\s_]+/g, ' ').trim();
@@ -63,12 +89,12 @@ export function mapPrizeRows(records: Record<string, unknown>[]): { rows: PrizeI
       description: get(record, 'description'),
       quantity: quantityText === '' ? 1 : Number(quantityText),
       is_active: parseActive(get(record, 'is_active')),
-      image: imageText === PRIZE_PHOTO_IN_SYSTEM ? '' : imageText,
+      image: PHOTO_MARKERS.has(imageText) ? '' : imageText,
     };
     if (!name && !row.code && !row.description) return; // blank line
-    if (!name) row.error = 'ไม่มีชื่อของรางวัล';
-    else if (!Number.isInteger(row.quantity) || row.quantity < 1) row.error = 'จำนวนต้องเป็นเลขจำนวนเต็มตั้งแต่ 1';
-    else if (row.image && !/^(https?:\/\/|data:image\/)/.test(row.image)) row.error = 'รูปภาพต้องเป็นลิงก์ https://...';
+    if (!name) row.error = 'MISSING_NAME';
+    else if (!Number.isInteger(row.quantity) || row.quantity < 1) row.error = 'BAD_QUANTITY';
+    else if (row.image && !/^(https?:\/\/|data:image\/)/.test(row.image)) row.error = 'BAD_IMAGE';
     rows.push(row);
   });
   return { rows, missingName: !columns.name };

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, User, Loader2, Zap } from 'lucide-react';
 import api from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useT } from '@/contexts/PreferencesContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { settings, isLoading: isSettingsLoading } = useSettings();
+  const t = useT();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +38,10 @@ export default function LoginPage() {
         localStorage.setItem('staff_user', JSON.stringify(data.data.user));
         router.push('/dashboard');
       } else {
-        setError(data.message || 'รหัสผ่านไม่ถูกต้อง');
+        setError(t.login.errors[data.error] || t.login.wrongPassword);
       }
     } catch (err) {
-      setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ (กรุณาตรวจสอบว่า Backend รันอยู่ที่พอร์ต 3005 หรือไม่)');
+      setError(t.login.connectionError);
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +69,7 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-extrabold text-white mt-4 tracking-tight">Staff Login</h1>
             <p className="text-xs text-slate-400 mt-2">
-              เข้าสู่ระบบจัดการ {settings.event_name || 'Smart Event Registration'}
+              {t.login.subtitle(settings.event_name || 'Smart Event Registration')}
             </p>
           </div>
 
@@ -130,12 +132,12 @@ export default function LoginPage() {
                 {isLoading ? (
                   <span className="flex items-center relative z-10">
                     <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                    กำลังตรวจสอบ...
+                    {t.login.submitting}
                   </span>
                 ) : (
                   <span className="flex items-center relative z-10">
                     <Zap className="w-5 h-5 mr-2" />
-                    เข้าสู่ระบบ
+                    {t.login.submit}
                   </span>
                 )}
               </button>

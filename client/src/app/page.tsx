@@ -21,6 +21,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useT } from '@/contexts/PreferencesContext';
 
 function subscribeToSession(onChange: () => void) {
   window.addEventListener('storage', onChange);
@@ -37,6 +38,7 @@ function hasSeenEntrance() {
 
 export default function HomePage() {
   const { settings, isLoading } = useSettings();
+  const t = useT();
   const { paused: effectsPaused, togglePaused: toggleMotion, setHidden: setBackdropHidden } = useBackdrop();
   const seenEntrance = useSyncExternalStore(subscribeToSession, hasSeenEntrance, () => false);
   const [entranceOverride, setShowSplash] = useState<boolean | null>(null);
@@ -77,9 +79,9 @@ export default function HomePage() {
   const quickLinks = [
     {
       href: '/register',
-      title: 'ลงทะเบียนออนไลน์',
+      title: t.home.modules.register.title,
       subtitle: 'Self-Registration & PDPA',
-      desc: 'ลงทะเบียนเข้าร่วมงานสัมมนาล่วงหน้า พร้อมขอความยินยอมตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)',
+      desc: t.home.modules.register.desc,
       icon: UserPlus,
       color: 'from-indigo-500/20 via-indigo-600/10 to-transparent',
       borderColor: 'group-hover:border-indigo-500/50',
@@ -88,9 +90,9 @@ export default function HomePage() {
     },
     {
       href: '/ticket',
-      title: 'ตั๋วเข้างานดิจิทัล',
+      title: t.home.modules.ticket.title,
       subtitle: 'Holographic QR Wallet',
-      desc: 'แสดงบัตรผ่านประตูดิจิทัล (Digital Pass) พร้อมรหัส QR Code เข้ารหัสสำหรับยิงสแกนหน้างาน',
+      desc: t.home.modules.ticket.desc,
       icon: QrCode,
       color: 'from-cyan-500/20 via-cyan-600/10 to-transparent',
       borderColor: 'group-hover:border-cyan-500/50',
@@ -99,9 +101,9 @@ export default function HomePage() {
     },
     {
       href: '/scanner',
-      title: 'จุดสแกนเข้าประตู',
+      title: t.home.modules.scanner.title,
       subtitle: 'Fast Check-in Counter',
-      desc: 'ระบบสแกนผ่านประตูสำหรับเจ้าหน้าที่ ตรวจสอบตั๋วใน 0.1 วินาที พร้อมระบบบล็อกการสแกนซ้ำ',
+      desc: t.home.modules.scanner.desc,
       icon: ScanLine,
       color: 'from-emerald-500/20 via-emerald-600/10 to-transparent',
       borderColor: 'group-hover:border-emerald-500/50',
@@ -110,9 +112,9 @@ export default function HomePage() {
     },
     {
       href: '/signage',
-      title: 'จอ LED Signage หน้างาน',
+      title: t.home.modules.signage.title,
       subtitle: 'Real-Time Welcome Display',
-      desc: 'ป้ายไฟ LED ต้อนรับผู้เข้าร่วมงานแบบสดๆ ขึ้นชื่อและบริษัทอัตโนมัติทันทีที่สแกนผ่านประตู',
+      desc: t.home.modules.signage.desc,
       icon: Tv,
       color: 'from-amber-500/20 via-amber-600/10 to-transparent',
       borderColor: 'group-hover:border-amber-500/50',
@@ -121,9 +123,9 @@ export default function HomePage() {
     },
     {
       href: '/lucky-draw',
-      title: 'วงล้อสุ่มรางวัล',
+      title: t.home.modules.luckyDraw.title,
       subtitle: 'Lucky Draw Engine',
-      desc: 'ระบบสุ่มจับรางวัลผู้โชคดีเฉพาะคนที่เช็คอินเข้างานแล้ว ตัดสิทธิ์สตาฟและผู้เคยได้รางวัลอัตโนมัติ',
+      desc: t.home.modules.luckyDraw.desc,
       icon: Sparkles,
       color: 'from-pink-500/20 via-pink-600/10 to-transparent',
       borderColor: 'group-hover:border-pink-500/50',
@@ -132,9 +134,9 @@ export default function HomePage() {
     },
     {
       href: '/dashboard',
-      title: 'แดชบอร์ดจัดการ CMS',
+      title: t.home.modules.dashboard.title,
       subtitle: 'Executive Operations',
-      desc: 'ศูนย์ควบคุมสำหรับผู้จัดงาน ดูสถิติสด กราฟ Show-up rate จัดการรายชื่อ และส่งออกข้อมูล',
+      desc: t.home.modules.dashboard.desc,
       icon: LayoutDashboard,
       color: 'from-purple-500/20 via-purple-600/10 to-transparent',
       borderColor: 'group-hover:border-purple-500/50',
@@ -159,7 +161,7 @@ export default function HomePage() {
         {/* Card 1: Registered */}
         <div className="glass-panel rounded-2xl p-6 relative overflow-hidden card-3d border border-indigo-500/20">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-semibold text-indigo-300 uppercase tracking-wider">ยอดลงทะเบียน</span>
+            <span className="text-sm font-semibold text-indigo-300 uppercase tracking-wider">{t.home.stats.registered}</span>
             <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
               <Users className="w-5 h-5" />
             </div>
@@ -169,14 +171,14 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5 text-sm text-indigo-300/80">
             <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-            <span>ผู้สมัครเข้าร่วมงานทั้งหมด</span>
+            <span>{t.home.stats.registeredNote}</span>
           </div>
         </div>
 
         {/* Card 2: Checked-in */}
         <div className="glass-panel rounded-2xl p-6 relative overflow-hidden card-3d border border-emerald-500/20">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-semibold text-emerald-300 uppercase tracking-wider">เช็คอินเข้างานแล้ว</span>
+            <span className="text-sm font-semibold text-emerald-300 uppercase tracking-wider">{t.home.stats.checkedIn}</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <UserCheck className="w-5 h-5" />
             </div>
@@ -186,14 +188,14 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5 text-sm text-emerald-300/80">
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>ผ่านจุดสแกนประตูแล้ว</span>
+            <span>{t.home.stats.checkedInNote}</span>
           </div>
         </div>
 
         {/* Card 3: Pending */}
         <div className="glass-panel rounded-2xl p-6 relative overflow-hidden card-3d border border-amber-500/20">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-semibold text-amber-300 uppercase tracking-wider">ยังไม่เช็คอิน</span>
+            <span className="text-sm font-semibold text-amber-300 uppercase tracking-wider">{t.common.status.pending}</span>
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
               <Clock className="w-5 h-5" />
             </div>
@@ -203,7 +205,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5 text-sm text-amber-300/80">
             <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span>อยู่ระหว่างการเดินทาง</span>
+            <span>{t.home.stats.pendingNote}</span>
           </div>
         </div>
 
@@ -232,10 +234,10 @@ export default function HomePage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              ศูนย์ปฏิบัติการและเมนูระบบ
+              {t.home.modules.title}
             </h2>
             <p className="text-sm sm:text-base text-slate-400">
-              เลือกระบบที่ต้องการเปิดใช้งานเพื่อทดสอบกระบวนการทำงาน
+              {t.home.modules.subtitle}
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-indigo-400 font-semibold bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-xl">
@@ -277,7 +279,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center justify-between text-sm font-semibold text-slate-400 group-hover:text-white transition-colors">
-                  <span>เข้าสู่หน้าการทำงาน</span>
+                  <span>{t.home.modules.open}</span>
                   <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1.5 transition-transform text-cyan-400" />
                 </div>
               </Link>

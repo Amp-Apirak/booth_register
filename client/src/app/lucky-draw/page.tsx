@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import api, { Participant, LuckyDrawWinner, Prize } from '@/lib/api';
 import useWebSocket from '@/lib/useWebSocket';
+import { useT } from '@/contexts/PreferencesContext';
 import { 
   Sparkles, 
   Trophy, 
@@ -16,9 +17,11 @@ import {
   Clock
 } from 'lucide-react';
 
-const FALLBACK_PRIZE: Prize = { name: 'รางวัลพิเศษ', code: '', description: 'กรุณาเพิ่มของรางวัลจากหน้าตั้งค่าระบบ', image: '', quantity: 1, is_active: true, sort_order: 0 };
+// Placeholder while no prize is active; its name/description come from the dictionary (t.luckyDraw.prizes)
+const FALLBACK_PRIZE: Prize = { name: '', code: '', description: '', image: '', quantity: 1, is_active: true, sort_order: 0 };
 
 export default function LuckyDrawPage() {
+  const t = useT();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [currentName, setCurrentName] = useState('');
@@ -41,7 +44,7 @@ export default function LuckyDrawPage() {
     fetchEligible();
   }, []);
 
-  const selectedPrize = prizes.find(p => p.prize_id === selectedPrizeId) || prizes[0] || FALLBACK_PRIZE;
+  const selectedPrize = prizes.find(p => p.prize_id === selectedPrizeId) || prizes[0] || { ...FALLBACK_PRIZE, name: t.luckyDraw.prizes.fallbackName, description: t.luckyDraw.prizes.fallbackDescription };
 
   const playSound = (type: 'tick' | 'fanfare') => {
     if (!soundEnabled) return;
@@ -127,10 +130,10 @@ export default function LuckyDrawPage() {
             <span>Official Event Lucky Draw Studio</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            วงล้อสุ่มรางวัล (Lucky Draw)
+            {t.luckyDraw.title}
           </h1>
           <p className="text-sm text-slate-400">
-            ระบบสุ่มรางวัลผู้โชคดีสำหรับผู้เข้าร่วมงานที่เช็คอินแล้ว
+            {t.luckyDraw.subtitle}
           </p>
         </div>
 
@@ -140,14 +143,14 @@ export default function LuckyDrawPage() {
             className={`p-2.5 rounded-xl border transition-all ${
               soundEnabled ? 'bg-white/[0.05] border-white/10 text-cyan-400' : 'bg-white/[0.02] border-white/5 text-slate-500'
             }`}
-            title={soundEnabled ? 'ปิดเสียง Sound FX' : 'เปิดเสียง Sound FX'}
+            title={soundEnabled ? t.luckyDraw.soundOff : t.luckyDraw.soundOn}
           >
             {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
 
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-mono font-semibold bg-white/[0.04] border border-white/10 text-slate-300">
             <Users className="w-4 h-4 text-cyan-400" />
-            <span>มีสิทธิ์สุ่ม {participants.length} คน</span>
+            <span>{t.luckyDraw.eligible(participants.length)}</span>
           </div>
         </div>
       </div>
@@ -156,7 +159,7 @@ export default function LuckyDrawPage() {
       <div className="glass-panel rounded-3xl p-6 border border-purple-400/20 shadow-[0_18px_60px_rgba(88,28,135,.2)] space-y-4 relative overflow-hidden">
         <div className="absolute inset-0 lucky-selector-shine pointer-events-none" />
         <label className="block text-xs font-semibold text-slate-300">
-          เลือกของรางวัลที่ต้องการจับสลาก (Prize Selection):
+          {t.luckyDraw.prizes.selectLabel}
         </label>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 relative">
           {prizes.map((prize) => (
@@ -170,10 +173,10 @@ export default function LuckyDrawPage() {
               }`}
             >
               <div className="w-14 h-14 rounded-xl bg-black/20 shrink-0 flex items-center justify-center overflow-hidden">{prize.image ? <img src={prize.image} alt="" className="w-full h-full object-contain p-1"/> : <Gift className="w-6 h-6 text-fuchsia-300"/>}</div>
-              <span className="min-w-0"><strong className="block text-sm truncate">{prize.name}</strong><small className="text-[11px] opacity-70">คงเหลือ {prize.remaining_count ?? prize.quantity} รางวัล</small></span>
+              <span className="min-w-0"><strong className="block text-sm truncate">{prize.name}</strong><small className="text-[11px] opacity-70">{t.luckyDraw.prizes.remaining(prize.remaining_count ?? prize.quantity)}</small></span>
             </button>
           ))}
-          {prizes.length === 0 && <div className="col-span-full rounded-2xl border border-dashed border-amber-400/30 bg-amber-500/5 p-5 text-sm text-amber-200">ยังไม่มีของรางวัลที่เปิดใช้งาน กรุณาเพิ่มจาก ตั้งค่าระบบ › จัดการของรางวัล</div>}
+          {prizes.length === 0 && <div className="col-span-full rounded-2xl border border-dashed border-amber-400/30 bg-amber-500/5 p-5 text-sm text-amber-200">{t.luckyDraw.prizes.empty}</div>}
         </div>
       </div>
 
@@ -207,7 +210,7 @@ export default function LuckyDrawPage() {
             </div>
 
             <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 max-w-md mx-auto">
-              <p className="text-xs text-slate-400 uppercase font-mono mb-1">ของรางวัลที่ได้รับ</p>
+              <p className="text-xs text-slate-400 uppercase font-mono mb-1">{t.luckyDraw.stage.prizeWon}</p>
               <p className="text-base sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-amber-300">
                 {winner.prize_name}
               </p>
@@ -233,7 +236,7 @@ export default function LuckyDrawPage() {
                   <p className="text-sm text-cyan-300 font-mono">{currentCompany}</p>
                 </div>
               ) : (
-                <div><h2 className="text-3xl sm:text-5xl font-black text-white lucky-prize-title">{selectedPrize.name}</h2>{selectedPrize.description && <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mt-3">{selectedPrize.description}</p>}<div className="mt-3 inline-flex px-4 py-1.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-300/20 text-xs font-mono">พร้อมสุ่ม · เหลือ {selectedPrize.remaining_count ?? selectedPrize.quantity} รางวัล</div></div>
+                <div><h2 className="text-3xl sm:text-5xl font-black text-white lucky-prize-title">{selectedPrize.name}</h2>{selectedPrize.description && <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mt-3">{selectedPrize.description}</p>}<div className="mt-3 inline-flex px-4 py-1.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-300/20 text-xs font-mono">{t.luckyDraw.stage.readyRemaining(selectedPrize.remaining_count ?? selectedPrize.quantity)}</div></div>
               )}
             </div>
           </div>
@@ -251,7 +254,7 @@ export default function LuckyDrawPage() {
             }`}
           >
             <RotateCw className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />
-            <span>{spinning ? 'กำลังสุ่มรายชื่อ...' : 'SPIN • สุ่มรางวัล'}</span>
+            <span>{spinning ? t.luckyDraw.stage.spinning : t.luckyDraw.stage.spin}</span>
           </button>
         </div>
       </div>
@@ -263,7 +266,7 @@ export default function LuckyDrawPage() {
           <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
               <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-300/25 to-orange-500/10 border border-amber-300/30 flex items-center justify-center shadow-[0_0_25px_rgba(251,191,36,.2)]"><Trophy className="w-7 h-7 text-amber-300" /></span>
-              <span>รายชื่อผู้ได้รับรางวัล <strong className="text-amber-300">({winners.length})</strong></span>
+              <span>{t.luckyDraw.winners.title} <strong className="text-amber-300">({winners.length})</strong></span>
             </h3>
             <span className="winner-live-badge text-sm text-emerald-200 font-mono inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-400/10 border border-emerald-300/20 self-start sm:self-auto"><i className="w-2 h-2 rounded-full bg-emerald-300" /> LIVE WINNERS</span>
           </div>
@@ -281,7 +284,7 @@ export default function LuckyDrawPage() {
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xl sm:text-2xl font-extrabold text-white truncate group-hover:text-amber-100 transition-colors">{w.fullname}</h4>
-                    <p className="text-base sm:text-lg text-slate-300 mt-1 flex items-center gap-2"><Building className="w-4 h-4 text-cyan-300 shrink-0"/><span className="truncate">{w.company || 'ไม่ระบุบริษัท'}</span></p>
+                    <p className="text-base sm:text-lg text-slate-300 mt-1 flex items-center gap-2"><Building className="w-4 h-4 text-cyan-300 shrink-0"/><span className="truncate">{w.company || t.luckyDraw.winners.noCompany}</span></p>
                   </div>
                 </div>
 
@@ -290,7 +293,7 @@ export default function LuckyDrawPage() {
                   <span className="text-lg sm:text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-amber-200 to-yellow-300 block">{w.prize_name}</span>
                   <span className="text-sm text-slate-400 font-mono flex items-center md:justify-end gap-1.5 mt-2">
                     <Clock className="w-4 h-4 text-cyan-300" />
-                    {new Date(w.drawn_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} น.
+                    {new Date(w.drawn_at).toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}{t.common.timeSuffix}
                   </span>
                 </div>
               </div>

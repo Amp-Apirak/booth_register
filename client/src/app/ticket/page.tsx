@@ -4,6 +4,7 @@ import { useState } from 'react';
 import * as htmlToImage from 'html-to-image';
 import api, { Participant, formatEventDateRange, formatEventTimeRange } from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
+import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import {
   QrCode,
   Search,
@@ -23,6 +24,8 @@ import {
 
 export default function TicketPage() {
   const { settings } = useSettings();
+  const t = useT();
+  const { theme } = usePreferences();
   const [ticketCode, setTicketCode] = useState('');
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,11 +57,11 @@ export default function TicketPage() {
       if (found) {
         setParticipant(found);
       } else {
-        setError('ไม่พบข้อมูลตั๋วนี้ในระบบ กรุณาตรวจสอบรหัสตั๋ว เบอร์โทรศัพท์ หรือชื่ออีกครั้ง');
+        setError(t.ticket.search.notFound);
         setParticipant(null);
       }
     } catch {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      setError(t.ticket.search.connectionError);
     } finally {
       setLoading(false);
     }
@@ -78,13 +81,15 @@ export default function TicketPage() {
     try {
       const element = document.getElementById('printable-ticket');
       if (element) {
+        // the saved pass keeps the on-screen look: dark card in the dark theme, white in the light theme
+        const passBackground = theme === 'light' ? '#ffffff' : '#090d16';
         const originalBg = element.style.background;
-        element.style.background = '#090d16';
+        element.style.background = passBackground;
 
         const rect = element.getBoundingClientRect();
 
         const dataUrl = await htmlToImage.toPng(element, {
-          backgroundColor: '#090d16',
+          backgroundColor: passBackground,
           pixelRatio: 2,
           width: rect.width,
           height: rect.height,
@@ -114,8 +119,8 @@ export default function TicketPage() {
     window.print();
   };
 
-  const eventDate = formatEventDateRange(settings.event_start, settings.event_end) || '30 สิงหาคม 2026';
-  const eventTime = formatEventTimeRange(settings.event_start, settings.event_end) || '09:00 - 17:00 น.';
+  const eventDate = formatEventDateRange(settings.event_start, settings.event_end, t.common.locale) || t.ticket.pass.fallbackDate;
+  const eventTime = formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale) || t.ticket.pass.fallbackTime;
   const eventVenue = settings.event_venue || 'Grand Ballroom';
   const eventPlace = [settings.event_building, settings.event_floor, settings.event_address].filter(Boolean).join(', ') || 'Central Plaza Hotel, Bangkok';
 
@@ -128,10 +133,10 @@ export default function TicketPage() {
           <span>Official Event Digital Pass</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-          ตั๋วเข้างานดิจิทัล (Digital Pass)
+          {t.ticket.title}
         </h1>
         <p className="text-base text-slate-400 max-w-md mx-auto">
-          แสดงบัตรดิจิทัลนี้ต่อเจ้าหน้าที่หน้าประตูทางเข้าเพื่อสแกน QR Code เช็คอิน
+          {t.ticket.subtitle}
         </p>
       </div>
 
@@ -146,7 +151,7 @@ export default function TicketPage() {
             value={ticketCode}
             onChange={(e) => setTicketCode(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none"
-            placeholder="กรอกรหัสตั๋ว เบอร์โทรศัพท์ หรือชื่อ แล้วกดค้นหา"
+            placeholder={t.ticket.search.placeholder}
           />
         </div>
         <button
@@ -154,7 +159,7 @@ export default function TicketPage() {
           disabled={loading}
           className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
         >
-          {loading ? 'กำลังค้นหา...' : 'ค้นหาตั๋ว'}
+          {loading ? t.ticket.search.searching : t.ticket.search.submit}
         </button>
       </form>
 
@@ -248,12 +253,12 @@ export default function TicketPage() {
                   <button
                     onClick={copyCode}
                     className="p-1 rounded text-slate-400 hover:text-white transition-colors"
-                    title="คัดลอก"
+                    title={t.ticket.pass.copy}
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {copied && <p className="text-xs text-emerald-400">คัดลอกรหัสแล้ว</p>}
+                {copied && <p className="text-xs text-emerald-400">{t.ticket.pass.codeCopied}</p>}
               </div>
 
               {/* Event Coordinates */}
@@ -261,7 +266,7 @@ export default function TicketPage() {
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 text-indigo-400 font-semibold">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>วันเวลาจัดงาน</span>
+                    <span>{t.ticket.pass.dateTime}</span>
                   </div>
                   <p className="text-slate-200">{eventDate}</p>
                   <p className="text-slate-400 text-xs">{eventTime}</p>
@@ -270,7 +275,7 @@ export default function TicketPage() {
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 text-cyan-400 font-semibold">
                     <MapPin className="w-3.5 h-3.5" />
-                    <span>สถานที่จัดงาน</span>
+                    <span>{t.ticket.pass.venue}</span>
                   </div>
                   <p className="text-slate-200">{eventVenue}</p>
                   <p className="text-slate-400 text-xs">{eventPlace}</p>
@@ -287,7 +292,7 @@ export default function TicketPage() {
               className="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-on-accent font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all"
             >
               <Download className="w-4 h-4" />
-              <span>{downloading ? 'กำลังบันทึกรูป...' : 'บันทึกบัตรลงมือถือ'}</span>
+              <span>{downloading ? t.ticket.actions.savingImage : t.ticket.actions.saveToPhone}</span>
             </button>
 
             <button
@@ -295,7 +300,7 @@ export default function TicketPage() {
               className="py-3 px-4 rounded-xl bg-white/[0.06] hover:bg-white/10 text-slate-200 hover:text-white font-semibold text-sm border border-white/10 flex items-center justify-center gap-2 transition-all"
             >
               <Printer className="w-4 h-4 text-cyan-400" />
-              <span>พิมพ์บัตร / บันทึกเป็น PDF</span>
+              <span>{t.ticket.actions.printOrPdf}</span>
             </button>
           </div>
         </div>

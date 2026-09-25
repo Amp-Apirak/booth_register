@@ -56,6 +56,9 @@ function NavigationContent() {
   };
 
   const visibleNavItems = navItems.filter(item => !item.staffOnly || isLoggedIn);
+  // Staff see 8 items, the public 5. So every item fits on one row in TH and EN, the desktop bar starts at xl
+  // (menu button below) and staff get a compact bar without icons or the year badge.
+  const compact = isLoggedIn;
 
   // If in public/standalone mode (e.g. sent to attendees) or if it's the register page
   const isPublicMode = pathname === '/register' || searchParams.get('mode') === 'public' || searchParams.get('standalone') === 'true';
@@ -63,8 +66,9 @@ function NavigationContent() {
   if (isPublicMode) {
     return (
       <header className="sticky top-0 z-50 px-4 sm:px-6 lg:px-8 py-3">
-        <div className="glass-panel rounded-2xl mx-auto max-w-3xl px-5 py-3 sm:py-4 flex items-center justify-between border border-white/10 shadow-2xl backdrop-blur-2xl">
-          <Link href="/" className="flex items-center gap-3 sm:gap-4 group cursor-pointer hover:opacity-80 transition-opacity">
+        {/* phones: event name on the first row, language/theme + "find my ticket" on the second (inside the card) */}
+        <div className="glass-panel rounded-2xl mx-auto max-w-3xl px-5 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 border border-white/10 shadow-2xl backdrop-blur-2xl">
+          <Link href="/" className="flex items-center gap-3 sm:gap-4 min-w-0 group cursor-pointer hover:opacity-80 transition-opacity">
             {settings.event_logo ? (
               <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden bg-white/5 border border-white/10 shadow-lg p-1 group-hover:scale-105 transition-transform duration-300">
                 <img src={settings.event_logo} alt="Logo" className="w-full h-full object-cover rounded-lg" />
@@ -85,18 +89,17 @@ function NavigationContent() {
               </p>
             </div>
           </Link>
-          <div className="flex items-center gap-2">
-          <PreferenceToggles className="hidden sm:flex" />
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+          <PreferenceToggles />
           <Link
             href="/ticket"
-            className="text-sm font-bold text-on-accent bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all border border-cyan-400/30 hover:scale-[1.02] active:scale-[0.98]"
+            className="text-sm font-bold text-on-accent bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 whitespace-nowrap transition-all border border-cyan-400/30 hover:scale-[1.02] active:scale-[0.98]"
           >
             <QrCode className="w-4 h-4" />
             <span>{t.nav.findMyTicket}</span>
           </Link>
           </div>
         </div>
-        <PreferenceToggles className="sm:hidden justify-end mt-2 mx-auto max-w-3xl" />
       </header>
     );
   }
@@ -124,7 +127,7 @@ function NavigationContent() {
                   <span className="font-extrabold text-base sm:text-lg tracking-tight holo-text truncate block">
                     {settings.event_name || 'SMART EVENT'}
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-semibold tracking-wider">
+                  <span className={`${compact ? 'hidden' : ''} text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-semibold tracking-wider`}>
                     2026
                   </span>
                 </div>
@@ -136,7 +139,7 @@ function NavigationContent() {
           </div>
 
           {/* Center: Desktop Navigation Links */}
-        <div className="hidden lg:flex flex-1 items-center justify-center px-4">
+        <div className="hidden xl:flex flex-1 items-center justify-center px-4">
           <div className="flex items-center flex-wrap justify-center gap-1 bg-white/[0.03] p-1 rounded-xl border border-white/[0.05]">
               {visibleNavItems.map((item) => {
                 const Icon = item.icon;
@@ -145,13 +148,13 @@ function NavigationContent() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all duration-300 whitespace-nowrap shrink-0 ${
+                    className={`relative flex items-center gap-2 py-2 rounded-lg font-semibold transition-all duration-300 whitespace-nowrap shrink-0 ${compact ? 'px-2.5 text-[13px] 2xl:text-sm' : 'px-3.5 text-sm tracking-wide'} ${
                       isActive
                         ? 'text-on-accent bg-gradient-to-r from-indigo-600/80 to-purple-600/80 shadow-lg shadow-indigo-500/25 border border-indigo-400/30'
                         : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-300' : 'text-slate-400'}`} />
+                    {!compact && <Icon className={`hidden 2xl:block w-4 h-4 ${isActive ? 'text-cyan-300' : 'text-slate-400'}`} />}
                     <span>{t.nav[item.key]}</span>
                   </Link>
                 );
@@ -161,13 +164,13 @@ function NavigationContent() {
           
           {/* Right Status & Auth (Inside the card) */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-medium border whitespace-nowrap shrink-0 transition-all ${
+          <div title={connected ? t.nav.liveSync : t.nav.disconnected} className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-medium border whitespace-nowrap shrink-0 transition-all ${
             connected 
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/10' 
               : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
           }`}>
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-            <span>{connected ? t.nav.liveSync : t.nav.disconnected}</span>
+            <span className="hidden 2xl:inline">{connected ? t.nav.liveSync : t.nav.disconnected}</span>
           </div>
 
           <PreferenceToggles className="hidden md:flex" />
@@ -179,7 +182,7 @@ function NavigationContent() {
               title={t.nav.logout}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>{t.nav.logout}</span>
+              <span className="hidden 2xl:inline">{t.nav.logout}</span>
             </button>
           ) : (
             <Link
@@ -195,7 +198,7 @@ function NavigationContent() {
           {/* Mobile menu trigger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden p-2 rounded-xl bg-white/[0.05] border border-white/10 text-slate-300 hover:text-white"
+            className="xl:hidden p-2 rounded-xl bg-white/[0.05] border border-white/10 text-slate-300 hover:text-white"
             aria-label={t.nav.toggleMenu}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -205,7 +208,7 @@ function NavigationContent() {
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="lg:hidden mt-2 glass-panel-glow rounded-2xl p-4 border border-white/10 shadow-2xl animate-fade-in max-w-[1600px] mx-auto w-full">
+        <div className="xl:hidden mt-2 glass-panel-glow rounded-2xl p-4 border border-white/10 shadow-2xl animate-fade-in max-w-[1600px] mx-auto w-full">
           <div className="flex flex-col gap-1.5">
             <PreferenceToggles className="md:hidden mb-2" />
             {visibleNavItems.map((item) => {

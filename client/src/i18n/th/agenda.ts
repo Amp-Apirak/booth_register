@@ -1,3 +1,140 @@
 // Thai UI text for the "agenda" area (source of truth — en/agenda.ts must mirror every key)
 export const agenda = {
+  loading: 'กำลังโหลดกำหนดการ...',
+  title: 'จัดการ Event Agenda',
+  subtitle: 'นำเข้า Excel แล้วตรวจสอบข้อมูลก่อนบันทึก รูปวิทยากรเพิ่มได้จากแต่ละรายการ',
+  actions: {
+    importExcel: 'นำเข้า Excel',
+    template: 'ไฟล์ตัวอย่าง',
+    exportExcel: 'ส่งออก Excel',
+    add: 'เพิ่มกำหนดการ',
+    saveAll: 'บันทึกกำหนดการทั้งหมด',
+  },
+  // "ดาวน์โหลด <b>ไฟล์ตัวอย่าง</b> (…) หรือใช้ไฟล์จาก <b>ส่งออก Excel</b> มาแก้…"
+  excelHint: {
+    download: 'ดาวน์โหลด',
+    guideSheet: (sheet: string) => `(มีชีต "${sheet}" บอกวิธีกรอก) หรือใช้ไฟล์จาก`,
+    rest: (requiredColumns: string) =>
+      `มาแก้แล้วนำเข้ากลับได้ · คอลัมน์ที่ต้องมี: ${requiredColumns} · การนำเข้าจะแทนที่รายการทั้งหมด (ยังไม่บันทึกจนกว่าจะกด "บันทึก")`,
+  },
+  filters: {
+    heading: 'ค้นหาและกรองกำหนดการ',
+    hint: 'ค้นหาจากหัวข้อ วิทยากร วันที่ หรือช่วงเวลาเริ่ม',
+    clear: 'ล้างตัวกรอง',
+    title: 'หัวข้อ',
+    titlePlaceholder: 'ค้นหาหัวข้อ...',
+    speaker: 'ชื่อวิทยากร',
+    speakerPlaceholder: 'ค้นหาวิทยากร...',
+    date: 'วันที่',
+    timeFrom: 'เวลาเริ่ม ตั้งแต่',
+    timeTo: 'เวลาเริ่ม ถึง',
+    found: 'พบ', // "พบ <b>3</b> จาก 10 รายการ"
+    ofTotal: (total: number) => `จาก ${total} รายการ`,
+    perPage: 'แสดงต่อหน้า',
+  },
+  empty: {
+    title: 'ยังไม่มีกำหนดการ',
+    hint: 'นำเข้า Excel หรือเพิ่มรายการแรกได้ทันที',
+    noMatch: 'ไม่พบกำหนดการที่ตรงกับตัวกรอง',
+    clearAll: 'ล้างตัวกรองทั้งหมด',
+  },
+  card: {
+    order: (order: number) => `ลำดับที่ ${order}`,
+    newUnsaved: 'ใหม่ · ยังไม่บันทึก',
+    noTime: 'ยังไม่ได้ระบุเวลา',
+    choosePhoto: 'เลือกรูป',
+    titlePlaceholder: 'หัวข้อกำหนดการ *',
+    descriptionPlaceholder: 'รายละเอียดย่อสำหรับแสดงบนจอ LED',
+    speakerPlaceholder: 'ชื่อวิทยากร / รายละเอียด',
+    locationPlaceholder: 'ห้อง / เวที / สถานที่',
+    start: 'เวลาเริ่ม *',
+    end: 'เวลาสิ้นสุด *',
+    removePhoto: 'ลบรูป',
+    removeItem: 'ลบรายการ',
+    highlight: 'แสดงเป็นรายการไฮไลต์',
+  },
+  // Shown when "บันทึก" finds a problem; `detail` gets the item number (1, 2, …)
+  validation: {
+    missingTitle: {
+      title: 'ยังไม่ได้กรอกหัวข้อ',
+      detail: (item: number) => `รายการที่ ${item}: กรุณากรอกช่อง “หัวข้อกำหนดการ”`,
+      example: 'ตัวอย่าง: บรรยายเปิดงานเทคโนโลยีแห่งอนาคต',
+    },
+    missingStart: {
+      title: 'ยังไม่ได้ระบุวันและเวลาเริ่ม',
+      detail: (item: number) => `รายการที่ ${item}: กรุณาเลือกวันและเวลาเริ่ม`,
+      example: 'ตัวอย่าง: 21/09/2026 15:30',
+    },
+    missingEnd: {
+      title: 'ยังไม่ได้ระบุวันและเวลาสิ้นสุด',
+      detail: (item: number) => `รายการที่ ${item}: กรุณาเลือกวันและเวลาสิ้นสุด`,
+      example: 'ตัวอย่าง: 21/09/2026 16:30',
+    },
+    invalidStart: {
+      title: 'วันเวลาเริ่มไม่ถูกต้อง',
+      detail: (item: number) => `รายการที่ ${item}: ระบบไม่สามารถอ่านวันเวลาเริ่มได้`,
+      example: 'ตัวอย่างที่ถูก: 21/09/2026 15:30',
+    },
+    invalidEnd: {
+      title: 'วันเวลาสิ้นสุดไม่ถูกต้อง',
+      detail: (item: number) => `รายการที่ ${item}: ระบบไม่สามารถอ่านวันเวลาสิ้นสุดได้`,
+      example: 'ตัวอย่างที่ถูก: 21/09/2026 16:30',
+    },
+    endBeforeStart: {
+      title: 'ช่วงเวลาไม่ถูกต้อง',
+      detail: (item: number) => `รายการที่ ${item}: เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม`,
+      example: 'ตัวอย่าง: เริ่ม 15:30 และสิ้นสุด 16:30',
+    },
+    backToEdit: 'กลับไปแก้ไข',
+  },
+  alerts: {
+    imageTooLargeTitle: 'รูปภาพมีขนาดใหญ่เกินไป',
+    imageTooLargeHtml: 'กรุณาใช้ไฟล์ PNG, JPG หรือ WebP ขนาดไม่เกิน <b>2 MB</b>',
+    savedTitle: 'บันทึกสำเร็จ',
+    savedText: (count: number) => `บันทึกกำหนดการ ${count} รายการและอัปเดตจอ LED แล้ว`,
+    ok: 'ตกลง',
+    saveFailedTitle: 'บันทึกกำหนดการไม่สำเร็จ',
+    saveFailedHint: 'กรุณาตรวจสอบการเข้าสู่ระบบ วันเวลา และลองบันทึกอีกครั้ง',
+    reviewData: 'ตรวจสอบข้อมูล',
+    missingDate: (row: number) => `กรุณากรอกวันที่ในแถวที่ ${row}`,
+    importedTitle: 'นำเข้า Excel สำเร็จ',
+    importedText: (count: number) =>
+      `นำเข้า ${count} รายการ (แทนที่รายการเดิมบนหน้านี้) — ตรวจสอบแล้วกด "บันทึก" เพื่อใช้งานจริง หากไม่ต้องการให้รีเฟรชหน้าเพื่อยกเลิก`,
+    importNoData: 'ไม่พบข้อมูลในไฟล์ หรือรูปแบบไฟล์ไม่ถูกต้อง',
+    importFailedTitle: 'นำเข้า Excel ไม่สำเร็จ',
+    importFailedExample: 'ตัวอย่าง: วันที่ 21/09/2026, เวลาเริ่ม 15:30, เวลาสิ้นสุด 16:30, หัวข้อ บรรยายเปิดงาน',
+    backToFile: 'กลับไปตรวจไฟล์',
+  },
+  // Excel template / export. Column headers must stay in the import alias lists
+  // (pick(row, [...]) in AgendaManager) so an exported file imports back.
+  excel: {
+    columns: {
+      order: 'ลำดับ', // export only, ignored on import
+      date: 'วันที่',
+      startTime: 'เวลาเริ่ม',
+      endTime: 'เวลาสิ้นสุด',
+      title: 'หัวข้อ',
+      description: 'รายละเอียดย่อ',
+      speaker: 'วิทยากร',
+      location: 'สถานที่',
+      highlight: 'ไฮไลต์',
+      speakerImage: 'รูปวิทยากร',
+    },
+    sample1: { title: 'พิธีเปิดงาน', description: 'กล่าวต้อนรับโดยประธานจัดงาน', speaker: 'ดร.สมชาย ใจดี' },
+    sample2: { title: 'เสวนา: อนาคตของ AI บนมือถือ', description: 'ผู้เชี่ยวชาญ 3 ท่านร่วมพูดคุย', speaker: 'คุณสมหญิง รักงาน' },
+    guideSheet: 'คำอธิบาย',
+    guide: {
+      column: 'คอลัมน์',
+      required: 'จำเป็น',
+      format: 'รูปแบบ',
+      example: 'ตัวอย่าง',
+      date: 'วัน/เดือน/ปี ค.ศ. หรือ พ.ศ.',
+      startTime: 'ชั่วโมง:นาที (24 ชม.)',
+      endTime: 'ชั่วโมง:นาที ต้องหลังเวลาเริ่ม',
+      text: 'ข้อความ',
+      description: 'ข้อความสั้น ๆ แสดงบนจอ LED',
+      yesNo: 'ใช่ / ไม่',
+      speakerImage: 'ลิงก์รูป (https://...) หรือเว้นว่างแล้วอัปโหลดในหน้าเว็บ',
+    },
+  },
 };

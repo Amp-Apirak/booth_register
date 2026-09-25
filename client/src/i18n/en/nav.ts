@@ -5,7 +5,7 @@ export const nav: typeof Th = {
   register: 'Register',
   ticket: 'Ticket',
   scanner: 'Scan',
-  dashboard: 'CMS Dashboard',
+  dashboard: 'Dashboard',
   settings: 'Settings',
   signage: 'LED Screen',
   luckyDraw: 'Lucky Draw',

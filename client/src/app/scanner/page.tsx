@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import jsQR from 'jsqr';
 import api, { Participant } from '@/lib/api';
 import useWebSocket from '@/lib/useWebSocket';
+import { useT } from '@/contexts/PreferencesContext';
 import {
   ScanLine,
   CheckCircle2,
@@ -24,6 +25,7 @@ const SAME_CODE_COOLDOWN_MS = 3000;
 const SCAN_INTERVAL_MS = 150;
 
 export default function ScannerPage() {
+  const t = useT();
   const [ticketCode, setTicketCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [lastCheckin, setLastCheckin] = useState<Participant | null>(null);
@@ -104,11 +106,11 @@ export default function ScannerPage() {
         setTicketCode('');
         playBeep(false);
       } else {
-        setError('ไม่พบรหัสตั๋วนี้ในระบบ หรือผู้ร่วมงานได้ทำการเช็คอินไปแล้ว');
+        setError(t.scanner.result.notFound);
         playBeep(true);
       }
     } catch {
-      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเกตเวย์เซิร์ฟเวอร์');
+      setError(t.scanner.result.connectionError);
       playBeep(true);
     } finally {
       busyRef.current = false;
@@ -133,7 +135,7 @@ export default function ScannerPage() {
   const startCamera = useCallback(async (deviceId?: string) => {
     setCameraError('');
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง (ต้องเปิดผ่าน localhost หรือ https)');
+      setCameraError(t.scanner.camera.unsupported);
       return;
     }
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -158,16 +160,16 @@ export default function ScannerPage() {
       const name = (err as DOMException)?.name;
       setCameraError(
         name === 'NotAllowedError'
-          ? 'ไม่ได้รับอนุญาตให้ใช้กล้อง — กดไอคอนกล้องที่แถบ URL แล้วเลือก "อนุญาต"'
+          ? t.scanner.camera.notAllowed
           : name === 'NotFoundError'
-            ? 'ไม่พบกล้องบนเครื่องนี้'
+            ? t.scanner.camera.notFound
             : name === 'NotReadableError'
-              ? 'กล้องถูกใช้งานโดยโปรแกรมอื่นอยู่ (เช่น Zoom / Teams)'
-              : 'ไม่สามารถเปิดกล้องได้'
+              ? t.scanner.camera.inUse
+              : t.scanner.camera.failed
       );
       setCameraOn(false);
     }
-  }, []);
+  }, [t]);
 
   // Decode QR codes from the live video
   useEffect(() => {
@@ -220,10 +222,10 @@ export default function ScannerPage() {
             <span>Fast Check-in Counter Gate 01</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            จุดสแกนบัตรผ่านประตู
+            {t.scanner.title}
           </h1>
           <p className="text-sm text-slate-400">
-            ยิงสแกน Barcode / QR Code เพื่อบันทึกประวัติการเข้างานและส่งชื่อขึ้นจอ Signage
+            {t.scanner.subtitle}
           </p>
         </div>
 
@@ -235,7 +237,7 @@ export default function ScannerPage() {
                 ? 'bg-white/[0.05] border-white/10 text-cyan-400'
                 : 'bg-white/[0.02] border-white/5 text-slate-500'
             }`}
-            title={soundEnabled ? 'ปิดเสียง Beep' : 'เปิดเสียง Beep'}
+            title={soundEnabled ? t.scanner.beepOff : t.scanner.beepOn}
           >
             {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
@@ -263,7 +265,7 @@ export default function ScannerPage() {
             <div className="text-2xl sm:text-3xl font-extrabold text-indigo-300 font-heading leading-none">
               {stats.registered}
             </div>
-            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">ผู้ลงทะเบียนทั้งหมด</div>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">{t.scanner.stats.registered}</div>
           </div>
         </div>
 
@@ -277,7 +279,7 @@ export default function ScannerPage() {
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-heading leading-none">
               {stats.checked_in}
             </div>
-            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">ผ่านประตูเข้างานแล้ว</div>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">{t.scanner.stats.checkedIn}</div>
           </div>
         </div>
 
@@ -291,7 +293,7 @@ export default function ScannerPage() {
             <div className="text-2xl sm:text-3xl font-extrabold text-amber-300 font-heading leading-none">
               {stats.pending}
             </div>
-            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">ยังไม่ผ่านประตู</div>
+            <div className="text-[11px] sm:text-xs text-slate-400 font-medium mt-1.5">{t.scanner.stats.pending}</div>
           </div>
         </div>
       </div>
@@ -357,7 +359,7 @@ export default function ScannerPage() {
             }`}
           >
             {cameraOn ? <CameraOff className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-            <span>{cameraOn ? 'ปิดกล้อง' : 'เปิดกล้องสแกน QR'}</span>
+            <span>{cameraOn ? t.scanner.camera.stop : t.scanner.camera.start}</span>
           </button>
           {cameraOn && cameras.length > 1 && (
             <select
@@ -367,7 +369,7 @@ export default function ScannerPage() {
             >
               {cameras.map((c, i) => (
                 <option key={c.deviceId} value={c.deviceId} className="bg-slate-900">
-                  {c.label || `กล้อง ${i + 1}`}
+                  {c.label || t.scanner.camera.deviceFallback(i + 1)}
                 </option>
               ))}
             </select>
@@ -386,7 +388,7 @@ export default function ScannerPage() {
               value={ticketCode}
               onChange={(e) => setTicketCode(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white/[0.04] border border-white/15 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-white font-mono text-base sm:text-lg placeholder-slate-500 shadow-inner"
-              placeholder="สแกน QR Code หรือกรอกรหัสตั๋วที่นี่..."
+              placeholder={t.scanner.form.placeholder}
               autoFocus
             />
           </div>
@@ -400,7 +402,7 @@ export default function ScannerPage() {
             ) : (
               <>
                 <CheckCircle2 className="w-5 h-5" />
-                <span>ยืนยันเข้างาน</span>
+                <span>{t.scanner.form.submit}</span>
               </>
             )}
           </button>
@@ -442,7 +444,7 @@ export default function ScannerPage() {
             <XCircle className="w-6 h-6" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">ไม่สามารถดำเนินการได้</h4>
+            <h4 className="text-sm font-bold text-white">{t.scanner.result.errorTitle}</h4>
             <p className="text-xs text-rose-300">{error}</p>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Pause, Play } from 'lucide-react';
+import { useT } from '@/contexts/PreferencesContext';
 import EventBackdrop from './EventBackdrop';
 import styles from './EventBackdrop.module.css';
 
@@ -26,6 +27,7 @@ const NO_CONTROL = ['/signage'];
  */
 export function SiteBackdropProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useT();
   const [paused, setPaused] = useState(false);
   const [hidden, setHidden] = useState(false);
   const togglePaused = () => setPaused(p => !p);
@@ -37,9 +39,9 @@ export function SiteBackdropProvider({ children }: { children: React.ReactNode }
       {children}
       {showControl && (
         <div className={styles.floatingControl}>
-          <button type="button" className={styles.motionButton} aria-pressed={paused} aria-label={paused ? 'เปิดพื้นหลังเคลื่อนไหว' : 'หยุดพื้นหลังเคลื่อนไหว'} onClick={togglePaused}>
+          <button type="button" className={styles.motionButton} aria-pressed={paused} aria-label={paused ? t.home.backdrop.resume : t.home.backdrop.pauseAria} onClick={togglePaused}>
             {paused ? <Play size={14} /> : <Pause size={14} />}
-            <span className={styles.motionLabel}>{paused ? 'เปิดพื้นหลังเคลื่อนไหว' : 'พักพื้นหลัง'}</span>
+            <span className={styles.motionLabel}>{paused ? t.home.backdrop.resume : t.home.backdrop.pause}</span>
           </button>
         </div>
       )}

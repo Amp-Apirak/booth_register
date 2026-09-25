@@ -2,6 +2,7 @@
 
 import { Building, Crown, Gift, Sparkles, Trophy } from 'lucide-react';
 import type { LuckyWinnerData } from '@/lib/api';
+import { useT } from '@/contexts/PreferencesContext';
 
 interface Props {
   winner: LuckyWinnerData;
@@ -21,6 +22,7 @@ const initials = (name: string) =>
 // Winner announcement for the LED "Lucky" screen. Sizes are capped by viewport
 // height so the whole reveal fits on any display, windowed or fullscreen.
 export default function LuckyWinnerReveal({ winner, isFullscreen }: Props) {
+  const t = useT();
   const isVip = winner.attendee_type === 'VIP';
   const visual = isFullscreen ? 'w-[min(20rem,30vh)] h-[min(20rem,30vh)]' : 'w-[min(13rem,22vh)] h-[min(13rem,22vh)]';
 
@@ -99,7 +101,7 @@ export default function LuckyWinnerReveal({ winner, isFullscreen }: Props) {
         )}
         <div className={`inline-flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-cyan-500/15 shadow-[0_0_40px_rgba(251,191,36,.18)] ${isFullscreen ? 'mt-7 px-8 py-4' : 'mt-5 px-5 py-2.5'}`}>
           <Trophy className={`text-amber-300 ${isFullscreen ? 'w-8 h-8' : 'w-5 h-5'}`} />
-          <span className={`text-amber-100/80 font-semibold ${isFullscreen ? 'text-xl' : 'text-sm'}`}>ได้รับรางวัล</span>
+          <span className={`text-amber-100/80 font-semibold ${isFullscreen ? 'text-xl' : 'text-sm'}`}>{t.signage.lucky.won}</span>
           <span className={`font-extrabold text-white ${isFullscreen ? 'text-3xl' : 'text-lg sm:text-xl'}`}>{winner.prize_name}</span>
         </div>
         {winner.prize_description && (

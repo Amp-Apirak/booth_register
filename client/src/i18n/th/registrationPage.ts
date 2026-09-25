@@ -1,3 +1,35 @@
 // Thai UI text for the "registrationPage" area (source of truth — en/registrationPage.ts must mirror every key)
 export const registrationPage = {
+  title: 'เนื้อหาหน้าลงทะเบียน',
+  subtitle: 'จัดภาพประชาสัมพันธ์ รายละเอียด วัตถุประสงค์ และเงื่อนไขที่ผู้สมัครจะเห็นก่อนลงทะเบียน',
+  images: {
+    hero: 'ภาพกิจกรรมหลักด้านบน (Hero Banner)',
+    brochure: 'ภาพโบรชัวร์ด้านล่าง',
+    remove: 'ลบภาพ',
+    upload: 'คลิกเพื่ออัปโหลดและปรับตำแหน่งภาพ',
+    formats: 'JPG, PNG, WebP ไม่เกิน 5 MB',
+  },
+  intro: 'คำแนะนำเกี่ยวกับงาน',
+  introPlaceholder: 'แนะนำภาพรวมและจุดเด่นของงาน...',
+  objectives: 'วัตถุประสงค์ของงาน',
+  objectivesPlaceholder: 'หนึ่งหัวข้อต่อหนึ่งบรรทัด เช่น\nพบกับผู้เชี่ยวชาญด้านเทคโนโลยี\nสร้างเครือข่ายทางธุรกิจ',
+  terms: 'เงื่อนไขและข้อมูลสำคัญ',
+  termsPlaceholder: 'หนึ่งเงื่อนไขต่อหนึ่งบรรทัด เช่น\nกรุณานำ QR Code มาแสดง ณ จุดลงทะเบียน\nสงวนสิทธิ์เฉพาะผู้ลงทะเบียนล่วงหน้า',
+  save: 'บันทึกเนื้อหาหน้าลงทะเบียน',
+  crop: {
+    titleHero: 'ปรับขนาดและตำแหน่งภาพ Hero Banner',
+    titleBrochure: 'ปรับขนาดและตำแหน่งภาพโบรชัวร์',
+    hint: 'เลื่อนภาพและซูมจนเนื้อหาสำคัญอยู่ภายในกรอบ',
+    zoom: 'ซูม',
+    apply: 'ใช้ภาพนี้',
+  },
+  alerts: {
+    fileTooLargeTitle: 'ไฟล์ใหญ่เกินไป',
+    fileTooLargeText: 'กรุณาใช้ไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB',
+    cropFailedTitle: 'ปรับภาพไม่สำเร็จ',
+    cropFailedText: 'กรุณาลองเลือกไฟล์ภาพใหม่',
+    savedTitle: 'บันทึกหน้าลงทะเบียนแล้ว',
+    saveFailedTitle: 'บันทึกไม่สำเร็จ',
+    checkConnection: 'กรุณาตรวจสอบการเชื่อมต่อ',
+  },
 };

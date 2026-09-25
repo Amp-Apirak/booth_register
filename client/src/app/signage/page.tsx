@@ -8,6 +8,7 @@ import api, { AgendaItem, LuckyWinnerData } from '@/lib/api';
 import LuckyWinnerReveal from '@/components/LuckyWinnerReveal';
 import { getAgendaForDate, getAgendaStatus } from '@/lib/agenda';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useT } from '@/contexts/PreferencesContext';
 import confetti from 'canvas-confetti';
 import { 
   Tv, 
@@ -50,6 +51,7 @@ function SignageDisplay() {
   }, [screen]);
 
   const { settings } = useSettings();
+  const t = useT();
   const { stats, latestCheckin, connected, agenda: liveAgenda, latestWinner } = useWebSocket();
   const [fetchedAgenda, setFetchedAgenda] = useState<AgendaItem[]>([]);
   const [now, setNow] = useState(() => new Date());
@@ -258,10 +260,10 @@ function SignageDisplay() {
           <button
             onClick={enterFullscreen}
             className="flex items-center gap-2 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-slate-300 transition-all"
-            title="เข้าสู่โหมดเต็มจอ (กด ESC เพื่อออก)"
+            title={t.signage.controls.fullscreenHint}
           >
             <Tv className="w-4 h-4" />
-            <span>เต็มจอ</span>
+            <span>{t.signage.controls.fullscreen}</span>
           </button>
 
           {/* Live Broadcast Badge */}
@@ -347,7 +349,7 @@ function SignageDisplay() {
               </div>
             ) : (
               <p className="text-xl text-slate-400 pt-6">
-                กำลังรอผู้ร่วมงานสแกนผ่านประตูทางเข้า...
+                {t.signage.welcome.waiting}
               </p>
             )}
           </div>
@@ -379,27 +381,27 @@ function SignageDisplay() {
                 <h2 className={`${isFullscreen ? 'text-5xl lg:text-7xl' : 'text-4xl lg:text-6xl'} font-black text-white tracking-tight leading-none`}>
                   Attendance <span className="holo-text">Overview</span>
                 </h2>
-                <p className={`${isFullscreen ? 'text-xl' : 'text-base'} text-slate-400 mt-3`}>ภาพรวมผู้เข้าร่วมงานแบบเรียลไทม์ · {settings.event_name || 'Smart Event Registration'}</p>
+                <p className={`${isFullscreen ? 'text-xl' : 'text-base'} text-slate-400 mt-3`}>{t.signage.overview.subtitle} · {settings.event_name || 'Smart Event Registration'}</p>
               </div>
               <div className="md:text-right shrink-0">
                 <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Live updated</div>
-                <div className={`${isFullscreen ? 'text-4xl' : 'text-3xl'} font-black font-mono text-cyan-300 mt-1`}>{now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div className={`${isFullscreen ? 'text-4xl' : 'text-3xl'} font-black font-mono text-cyan-300 mt-1`}>{now.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 perspective-1000">
               {[
-                { label: 'REGISTERED', thai: 'ลงทะเบียนทั้งหมด', value: stats.registered, Icon: Users, gradient: 'from-indigo-500/25 via-indigo-500/10 to-transparent', text: 'text-indigo-300', border: 'border-indigo-400/35', glow: 'shadow-indigo-500/15', orb: 'bg-indigo-400/10', iconBg: 'bg-indigo-400/15' },
-                { label: 'CHECKED-IN', thai: 'เข้างานแล้ว', value: stats.checked_in, Icon: UserCheck, gradient: 'from-emerald-500/25 via-emerald-500/10 to-transparent', text: 'text-emerald-300', border: 'border-emerald-400/40', glow: 'shadow-emerald-500/20', orb: 'bg-emerald-400/10', iconBg: 'bg-emerald-400/15' },
-                { label: 'PENDING', thai: 'ยังไม่มา', value: stats.pending, Icon: Clock, gradient: 'from-amber-500/25 via-amber-500/10 to-transparent', text: 'text-amber-300', border: 'border-amber-400/35', glow: 'shadow-amber-500/15', orb: 'bg-amber-400/10', iconBg: 'bg-amber-400/15' },
-              ].map(({ label, thai, value, Icon, gradient, text, border, glow, orb, iconBg }, cardIndex) => (
+                { label: 'REGISTERED', caption: t.signage.overview.registered, value: stats.registered, Icon: Users, gradient: 'from-indigo-500/25 via-indigo-500/10 to-transparent', text: 'text-indigo-300', border: 'border-indigo-400/35', glow: 'shadow-indigo-500/15', orb: 'bg-indigo-400/10', iconBg: 'bg-indigo-400/15' },
+                { label: 'CHECKED-IN', caption: t.signage.overview.checkedIn, value: stats.checked_in, Icon: UserCheck, gradient: 'from-emerald-500/25 via-emerald-500/10 to-transparent', text: 'text-emerald-300', border: 'border-emerald-400/40', glow: 'shadow-emerald-500/20', orb: 'bg-emerald-400/10', iconBg: 'bg-emerald-400/15' },
+                { label: 'PENDING', caption: t.signage.overview.pending, value: stats.pending, Icon: Clock, gradient: 'from-amber-500/25 via-amber-500/10 to-transparent', text: 'text-amber-300', border: 'border-amber-400/35', glow: 'shadow-amber-500/15', orb: 'bg-amber-400/10', iconBg: 'bg-amber-400/15' },
+              ].map(({ label, caption, value, Icon, gradient, text, border, glow, orb, iconBg }, cardIndex) => (
                 <div key={label} className={`overview-stat-card group relative overflow-hidden rounded-[1.75rem] border ${border} bg-gradient-to-br ${gradient} p-5 lg:p-7 shadow-2xl ${glow} card-3d`} style={{ '--card-delay': `${cardIndex * -1.15}s` } as CSSProperties}>
                   <div className={`absolute -right-12 -top-12 w-40 h-40 rounded-full ${orb} blur-2xl group-hover:scale-125 transition-transform duration-700`} />
                   <div className="relative flex items-start justify-between gap-4">
                     <div>
                       <div className="text-[11px] lg:text-xs font-mono font-bold tracking-[0.22em] text-slate-400">{label}</div>
-                      <div key={`${label}-${value}`} className={`overview-number-pop ${isFullscreen ? 'text-7xl lg:text-8xl' : 'text-6xl lg:text-7xl'} font-black font-heading ${text} leading-none mt-4 drop-shadow-[0_0_22px_currentColor]`}>{value.toLocaleString('th-TH')}</div>
-                      <div className="text-base lg:text-lg font-semibold text-white mt-3">{thai}</div>
+                      <div key={`${label}-${value}`} className={`overview-number-pop ${isFullscreen ? 'text-7xl lg:text-8xl' : 'text-6xl lg:text-7xl'} font-black font-heading ${text} leading-none mt-4 drop-shadow-[0_0_22px_currentColor]`}>{value.toLocaleString(t.common.locale)}</div>
+                      <div className="text-base lg:text-lg font-semibold text-white mt-3">{caption}</div>
                     </div>
                     <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-2xl ${iconBg} border ${border} flex items-center justify-center ${text} shadow-lg`}><Icon className="w-6 h-6 lg:w-7 lg:h-7" /></div>
                   </div>
@@ -413,7 +415,7 @@ function SignageDisplay() {
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="text-lg lg:text-xl font-bold text-white">Show-up Progress</div>
-                    <div className="text-sm text-slate-400 mt-0.5">อัตราผู้เข้าร่วมงานจริง ณ เวลาปัจจุบัน</div>
+                    <div className="text-sm text-slate-400 mt-0.5">{t.signage.overview.showUpHint}</div>
                   </div>
                   <div className={`flex items-center gap-2 text-xs font-mono ${connected ? 'text-emerald-300' : 'text-rose-300'}`}><span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />{connected ? 'SYNCED' : 'OFFLINE'}</div>
                 </div>
@@ -423,7 +425,7 @@ function SignageDisplay() {
                   </div>
                 </div>
                 <div className="flex justify-between mt-3 text-xs text-slate-500 font-mono"><span>0%</span><span>LIVE CAPACITY TRACKING</span><span>100%</span></div>
-                {latestCheckin && <div className="mt-5 pt-4 border-t border-white/10 flex items-center gap-3 text-sm"><span className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/25 flex items-center justify-center"><ShieldCheck className="w-4 h-4 text-emerald-300" /></span><span className="text-slate-400">เช็คอินล่าสุด</span><b className="text-white truncate">{latestCheckin.fullname}</b><span className="text-cyan-300 truncate hidden sm:inline">{latestCheckin.company}</span></div>}
+                {latestCheckin && <div className="mt-5 pt-4 border-t border-white/10 flex items-center gap-3 text-sm"><span className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/25 flex items-center justify-center"><ShieldCheck className="w-4 h-4 text-emerald-300" /></span><span className="text-slate-400">{t.signage.overview.latestCheckin}</span><b className="text-white truncate">{latestCheckin.fullname}</b><span className="text-cyan-300 truncate hidden sm:inline">{latestCheckin.company}</span></div>}
               </div>
 
               <div className="relative w-full lg:w-56 rounded-[1.75rem] border border-cyan-400/25 bg-cyan-500/[0.06] p-4 flex items-center justify-center shadow-[0_0_35px_rgba(34,211,238,.1)]">
@@ -453,16 +455,16 @@ function SignageDisplay() {
               <p className={`${isFullscreen ? 'text-xl' : 'text-base'} text-slate-300`}>{settings.event_name || 'Smart Event Registration'}</p>
             </div>
             <div className="md:text-right">
-              <div className={`${isFullscreen ? 'text-4xl' : 'text-2xl'} font-extrabold font-mono text-cyan-300`}>{now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
-              <div className="text-sm text-slate-400 mt-1">{now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+              <div className={`${isFullscreen ? 'text-4xl' : 'text-2xl'} font-extrabold font-mono text-cyan-300`}>{now.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })}</div>
+              <div className="text-sm text-slate-400 mt-1">{now.toLocaleDateString(t.common.locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
             </div>
           </div>
 
           {todayAgenda.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/15 bg-white/[0.02] text-center p-12">
               <Calendar className="w-14 h-14 text-slate-600 mb-4" />
-              <h3 className="text-2xl font-bold text-white">ไม่มีกำหนดการสำหรับวันนี้</h3>
-              <p className="text-slate-400 mt-2">จอจะแสดงเฉพาะรายการที่ตรงกับวันที่ปัจจุบัน กรุณาตรวจสอบวันที่ในเมนูตั้งค่าระบบ</p>
+              <h3 className="text-2xl font-bold text-white">{t.signage.agenda.emptyTitle}</h3>
+              <p className="text-slate-400 mt-2">{t.signage.agenda.emptyHint}</p>
             </div>
           ) : (
           <div ref={agendaScrollRef} className="relative z-10 grid grid-cols-1 xl:grid-cols-2 gap-4 w-full content-start overflow-y-auto pr-1 pb-1 scroll-smooth">
@@ -501,9 +503,9 @@ function SignageDisplay() {
                 <div className={`${isFullscreen ? 'px-7 py-6 lg:px-8 lg:py-7' : 'p-5'} flex-1 min-w-0 flex flex-col justify-center`}>
                   <div className={`flex flex-wrap items-center justify-between gap-2 ${isFullscreen ? 'mb-3' : 'mb-2'}`}>
                     <span className={`${isFullscreen ? 'text-xl' : 'text-base'} font-mono font-bold ${isActive ? 'text-cyan-200' : 'text-cyan-400'}`}>
-                      {start.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                      {start.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    {isActive ? <span className="px-3 py-1 rounded-full bg-emerald-400 text-emerald-950 font-extrabold text-xs tracking-wider flex items-center gap-2"><span className="agenda-live-dot w-1.5 h-1.5 rounded-full bg-emerald-950" />กำลังดำเนินรายการ</span> : isNext ? <span className="px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-200 border border-indigo-400/25 font-bold text-xs">รายการถัดไป</span> : item.is_highlight ? <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 font-bold text-xs">HIGHLIGHT</span> : null}
+                    {isActive ? <span className="px-3 py-1 rounded-full bg-emerald-400 text-emerald-950 font-extrabold text-xs tracking-wider flex items-center gap-2"><span className="agenda-live-dot w-1.5 h-1.5 rounded-full bg-emerald-950" />{t.signage.agenda.nowOn}</span> : isNext ? <span className="px-3 py-1 rounded-full bg-indigo-500/15 text-indigo-200 border border-indigo-400/25 font-bold text-xs">{t.signage.agenda.upNext}</span> : item.is_highlight ? <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 font-bold text-xs">HIGHLIGHT</span> : null}
                   </div>
                   <h4 className={`${isFullscreen ? 'text-2xl lg:text-[1.7rem] leading-snug' : 'text-lg lg:text-2xl leading-tight'} font-extrabold text-white`}>{item.title}</h4>
                   {item.description && <p className={`${isFullscreen ? 'text-base lg:text-lg' : 'text-sm lg:text-base'} text-slate-200/90 mt-2 leading-relaxed line-clamp-2`}>{item.description}</p>}
@@ -512,7 +514,7 @@ function SignageDisplay() {
                     {item.location && <span className="text-indigo-300">{item.location}</span>}
                   </div>
                   {isActive && <div className="mt-4"><div className="flex items-center justify-between text-[10px] font-mono text-cyan-100/70 mb-1.5"><span>SESSION PROGRESS</span><span>{Math.round(progress)}%</span></div><div className="h-1.5 rounded-full bg-black/25 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-indigo-300 via-cyan-300 to-emerald-300 shadow-[0_0_12px_rgba(103,232,249,.8)] transition-[width] duration-1000" style={{ width: `${progress}%` }} /></div></div>}
-                  {isActive && pastAgendaCount > 0 && <div className="mt-2 text-[10px] text-slate-300/55 font-mono">↑ เลื่อนขึ้นเพื่อดู {pastAgendaCount} รายการที่ผ่านมา</div>}
+                  {isActive && pastAgendaCount > 0 && <div className="mt-2 text-[10px] text-slate-300/55 font-mono">{t.signage.agenda.morePast(pastAgendaCount)}</div>}
                 </div>
               </div>
             )})}
@@ -549,7 +551,7 @@ function SignageDisplay() {
                 <span className="absolute inset-[12%] rounded-full bg-amber-300/20 blur-3xl -z-10" />
                 <Image
                   src="/lucky-draw-trophy.png"
-                  alt="ถ้วยรางวัล Lucky Draw"
+                  alt={t.signage.lucky.trophyAlt}
                   fill
                   priority
                   sizes={isFullscreen ? '416px' : '(min-width: 640px) 288px, 256px'}
@@ -561,12 +563,12 @@ function SignageDisplay() {
             <h1 className={`lucky-title font-black tracking-[-0.04em] leading-none ${isFullscreen ? 'text-7xl lg:text-9xl' : 'text-5xl sm:text-7xl lg:text-8xl'}`}>LUCKY DRAW</h1>
             <div className={`${isFullscreen ? 'text-3xl lg:text-4xl mt-4' : 'text-xl lg:text-2xl mt-3'} font-bold text-purple-200 tracking-[0.3em] uppercase`}>Stage</div>
             <p className={`${isFullscreen ? 'text-2xl max-w-3xl mt-8 mb-10' : 'text-lg lg:text-xl max-w-2xl mt-6 mb-8'} text-slate-300 font-light leading-relaxed`}>
-              เตรียมพร้อมสำหรับการสุ่มรางวัลใหญ่<br className="hidden sm:block" /> ขอให้ผู้ร่วมงานทุกท่านโชคดี!
+              {t.signage.lucky.getReady}<br className="hidden sm:block" /> {t.signage.lucky.goodLuck}
             </p>
 
             <div className={`relative overflow-hidden rounded-2xl bg-white/[0.05] border border-white/10 font-mono text-slate-300 shadow-xl ${isFullscreen ? 'px-9 py-4 text-base' : 'px-6 py-3 text-xs lg:text-sm'}`}>
               <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-purple-400 via-amber-300 to-cyan-300 animate-pulse" />
-              กดปุ่มสุ่มรางวัล (SPIN) จากแผงควบคุมระบบ เพื่อเริ่มการหมุนวงล้อ
+              {t.signage.lucky.spinHint}
             </div>
           </div>
           )}
