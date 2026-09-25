@@ -165,7 +165,7 @@ export default function LuckyDrawPage() {
               onClick={() => setSelectedPrizeId(prize.prize_id)}
               className={`p-3 rounded-2xl text-left transition-all flex items-center gap-3 ${
                 selectedPrize.prize_id === prize.prize_id
-                  ? 'bg-gradient-to-r from-purple-600/70 to-pink-600/60 text-white shadow-lg shadow-purple-500/25 border border-purple-300/50 scale-[1.02]'
+                  ? 'bg-gradient-to-r from-purple-600/70 to-pink-600/60 text-on-accent shadow-lg shadow-purple-500/25 border border-purple-300/50 scale-[1.02]'
                   : 'bg-white/[0.04] text-slate-300 hover:bg-white/[0.08] hover:text-white border border-white/5'
               }`}
             >
@@ -188,7 +188,7 @@ export default function LuckyDrawPage() {
           <div className="space-y-6 animate-bounce-in">
             {selectedPrize.image && <div className="w-40 h-40 mx-auto"><img src={selectedPrize.image} alt={selectedPrize.name} className="w-full h-full object-contain drop-shadow-[0_20px_30px_rgba(251,191,36,.3)]"/></div>}
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-600 p-0.5 mx-auto shadow-2xl shadow-yellow-500/30">
-              <div className="w-full h-full bg-[#090d16] rounded-[22px] flex items-center justify-center text-amber-400">
+              <div className="w-full h-full bg-surface-2 rounded-[22px] flex items-center justify-center text-amber-400">
                 <Crown className="w-10 h-10" />
               </div>
             </div>
@@ -247,7 +247,7 @@ export default function LuckyDrawPage() {
             className={`px-10 py-4 rounded-2xl text-base sm:text-lg font-extrabold transition-all shadow-2xl flex items-center justify-center gap-3 mx-auto ${
               spinning
                 ? 'bg-white/[0.05] text-slate-500 cursor-not-allowed border border-white/5'
-                : 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-white shadow-purple-600/40 hover:scale-105 active:scale-95 border border-white/20'
+                : 'bg-gradient-to-r from-purple-600 via-pink-600 to-amber-500 hover:from-purple-500 hover:to-amber-400 text-on-accent shadow-purple-600/40 hover:scale-105 active:scale-95 border border-white/20'
             }`}
           >
             <RotateCw className={`w-5 h-5 ${spinning ? 'animate-spin' : ''}`} />

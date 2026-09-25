@@ -205,7 +205,7 @@ function SignageDisplay() {
   }, [screen, agendaFocusKey, isFullscreen]);
 
   return (
-    <div ref={containerRef} className={`h-screen w-full flex flex-col justify-between relative ${isFullscreen ? 'bg-[#090d16] p-8' : 'p-6'}`}>
+    <div ref={containerRef} className={`h-screen w-full flex flex-col justify-between relative ${isFullscreen ? 'bg-surface-2 p-8' : 'p-6'}`}>
 
       {/* Confetti canvas (child of container so it renders in fullscreen too) */}
       <canvas
@@ -242,7 +242,7 @@ function SignageDisplay() {
                 onClick={() => setScreen(s.id)}
                 className={`flex items-center gap-2 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg shadow-indigo-500/20'
+                    ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -304,7 +304,7 @@ function SignageDisplay() {
                   <div className="relative inline-block mb-2 animate-fade-in">
                     {/* Thai-style ornate square frame */}
                     <div className={`p-[3px] rounded-2xl bg-gradient-to-br shadow-2xl ${activePerson.attendee_type === 'VIP' ? 'from-amber-200 via-amber-400 to-amber-600 shadow-amber-500/40' : 'from-indigo-400 via-purple-500 to-cyan-400 shadow-indigo-500/40'}`}>
-                      <div className="p-1.5 rounded-xl bg-[#0b1120]">
+                      <div className="p-1.5 rounded-xl bg-surface-3">
                         <img
                           src={activePerson.profile_picture}
                           alt="Profile"

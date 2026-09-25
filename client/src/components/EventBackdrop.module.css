@@ -183,3 +183,13 @@
 @media print {
   .backdrop, .floatingControl { display: none !important; }
 }
+
+/* ── Light theme ── */
+:global(:root[data-theme="light"]) .viewport { background: #eef2f8; }
+:global(:root[data-theme="light"]) .viewport .shade { background: radial-gradient(ellipse at center, #eef2f866, transparent 75%); }
+:global(:root[data-theme="light"]) .hero .shade { background: linear-gradient(90deg, #f8fafcb3, #f8fafc40 50%, transparent); }
+:global(:root[data-theme="light"]) .subtle .shade { background: radial-gradient(ellipse at 50% 45%, #eef2f8cc, #eef2f873 45%, transparent 80%); }
+:global(:root[data-theme="light"]) .dust i { background: #818cf8; box-shadow: 0 0 6px #6366f160; }
+:global(:root[data-theme="light"]) .motionButton { color: #3730a3; background: #ffffffd9; border-color: #6366f140; }
+:global(:root[data-theme="light"]) .motionButton:hover { color: #1e1b4b; border-color: #0891b280; }
+:global(:root[data-theme="light"]) .floatingControl .motionButton { box-shadow: 0 8px 24px #0f172a26, 0 0 0 1px #6366f11a; }

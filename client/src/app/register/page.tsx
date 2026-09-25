@@ -269,7 +269,7 @@ function RegisterPageContent() {
       {settings.registration_hero_image && (
         <div className="registration-hero-card relative aspect-[16/7] rounded-xl overflow-hidden border border-cyan-300/20 shadow-[0_25px_80px_rgba(37,99,235,.2)] animate-fade-in">
           <img src={settings.registration_hero_image} alt={`ภาพประชาสัมพันธ์ ${settings.event_name}`} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#080b18]/80 via-transparent to-indigo-950/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-5/80 via-transparent to-indigo-950/10" />
           <div className="absolute left-5 right-5 bottom-5 flex items-end justify-between gap-3"><div><span className="text-[10px] font-mono tracking-[.2em] text-cyan-200 uppercase">Official Event</span><h2 className="text-xl sm:text-3xl font-black text-white drop-shadow-xl">{settings.event_name}</h2></div><Sparkles className="w-7 h-7 text-cyan-200 animate-pulse"/></div>
         </div>
       )}
@@ -301,7 +301,7 @@ function RegisterPageContent() {
           </div>
 
           {/* Printable Ticket Pass Box */}
-          <div className="bg-[#090d16]/95 border border-white/15 rounded-3xl p-6 max-w-md mx-auto shadow-2xl text-center space-y-5" id="printable-ticket">
+          <div className="bg-surface-2/95 border border-white/15 rounded-3xl p-6 max-w-md mx-auto shadow-2xl text-center space-y-5" id="printable-ticket">
             {/* Event Header in Pass */}
             <div className="border-b border-white/10 pb-4">
               <span className="text-xs sm:text-sm font-mono font-bold tracking-widest text-cyan-400 uppercase">OFFICIAL DIGITAL PASS</span>
@@ -309,7 +309,7 @@ function RegisterPageContent() {
             </div>
 
             {/* QR Code */}
-            <div className="bg-white p-3.5 rounded-2xl inline-block shadow-2xl relative group">
+            <div className="theme-fixed bg-white p-3.5 rounded-2xl inline-block shadow-2xl relative group">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=090d16&data=${result.ticket_code}`}
                 alt="Ticket QR Code"
@@ -354,7 +354,7 @@ function RegisterPageContent() {
               <button
                 onClick={downloadQrCode}
                 disabled={downloading}
-                className="py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all"
+                className="py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-on-accent font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all"
               >
                 <Download className="w-4 h-4" />
                 <span>{downloading ? 'กำลังบันทึกรูป...' : 'บันทึกรูป QR ลงมือถือ'}</span>
@@ -559,7 +559,7 @@ function RegisterPageContent() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold text-sm shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-white/10"
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-on-accent font-bold text-sm shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-white/10"
         >
           {loading ? (
             <>
@@ -601,7 +601,7 @@ function RegisterPageContent() {
               onZoomChange={setZoom}
             />
           </div>
-          <div className="p-6 bg-[#090d16] border-t border-white/10">
+          <div className="p-6 bg-surface-2 border-t border-white/10">
             <div className="max-w-md mx-auto space-y-4 text-center">
               <label className="block text-xs font-semibold text-slate-300">ปรับขนาดรูปภาพ (ซูมเข้า-ออก)</label>
               <input
@@ -625,7 +625,7 @@ function RegisterPageContent() {
                 <button
                   type="button"
                   onClick={handleCropSave}
-                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30 border border-indigo-500/50"
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-on-accent font-bold transition-all shadow-lg shadow-indigo-600/30 border border-indigo-500/50"
                 >
                   ยืนยันรูปภาพ
                 </button>

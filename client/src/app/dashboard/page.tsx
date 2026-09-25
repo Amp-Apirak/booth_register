@@ -324,7 +324,7 @@ export default function DashboardPage() {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>เพิ่มผู้ร่วมงาน</span>
@@ -395,7 +395,7 @@ export default function DashboardPage() {
               onClick={() => setFilter(f)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
                 filter === f
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                  ? 'bg-indigo-600 text-on-accent shadow-md shadow-indigo-600/30'
                   : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
               }`}
             >
@@ -523,7 +523,7 @@ export default function DashboardPage() {
                           {!isChecked && (
                             <button
                               onClick={() => handleQuickCheckin(p.ticket_code)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-sm font-semibold transition-all"
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-on-accent border border-emerald-500/30 text-sm font-semibold transition-all"
                               title="เช็คอินทันที"
                             >
                               สแกนเข้า
@@ -613,7 +613,7 @@ export default function DashboardPage() {
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between sticky top-0 bg-[#090d16]/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
+            <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
                   <UserPlus className="w-6 h-6" />
@@ -664,14 +664,14 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setNewAttendee({ ...newAttendee, attendee_type: 'General' })}
-                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${newAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${newAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-on-accent shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       <UserCircle className="w-4 h-4" /> ทั่วไป
                     </button>
                     <button
                       type="button"
                       onClick={() => setNewAttendee({ ...newAttendee, attendee_type: 'VIP' })}
-                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${newAttendee.attendee_type === 'VIP' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${newAttendee.attendee_type === 'VIP' ? 'bg-amber-500 text-on-accent shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       <Crown className="w-4 h-4" /> VIP
                     </button>
@@ -748,7 +748,7 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
                 >
                   {actionLoading ? 'กำลังบันทึก...' : 'บันทึกข้อมูลผู้เข้าร่วมงาน'}
                 </button>
@@ -761,7 +761,7 @@ export default function DashboardPage() {
       {isEditModalOpen && editingAttendee && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between sticky top-0 bg-[#090d16]/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
+            <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
                   <Edit3 className="w-6 h-6" />
@@ -812,14 +812,14 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => setEditingAttendee({ ...editingAttendee, attendee_type: 'General' })}
-                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${editingAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${editingAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-on-accent shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       <UserCircle className="w-4 h-4" /> ทั่วไป
                     </button>
                     <button
                       type="button"
                       onClick={() => setEditingAttendee({ ...editingAttendee, attendee_type: 'VIP' })}
-                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${editingAttendee.attendee_type === 'VIP' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+                      className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${editingAttendee.attendee_type === 'VIP' ? 'bg-amber-500 text-on-accent shadow-lg shadow-amber-500/30' : 'text-slate-400 hover:text-white'}`}
                     >
                       <Crown className="w-4 h-4" /> VIP
                     </button>
@@ -870,7 +870,7 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
                 >
                   {actionLoading ? 'กำลังบันทึก...' : 'บันทึกการแก้ไขข้อมูล'}
                 </button>
@@ -894,7 +894,7 @@ export default function DashboardPage() {
               onZoomChange={setZoom}
             />
           </div>
-          <div className="p-6 bg-[#090d16] border-t border-white/10">
+          <div className="p-6 bg-surface-2 border-t border-white/10">
             <div className="max-w-md mx-auto space-y-4 text-center">
               <label className="block text-sm font-semibold text-slate-300">ปรับขนาดรูปภาพ (ซูมเข้า-ออก)</label>
               <input
@@ -918,7 +918,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={handleCropSave}
-                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-600/30 border border-indigo-500/50"
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-on-accent font-bold transition-all shadow-lg shadow-indigo-600/30 border border-indigo-500/50"
                 >
                   ยืนยันรูปภาพ
                 </button>
@@ -954,7 +954,7 @@ export default function DashboardPage() {
       {qrModalParticipant && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setQrModalParticipant(null)}>
           <div 
-            className="bg-[#090d16] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl relative text-center"
+            className="bg-surface-2 border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl relative text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -964,7 +964,7 @@ export default function DashboardPage() {
               <X className="w-5 h-5" />
             </button>
             
-            <div id="dashboard-qr-ticket" className="bg-white p-6 rounded-2xl mb-6 flex flex-col items-center mx-auto" style={{ width: 'fit-content' }}>
+            <div id="dashboard-qr-ticket" className="theme-fixed bg-white p-6 rounded-2xl mb-6 flex flex-col items-center mx-auto" style={{ width: 'fit-content' }}>
               <QRCodeSVG
                 value={qrModalParticipant.ticket_code || ''}
                 size={200}
@@ -991,7 +991,7 @@ export default function DashboardPage() {
             <button
               onClick={downloadQrCode}
               disabled={downloadingQr}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
             >
               <Download className="w-5 h-5" />
               {downloadingQr ? 'กำลังประมวลผล...' : 'บันทึกรูป QR Code'}

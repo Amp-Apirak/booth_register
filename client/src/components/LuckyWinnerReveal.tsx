@@ -42,7 +42,7 @@ export default function LuckyWinnerReveal({ winner, isFullscreen }: Props) {
         <div className="winner-reveal relative flex flex-col items-center">
           <div className={`relative ${visual}`}>
             <div className="winner-ring absolute inset-0 rounded-full p-[5px]">
-              <div className="w-full h-full rounded-full bg-[#0b1120]" />
+              <div className="w-full h-full rounded-full bg-surface-3" />
             </div>
             <div className="absolute inset-[9px] rounded-full overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-amber-500 flex items-center justify-center">
               {winner.profile_picture ? (

@@ -1,0 +1,20 @@
+// Thai text for the top navigation (source of truth — en/nav.ts must mirror every key)
+export const nav = {
+  home: 'หน้าแรก',
+  register: 'ลงทะเบียน',
+  ticket: 'ตั๋ว',
+  scanner: 'สแกน',
+  dashboard: 'แดชบอร์ด CMS',
+  settings: 'ตั้งค่าระบบ',
+  signage: 'จอ LED',
+  luckyDraw: 'Lucky Draw',
+  login: 'เข้าสู่ระบบ',
+  loginStaff: 'เข้าสู่ระบบ (Staff)',
+  logout: 'ออกจากระบบ',
+  liveSync: 'LIVE SYNC',
+  disconnected: 'DISCONNECTED',
+  tagline: 'Scan • Check-in • Show',
+  attendeePortal: 'Official Attendee Portal',
+  findMyTicket: 'ค้นหาตั๋วของฉัน',
+  toggleMenu: 'เปิด/ปิดเมนู',
+};

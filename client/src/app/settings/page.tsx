@@ -189,16 +189,16 @@ function SettingsContent() {
       </div>
 
       <div className="inline-flex p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
-        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Settings className="w-4 h-4" />ข้อมูลทั่วไป
         </button>
-        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <CalendarRange className="w-4 h-4" />จัดการกำหนดการ
         </button>
-        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <PanelsTopLeft className="w-4 h-4" />หน้าลงทะเบียน
         </button>
-        <button type="button" onClick={() => setActiveTab('prizes')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('prizes')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Gift className="w-4 h-4" />จัดการของรางวัล
         </button>
       </div>
@@ -221,7 +221,7 @@ function SettingsContent() {
                   value={eventName}
                   onChange={(e) => setEventName(e.target.value)}
                   placeholder="เช่น SMART EVENT REGISTRATION"
-                  className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
+                  className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
                   required
                 />
                 <p className="text-xs text-slate-500">ชื่อนี้จะไปแสดงบนเมนู, หน้าจอ Splash Screen และใบเสร็จต่างๆ</p>
@@ -241,7 +241,7 @@ function SettingsContent() {
                       value={eventVenue}
                       onChange={(e) => setEventVenue(e.target.value)}
                       placeholder="เช่น Grand Ballroom"
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
                     />
                   </div>
 
@@ -256,7 +256,7 @@ function SettingsContent() {
                       value={eventAddress}
                       onChange={(e) => setEventAddress(e.target.value)}
                       placeholder="เช่น Central Plaza Hotel, Bangkok"
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
                     />
                   </div>
 
@@ -271,7 +271,7 @@ function SettingsContent() {
                       value={eventBuilding}
                       onChange={(e) => setEventBuilding(e.target.value)}
                       placeholder="เช่น อาคาร A"
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
                     />
                   </div>
 
@@ -286,7 +286,7 @@ function SettingsContent() {
                       value={eventFloor}
                       onChange={(e) => setEventFloor(e.target.value)}
                       placeholder="เช่น ชั้น 3"
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium"
                     />
                   </div>
 
@@ -300,7 +300,7 @@ function SettingsContent() {
                       type="datetime-local"
                       value={eventStart}
                       onChange={(e) => setEventStart(e.target.value)}
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium scheme-dark"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium scheme-dark"
                     />
                   </div>
 
@@ -315,7 +315,7 @@ function SettingsContent() {
                       value={eventEnd}
                       min={eventStart || undefined}
                       onChange={(e) => setEventEnd(e.target.value)}
-                      className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium scheme-dark"
+                      className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium scheme-dark"
                     />
                   </div>
                 </div>
@@ -331,28 +331,28 @@ function SettingsContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Users className="w-4 h-4 text-indigo-400" />ชื่อผู้จัดงาน (Organizer)</label>
-                    <input type="text" value={footerInfo.organizer_name} onChange={(e) => setFooterField('organizer_name', e.target.value)} placeholder="เช่น บริษัท อีเว้นท์ จำกัด" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                    <input type="text" value={footerInfo.organizer_name} onChange={(e) => setFooterField('organizer_name', e.target.value)} placeholder="เช่น บริษัท อีเว้นท์ จำกัด" className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Map className="w-4 h-4 text-cyan-400" />ลิงก์แผนที่ (Google Maps)</label>
-                    <input type="url" value={footerInfo.event_map_url} onChange={(e) => setFooterField('event_map_url', e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                    <input type="url" value={footerInfo.event_map_url} onChange={(e) => setFooterField('event_map_url', e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Phone className="w-4 h-4 text-emerald-400" />เบอร์โทรติดต่อ</label>
-                    <input type="tel" value={footerInfo.contact_phone} onChange={(e) => setFooterField('contact_phone', e.target.value)} placeholder="เช่น 0812345678" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                    <input type="tel" value={footerInfo.contact_phone} onChange={(e) => setFooterField('contact_phone', e.target.value)} placeholder="เช่น 0812345678" className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><Mail className="w-4 h-4 text-indigo-400" />อีเมลติดต่อ</label>
-                    <input type="email" value={footerInfo.contact_email} onChange={(e) => setFooterField('contact_email', e.target.value)} placeholder="เช่น help@event.com" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                    <input type="email" value={footerInfo.contact_email} onChange={(e) => setFooterField('contact_email', e.target.value)} placeholder="เช่น help@event.com" className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><MessageCircle className="w-4 h-4 text-green-400" />LINE ID</label>
-                    <input type="text" value={footerInfo.contact_line} onChange={(e) => setFooterField('contact_line', e.target.value)} placeholder="เช่น @myevent หรือ myevent" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
+                    <input type="text" value={footerInfo.contact_line} onChange={(e) => setFooterField('contact_line', e.target.value)} placeholder="เช่น @myevent หรือ myevent" className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-300 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-cyan-400" />นโยบายความเป็นส่วนตัว (PDPA)</label>
-                  <textarea value={footerInfo.privacy_policy} onChange={(e) => setFooterField('privacy_policy', e.target.value)} rows={6} placeholder="ข้อความนโยบายที่ผ่านการตรวจจากผู้จัดงาน/ฝ่ายกฎหมาย · เว้นบรรทัดว่างเพื่อขึ้นย่อหน้าใหม่" className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all resize-y" />
+                  <textarea value={footerInfo.privacy_policy} onChange={(e) => setFooterField('privacy_policy', e.target.value)} rows={6} placeholder="ข้อความนโยบายที่ผ่านการตรวจจากผู้จัดงาน/ฝ่ายกฎหมาย · เว้นบรรทัดว่างเพื่อขึ้นย่อหน้าใหม่" className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all resize-y" />
                   <p className="text-xs text-slate-500">แสดงที่หน้า <a href="/privacy" target="_blank" className="text-cyan-400 hover:text-cyan-300">/privacy</a> (ลิงก์จาก Footer และช่องยินยอม PDPA ในหน้าลงทะเบียน)</p>
                 </div>
               </div>
@@ -426,7 +426,7 @@ function SettingsContent() {
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
-                      <div className="w-full bg-[#060913]/50 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between group-hover:border-cyan-500/50 transition-all">
+                      <div className="w-full bg-surface/50 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between group-hover:border-cyan-500/50 transition-all">
                         <span className="text-slate-400 text-sm">
                           {eventLogo && eventLogo.startsWith('data:image') 
                             ? 'เลือกไฟล์ใหม่' 
@@ -464,7 +464,7 @@ function SettingsContent() {
                 <button
                   type="submit"
                   disabled={isSaving || imageToCrop !== null}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none border border-white/10"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 text-on-accent font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none border border-white/10"
                 >
                   {isSaving ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -510,7 +510,7 @@ function SettingsContent() {
                 </div>
               ) : (
                 <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 p-[2px] mb-5 shadow-xl relative z-10">
-                  <div className="w-full h-full bg-[#090d16] rounded-xl flex items-center justify-center">
+                  <div className="w-full h-full bg-surface-2 rounded-xl flex items-center justify-center">
                     <span className="text-3xl">⚡</span>
                   </div>
                 </div>

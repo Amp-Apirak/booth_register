@@ -308,7 +308,7 @@ export default function AgendaManager() {
             <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 font-semibold text-sm"><Upload className="w-4 h-4" />นำเข้า Excel</button>
             <button type="button" onClick={downloadTemplate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 font-semibold text-sm"><FileSpreadsheet className="w-4 h-4 text-emerald-400" />ไฟล์ตัวอย่าง</button>
             <button type="button" onClick={exportExcel} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 font-semibold text-sm"><Download className="w-4 h-4" />ส่งออก Excel</button>
-            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 font-semibold text-sm"><CalendarPlus className="w-4 h-4" />เพิ่มกำหนดการ</button>
+            <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-on-accent hover:bg-indigo-500 font-semibold text-sm"><CalendarPlus className="w-4 h-4" />เพิ่มกำหนดการ</button>
           </div>
         </div>
         <p className="text-xs text-slate-500 mt-4">
@@ -325,16 +325,16 @@ export default function AgendaManager() {
           <button type="button" onClick={resetFilters} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-white/5 hover:bg-white/10 border border-white/10"><RotateCcw className="w-3.5 h-3.5" />ล้างตัวกรอง</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-          <label className="space-y-1"><span className="text-xs text-slate-400">หัวข้อ</span><input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="ค้นหาหัวข้อ..." className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white" /></label>
-          <label className="space-y-1"><span className="text-xs text-slate-400">ชื่อวิทยากร</span><input value={speakerQuery} onChange={event => { setSpeakerQuery(event.target.value); setPage(1); }} placeholder="ค้นหาวิทยากร..." className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white" /></label>
-          <label className="space-y-1"><span className="text-xs text-slate-400">วันที่</span><input type="date" value={filterDate} onChange={event => { setFilterDate(event.target.value); setPage(1); }} className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
-          <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม ตั้งแต่</span><input type="time" value={timeFrom} onChange={event => { setTimeFrom(event.target.value); setPage(1); }} className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
-          <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม ถึง</span><input type="time" value={timeTo} onChange={event => { setTimeTo(event.target.value); setPage(1); }} className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
+          <label className="space-y-1"><span className="text-xs text-slate-400">หัวข้อ</span><input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="ค้นหาหัวข้อ..." className="w-full bg-surface/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white" /></label>
+          <label className="space-y-1"><span className="text-xs text-slate-400">ชื่อวิทยากร</span><input value={speakerQuery} onChange={event => { setSpeakerQuery(event.target.value); setPage(1); }} placeholder="ค้นหาวิทยากร..." className="w-full bg-surface/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white" /></label>
+          <label className="space-y-1"><span className="text-xs text-slate-400">วันที่</span><input type="date" value={filterDate} onChange={event => { setFilterDate(event.target.value); setPage(1); }} className="w-full bg-surface/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
+          <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม ตั้งแต่</span><input type="time" value={timeFrom} onChange={event => { setTimeFrom(event.target.value); setPage(1); }} className="w-full bg-surface/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
+          <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม ถึง</span><input type="time" value={timeTo} onChange={event => { setTimeTo(event.target.value); setPage(1); }} className="w-full bg-surface/60 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white scheme-dark" /></label>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span className="text-slate-400">พบ <b className="text-white">{filteredItems.length}</b> จาก {items.length} รายการ</span>
           <label className="flex items-center gap-2 text-slate-400">แสดงต่อหน้า
-            <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }} className="bg-[#060913] border border-white/10 rounded-lg px-3 py-2 text-white">
+            <select value={pageSize} onChange={event => { setPageSize(Number(event.target.value)); setPage(1); }} className="bg-surface border border-white/10 rounded-lg px-3 py-2 text-white">
               {[5, 10, 20, 50].map(size => <option key={size} value={size}>{size} รายการ</option>)}
             </select>
           </label>
@@ -369,18 +369,18 @@ export default function AgendaManager() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={item.speaker_image} alt={item.speaker || item.title} className="w-full h-full object-cover" />
               ) : <ImagePlus className="w-8 h-8 text-slate-600" />}
-              <label className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center text-xs font-bold text-white">
+              <label className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 transition-opacity cursor-pointer flex items-center justify-center text-xs font-bold text-on-accent">
                 เลือกรูป
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => handleImage(index, event.target.files?.[0])} />
               </label>
             </div>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input id={`agenda-${index}-title`} value={item.title} onChange={event => updateItem(index, 'title', event.target.value)} placeholder="หัวข้อกำหนดการ *" className="md:col-span-2 bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white font-semibold" />
-              <textarea value={item.description} onChange={event => updateItem(index, 'description', event.target.value)} placeholder="รายละเอียดย่อสำหรับแสดงบนจอ LED" rows={2} className="md:col-span-2 bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white resize-none" />
-              <input value={item.speaker} onChange={event => updateItem(index, 'speaker', event.target.value)} placeholder="ชื่อวิทยากร / รายละเอียด" className="bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white" />
-              <input value={item.location} onChange={event => updateItem(index, 'location', event.target.value)} placeholder="ห้อง / เวที / สถานที่" className="bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white" />
-              <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม *</span><input id={`agenda-${index}-start_at`} type="datetime-local" value={item.start_at} onChange={event => updateItem(index, 'start_at', event.target.value)} className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
-              <label className="space-y-1"><span className="text-xs text-slate-400">เวลาสิ้นสุด *</span><input id={`agenda-${index}-end_at`} type="datetime-local" min={item.start_at || undefined} value={item.end_at} onChange={event => updateItem(index, 'end_at', event.target.value)} className="w-full bg-[#060913]/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
+              <input id={`agenda-${index}-title`} value={item.title} onChange={event => updateItem(index, 'title', event.target.value)} placeholder="หัวข้อกำหนดการ *" className="md:col-span-2 bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white font-semibold" />
+              <textarea value={item.description} onChange={event => updateItem(index, 'description', event.target.value)} placeholder="รายละเอียดย่อสำหรับแสดงบนจอ LED" rows={2} className="md:col-span-2 bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white resize-none" />
+              <input value={item.speaker} onChange={event => updateItem(index, 'speaker', event.target.value)} placeholder="ชื่อวิทยากร / รายละเอียด" className="bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white" />
+              <input value={item.location} onChange={event => updateItem(index, 'location', event.target.value)} placeholder="ห้อง / เวที / สถานที่" className="bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white" />
+              <label className="space-y-1"><span className="text-xs text-slate-400">เวลาเริ่ม *</span><input id={`agenda-${index}-start_at`} type="datetime-local" value={item.start_at} onChange={event => updateItem(index, 'start_at', event.target.value)} className="w-full bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
+              <label className="space-y-1"><span className="text-xs text-slate-400">เวลาสิ้นสุด *</span><input id={`agenda-${index}-end_at`} type="datetime-local" min={item.start_at || undefined} value={item.end_at} onChange={event => updateItem(index, 'end_at', event.target.value)} className="w-full bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
             </div>
             <div className="flex flex-col gap-2">
               {item.speaker_image && <button type="button" title="ลบรูป" onClick={() => updateItem(index, 'speaker_image', '')} className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><X className="w-4 h-4" /></button>}
@@ -398,14 +398,14 @@ export default function AgendaManager() {
           <span className="text-sm text-slate-400">หน้า <b className="text-white">{currentPage}</b> จาก {totalPages} · รายการ {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredItems.length)}</span>
           <div className="flex items-center gap-2">
             <button type="button" disabled={currentPage === 1} onClick={() => setPage(value => Math.max(1, value - 1))} className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30"><ChevronLeft className="w-4 h-4" />ก่อนหน้า</button>
-            {Array.from({ length: totalPages }, (_, index) => index + 1).filter(number => totalPages <= 7 || number === 1 || number === totalPages || Math.abs(number - currentPage) <= 1).map((number, index, pages) => <span key={number} className="contents">{index > 0 && number - pages[index - 1] > 1 && <span className="text-slate-500">…</span>}<button type="button" onClick={() => setPage(number)} className={`w-9 h-9 rounded-xl text-sm font-bold border ${currentPage === number ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-white/5 border-white/10 text-slate-300'}`}>{number}</button></span>)}
+            {Array.from({ length: totalPages }, (_, index) => index + 1).filter(number => totalPages <= 7 || number === 1 || number === totalPages || Math.abs(number - currentPage) <= 1).map((number, index, pages) => <span key={number} className="contents">{index > 0 && number - pages[index - 1] > 1 && <span className="text-slate-500">…</span>}<button type="button" onClick={() => setPage(number)} className={`w-9 h-9 rounded-xl text-sm font-bold border ${currentPage === number ? 'bg-indigo-600 border-indigo-400 text-on-accent' : 'bg-white/5 border-white/10 text-slate-300'}`}>{number}</button></span>)}
             <button type="button" disabled={currentPage === totalPages} onClick={() => setPage(value => Math.min(totalPages, value + 1))} className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30">ถัดไป<ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}
 
       <div className="flex justify-end">
-        <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 text-white font-bold shadow-lg shadow-indigo-500/25 disabled:opacity-50">
+        <button type="button" onClick={save} disabled={saving} className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 text-on-accent font-bold shadow-lg shadow-indigo-500/25 disabled:opacity-50">
           {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}บันทึกกำหนดการทั้งหมด
         </button>
       </div>

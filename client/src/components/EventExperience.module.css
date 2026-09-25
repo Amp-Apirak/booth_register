@@ -65,7 +65,7 @@
 .orbit, .orbitSecondary { position: absolute; inset: 5px; border: 1px solid #818cf845; border-radius: 50%; transform: rotateZ(-30deg) rotateX(59deg); transform-style: preserve-3d; }
 .orbit::after { content: ''; position: absolute; width: 9px; height: 9px; left: 15%; top: 12%; border-radius: 50%; background: #67e8f9; box-shadow: 0 0 16px #22d3ee; }
 .orbitSecondary { inset: 45px -15px; transform: rotateZ(54deg) rotateX(65deg); border-color: #c084fc38; }
-.ticket { position: absolute; width: 244px; min-height: 284px; left: 126px; top: 119px; padding: 21px; border-radius: 18px; overflow: hidden; background: linear-gradient(135deg, #a78bfa35, #6366f11f 46%, #06b6d428), #10132bed; border: 1px solid #a5b4fc70; box-shadow: -3px 3px 0 #6366a5, -7px 8px 0 #312e5b, -18px 25px 45px #020914a0, inset 0 1px 0 #fff5; transform: translateZ(70px) rotate(-12deg); animation: ticketFloat 6s ease-in-out infinite; }
+.ticket { color: #f5f7ff; position: absolute; width: 244px; min-height: 284px; left: 126px; top: 119px; padding: 21px; border-radius: 18px; overflow: hidden; background: linear-gradient(135deg, #a78bfa35, #6366f11f 46%, #06b6d428), #10132bed; border: 1px solid #a5b4fc70; box-shadow: -3px 3px 0 #6366a5, -7px 8px 0 #312e5b, -18px 25px 45px #020914a0, inset 0 1px 0 #fff5; transform: translateZ(70px) rotate(-12deg); animation: ticketFloat 6s ease-in-out infinite; }
 .ticketTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #67e8f9; }
 .ticketTop span { font: 9px/1.6 var(--font-mono); letter-spacing: .14em; flex: 1; }
 .ticketTop b { color: #e6f1ff; font-weight: 500; }
@@ -167,3 +167,30 @@
   .experience *, .experience *::before, .experience *::after { animation: none !important; transition: none !important; }
   .sculpture { transform: none; }
 }
+
+/* ── Light theme: copy and surfaces turn light; the 3D objects (portal, ticket, tags) keep their look ── */
+:global(:root[data-theme="light"]) .dialog { color: #0f172a; background: #eef2f8; }
+:global(:root[data-theme="light"]) .dialog::backdrop { background: #eef2f8; }
+:global(:root[data-theme="light"]) .experience { --accent: #0e7490; color: #0f172a; }
+:global(:root[data-theme="light"]) .compact { box-shadow: 0 12px 40px -14px #4f46e533, inset 0 1px 1px #ffffffcc; background-color: #ffffffb8; }
+:global(:root[data-theme="light"]) .topbar { border-bottom-color: #0f172a14; }
+:global(:root[data-theme="light"]) .brand small { color: #64748b; }
+:global(:root[data-theme="light"]) .motionButton { color: #475569; border-color: #0f172a1f; background: #ffffffb3; }
+:global(:root[data-theme="light"]) .motionButton:hover { color: #0f172a; }
+:global(:root[data-theme="light"]) .eyebrow > span { box-shadow: 0 0 10px #0891b260; }
+:global(:root[data-theme="light"]) .tagline span { background: linear-gradient(110deg, #4f46e5, #9333ea 48%, #0369a1); background-clip: text; -webkit-background-clip: text; }
+:global(:root[data-theme="light"]) .description { color: #475569; }
+:global(:root[data-theme="light"]) .details > div { color: #334155; }
+:global(:root[data-theme="light"]) .details svg { color: #4f46e5; }
+:global(:root[data-theme="light"]) .details small { color: #64748b; }
+:global(:root[data-theme="light"]) .secondary { color: #1e293b; border-bottom-color: #0f172a33; }
+:global(:root[data-theme="light"]) .actionNote { color: #64748b; }
+:global(:root[data-theme="light"]) .sceneGlow { background: radial-gradient(ellipse at 52% 43%, #8b5cf62e, #06b6d412 40%, transparent 68%); }
+:global(:root[data-theme="light"]) .sceneLabel { color: #64748b; }
+:global(:root[data-theme="light"]) .journey { border-top-color: #0f172a14; }
+:global(:root[data-theme="light"]) .journeyIntro { color: #64748b; }
+:global(:root[data-theme="light"]) .journeyIntro strong { color: #334155; }
+:global(:root[data-theme="light"]) .journeyItem { border-left-color: #0f172a14; }
+:global(:root[data-theme="light"]) .journeyItem svg { color: #4f46e5; }
+:global(:root[data-theme="light"]) .step { color: #64748b; }
+:global(:root[data-theme="light"]) .journeyItem small { color: #64748b; }

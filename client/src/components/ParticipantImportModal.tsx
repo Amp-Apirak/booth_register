@@ -109,7 +109,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-4xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between sticky top-0 bg-[#090d16]/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
+        <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
               <FileSpreadsheet className="w-6 h-6" />
@@ -163,7 +163,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
               <button onClick={reset} className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10">
                 นำเข้าไฟล์อื่น
               </button>
-              <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white text-xs font-bold">
+              <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent text-xs font-bold">
                 เสร็จสิ้น
               </button>
             </div>
@@ -282,7 +282,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                   <button
                     onClick={handleImport}
                     disabled={importing || validRows.length === 0}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-xs font-bold shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {importing ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

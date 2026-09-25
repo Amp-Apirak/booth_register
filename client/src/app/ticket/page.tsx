@@ -152,7 +152,7 @@ export default function TicketPage() {
         <button
           type="submit"
           disabled={loading}
-          className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+          className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? 'กำลังค้นหา...' : 'ค้นหาตั๋ว'}
         </button>
@@ -220,16 +220,16 @@ export default function TicketPage() {
             </div>
 
             {/* Middle Perforated Line with Side Notches */}
-            <div className="relative py-3 flex items-center justify-center bg-[#090d16]">
+            <div className="relative py-3 flex items-center justify-center bg-surface-2">
               <div className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-cyber-mesh rounded-full border border-white/10" />
               <div className="w-full border-t border-dashed border-white/20 mx-6" />
               <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-7 h-7 bg-cyber-mesh rounded-full border border-white/10" />
             </div>
 
             {/* Bottom Pass Body with QR Code */}
-            <div className="p-6 sm:p-8 bg-[#090d16]/95 text-center space-y-6">
+            <div className="p-6 sm:p-8 bg-surface-2/95 text-center space-y-6">
               {/* QR Code Frame */}
-              <div className="inline-block p-4 rounded-2xl bg-white shadow-2xl shadow-indigo-500/10 relative group">
+              <div className="theme-fixed inline-block p-4 rounded-2xl bg-white shadow-2xl shadow-indigo-500/10 relative group">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=090d16&data=${participant.ticket_code || ticketCode}`}
                   alt="QR Code"
@@ -284,7 +284,7 @@ export default function TicketPage() {
             <button
               onClick={downloadQrCode}
               disabled={downloading}
-              className="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all"
+              className="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-on-accent font-bold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition-all"
             >
               <Download className="w-4 h-4" />
               <span>{downloading ? 'กำลังบันทึกรูป...' : 'บันทึกบัตรลงมือถือ'}</span>

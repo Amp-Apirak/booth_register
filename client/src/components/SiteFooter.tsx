@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Calendar, Mail, MapPin, MessageCircle, Phone, Rocket, ShieldCheck, Zap } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useT } from '@/contexts/PreferencesContext';
 import { formatEventDateRange, formatEventLocation, formatEventTimeRange } from '@/lib/api';
 import { PLATFORM_CONTACT, formatThaiPhone, isWebUrl, lineHref, telHref } from '@/lib/platform';
 
@@ -15,6 +16,7 @@ const STAFF_PAGES = ['/dashboard', '/settings'];
 export default function SiteFooter() {
   const pathname = usePathname();
   const { settings } = useSettings();
+  const t = useT();
 
   if (NO_FOOTER.some((p) => pathname.startsWith(p))) return null;
 
@@ -26,9 +28,9 @@ export default function SiteFooter() {
     return (
       <footer className="border-t border-white/5 mt-8">
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500">
-          <span>{copyright} · ระบบบริหารงานอีเว้นท์ (สำหรับเจ้าหน้าที่)</span>
+          <span>{copyright} · {t.footer.staffSystem}</span>
           <span>
-            ติดต่อทีมดูแลแพลตฟอร์ม:{' '}
+            {t.footer.platformSupport}{' '}
             <a href={telHref(PLATFORM_CONTACT.phone)} className="text-slate-300 hover:text-white">
               {PLATFORM_CONTACT.name} · {formatThaiPhone(PLATFORM_CONTACT.phone)}
             </a>
@@ -38,8 +40,8 @@ export default function SiteFooter() {
     );
   }
 
-  const date = formatEventDateRange(settings.event_start, settings.event_end);
-  const time = formatEventTimeRange(settings.event_start, settings.event_end);
+  const date = formatEventDateRange(settings.event_start, settings.event_end, t.common.locale);
+  const time = formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale);
   const location = formatEventLocation(settings);
   const mapUrl = isWebUrl(settings.event_map_url || '') ? settings.event_map_url : '';
   const hasContact = settings.contact_phone || settings.contact_email || settings.contact_line;
@@ -48,7 +50,7 @@ export default function SiteFooter() {
   const link = 'text-sm text-slate-400 hover:text-cyan-300 transition-colors';
 
   return (
-    <footer className="relative mt-12 border-t border-white/10 bg-[#060913]/70 backdrop-blur-xl">
+    <footer className="relative mt-12 border-t border-white/10 bg-surface/70 backdrop-blur-xl">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent" />
       <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr] gap-10">
         {/* Event */}
@@ -62,7 +64,7 @@ export default function SiteFooter() {
             )}
             <div>
               <div className="text-lg font-extrabold text-white leading-tight">{eventName}</div>
-              {settings.organizer_name && <div className="text-sm text-slate-400">จัดโดย {settings.organizer_name}</div>}
+              {settings.organizer_name && <div className="text-sm text-slate-400">{t.footer.organizedBy(settings.organizer_name)}</div>}
             </div>
           </div>
           <div className="space-y-2.5 text-sm text-slate-300">
@@ -77,7 +79,7 @@ export default function SiteFooter() {
                 <MapPin className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
                 <span>
                   {location}
-                  {mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2">ดูแผนที่</a></>}
+                  {mapUrl && <> · <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2">{t.footer.viewMap}</a></>}
                 </span>
               </div>
             )}
@@ -86,18 +88,18 @@ export default function SiteFooter() {
 
         {/* Quick links */}
         <div>
-          <div className={heading}>ลิงก์ด่วน</div>
+          <div className={heading}>{t.footer.quickLinks}</div>
           <ul className="space-y-2.5">
-            <li><Link href="/register" className={link}>ลงทะเบียนเข้าร่วมงาน</Link></li>
-            <li><Link href="/ticket" className={link}>ค้นหาตั๋วของฉัน</Link></li>
-            <li><Link href="/" className={link}>หน้าแรก</Link></li>
-            <li><Link href="/privacy" className={link}>นโยบายความเป็นส่วนตัว (PDPA)</Link></li>
+            <li><Link href="/register" className={link}>{t.footer.registerLink}</Link></li>
+            <li><Link href="/ticket" className={link}>{t.footer.findTicket}</Link></li>
+            <li><Link href="/" className={link}>{t.footer.home}</Link></li>
+            <li><Link href="/privacy" className={link}>{t.footer.privacyPdpa}</Link></li>
           </ul>
         </div>
 
         {/* Help */}
         <div>
-          <div className={heading}>ติดต่อ / ช่วยเหลือ</div>
+          <div className={heading}>{t.footer.help}</div>
           {hasContact ? (
             <ul className="space-y-2.5 text-sm">
               {settings.contact_phone && (
@@ -111,7 +113,7 @@ export default function SiteFooter() {
               )}
             </ul>
           ) : (
-            <p className="text-sm text-slate-500">ทำตั๋วหายหรือไม่ได้รับอีเมล? ติดต่อเจ้าหน้าที่ที่จุดลงทะเบียนหน้างาน</p>
+            <p className="text-sm text-slate-500">{t.footer.helpFallback}</p>
           )}
         </div>
       </div>
@@ -121,7 +123,7 @@ export default function SiteFooter() {
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex flex-col lg:flex-row items-center justify-between gap-3 text-sm">
           <div className="flex items-center gap-2.5 text-slate-200 font-semibold">
             <Rocket className="w-4 h-4 text-fuchsia-400" />
-            สนใจใช้แพลตฟอร์มลงทะเบียนและเช็คอินนี้กับงานของคุณ?
+            {t.footer.platformPitch}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-slate-400">
             <span className="text-slate-300">{PLATFORM_CONTACT.name}</span>
@@ -134,8 +136,8 @@ export default function SiteFooter() {
 
       <div className="border-t border-white/5">
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500">
-          <span>{copyright} · สงวนลิขสิทธิ์</span>
-          <Link href="/privacy" className="inline-flex items-center gap-1.5 hover:text-slate-300"><ShieldCheck className="w-4 h-4" />นโยบายความเป็นส่วนตัว</Link>
+          <span>{copyright} · {t.footer.rightsReserved}</span>
+          <Link href="/privacy" className="inline-flex items-center gap-1.5 hover:text-slate-300"><ShieldCheck className="w-4 h-4" />{t.footer.privacy}</Link>
         </div>
       </div>
     </footer>

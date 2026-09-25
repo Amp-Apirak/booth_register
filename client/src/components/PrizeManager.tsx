@@ -151,7 +151,7 @@ export default function PrizeManager() {
     }
   };
 
-  const field = 'w-full bg-[#060913]/65 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-fuchsia-400/60';
+  const field = 'w-full bg-surface/65 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-fuchsia-400/60';
   const card = (item: Prize, setItem: (p: Prize) => void, index?: number) => {
     const isNew = index === undefined;
     const soldOut = !isNew && item.awarded_count !== undefined && item.awarded_count >= item.quantity;
@@ -184,7 +184,7 @@ export default function PrizeManager() {
             {item.awarded_count !== undefined && <span className="text-xs text-cyan-300">แจกแล้ว {item.awarded_count}/{item.quantity}</span>}
             <div className="ml-auto flex gap-2">
               {isNew && <button type="button" onClick={() => setDraft(null)} className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 font-semibold inline-flex gap-2"><X className="w-4 h-4"/>ยกเลิก</button>}
-              <button onClick={()=>save(item,index)} disabled={saving === (index ?? 'new')} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-bold inline-flex gap-2"><Save className="w-4 h-4"/>บันทึก</button>
+              <button onClick={()=>save(item,index)} disabled={saving === (index ?? 'new')} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-on-accent font-bold inline-flex gap-2"><Save className="w-4 h-4"/>บันทึก</button>
               {item.prize_id && <button onClick={()=>remove(item)} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20"><Trash2 className="w-5 h-5"/></button>}
             </div>
           </div>
@@ -205,7 +205,7 @@ export default function PrizeManager() {
           <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 font-semibold text-sm"><Upload className="w-4 h-4" />นำเข้า Excel</button>
           <button type="button" onClick={downloadTemplate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 font-semibold text-sm"><FileSpreadsheet className="w-4 h-4 text-emerald-400" />ไฟล์ตัวอย่าง</button>
           <button type="button" onClick={exportExcel} disabled={items.length === 0} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 font-semibold text-sm disabled:opacity-40"><Download className="w-4 h-4" />ส่งออก Excel</button>
-          <button type="button" onClick={addPrize} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 font-bold text-sm shadow-lg shadow-fuchsia-500/20"><Plus className="w-4 h-4" />เพิ่มรางวัล</button>
+          <button type="button" onClick={addPrize} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 text-on-accent hover:from-fuchsia-500 hover:to-purple-500 font-bold text-sm shadow-lg shadow-fuchsia-500/20"><Plus className="w-4 h-4" />เพิ่มรางวัล</button>
         </div>
       </div>
       <p className="text-xs text-slate-500 mt-4">

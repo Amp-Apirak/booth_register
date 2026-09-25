@@ -20,17 +20,19 @@ import {
 import { useState, Suspense, useEffect } from 'react';
 import useWebSocket from '@/lib/useWebSocket';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useT } from '@/contexts/PreferencesContext';
+import PreferenceToggles from '@/components/PreferenceToggles';
 
 const navItems = [
-  { href: '/', label: 'หน้าแรก', icon: Home, staffOnly: false },
-  { href: '/register', label: 'ลงทะเบียน', icon: UserPlus, staffOnly: false },
-  { href: '/ticket', label: 'ตั๋ว', icon: QrCode, staffOnly: false },
-  { href: '/scanner', label: 'สแกน', icon: ScanLine, staffOnly: true },
-  { href: '/dashboard', label: 'แดชบอร์ด CMS', icon: LayoutDashboard, staffOnly: true },
-  { href: '/settings', label: 'ตั้งค่าระบบ', icon: Settings, staffOnly: true },
-  { href: '/signage', label: 'จอ LED', icon: Tv, staffOnly: false },
-  { href: '/lucky-draw', label: 'Lucky Draw', icon: Sparkles, staffOnly: false },
-];
+  { href: '/', key: 'home', icon: Home, staffOnly: false },
+  { href: '/register', key: 'register', icon: UserPlus, staffOnly: false },
+  { href: '/ticket', key: 'ticket', icon: QrCode, staffOnly: false },
+  { href: '/scanner', key: 'scanner', icon: ScanLine, staffOnly: true },
+  { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard, staffOnly: true },
+  { href: '/settings', key: 'settings', icon: Settings, staffOnly: true },
+  { href: '/signage', key: 'signage', icon: Tv, staffOnly: false },
+  { href: '/lucky-draw', key: 'luckyDraw', icon: Sparkles, staffOnly: false },
+] as const;
 
 function NavigationContent() {
   const pathname = usePathname();
@@ -39,6 +41,7 @@ function NavigationContent() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { connected } = useWebSocket();
   const { settings } = useSettings();
+  const t = useT();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ function NavigationContent() {
               </div>
             ) : (
               <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-[1px] shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
-                <div className="w-full h-full bg-[#090d16] rounded-[11px] flex items-center justify-center">
+                <div className="w-full h-full bg-surface-2 rounded-[11px] flex items-center justify-center">
                   <Zap className="w-5 h-5 sm:w-7 sm:h-7 text-cyan-400" />
                 </div>
               </div>
@@ -78,18 +81,22 @@ function NavigationContent() {
                 {settings.event_name || 'TECH INNOVATION SUMMIT 2026'}
               </span>
               <p className="text-[10px] sm:text-xs text-indigo-300 font-mono tracking-widest uppercase mt-0.5">
-                Official Attendee Portal
+                {t.nav.attendeePortal}
               </p>
             </div>
           </Link>
+          <div className="flex items-center gap-2">
+          <PreferenceToggles className="hidden sm:flex" />
           <Link
             href="/ticket"
-            className="text-sm font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all border border-cyan-400/30 hover:scale-[1.02] active:scale-[0.98]"
+            className="text-sm font-bold text-on-accent bg-gradient-to-r from-cyan-600 to-blue-500 hover:from-cyan-500 hover:to-blue-400 px-4 py-2 rounded-xl shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all border border-cyan-400/30 hover:scale-[1.02] active:scale-[0.98]"
           >
             <QrCode className="w-4 h-4" />
-            <span>ค้นหาตั๋วของฉัน</span>
+            <span>{t.nav.findMyTicket}</span>
           </Link>
+          </div>
         </div>
+        <PreferenceToggles className="sm:hidden justify-end mt-2 mx-auto max-w-3xl" />
       </header>
     );
   }
@@ -107,7 +114,7 @@ function NavigationContent() {
               </div>
             ) : (
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-400 p-[1px] shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-300">
-                <div className="w-full h-full bg-[#090d16] rounded-[11px] flex items-center justify-center">
+                <div className="w-full h-full bg-surface-2 rounded-[11px] flex items-center justify-center">
                   <Zap className="w-5 h-5 text-cyan-400 group-hover:text-indigo-300 transition-colors" />
                 </div>
               </div>
@@ -122,7 +129,7 @@ function NavigationContent() {
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400 tracking-wider font-mono uppercase hidden xl:block whitespace-nowrap">
-                  Scan • Check-in • Show
+                  {t.nav.tagline}
                 </p>
               </div>
             </Link>
@@ -140,12 +147,12 @@ function NavigationContent() {
                     href={item.href}
                     className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold tracking-wide transition-all duration-300 whitespace-nowrap shrink-0 ${
                       isActive
-                        ? 'text-white bg-gradient-to-r from-indigo-600/80 to-purple-600/80 shadow-lg shadow-indigo-500/25 border border-indigo-400/30'
+                        ? 'text-on-accent bg-gradient-to-r from-indigo-600/80 to-purple-600/80 shadow-lg shadow-indigo-500/25 border border-indigo-400/30'
                         : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                     }`}
                   >
                     <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-300' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
+                    <span>{t.nav[item.key]}</span>
                   </Link>
                 );
               })}
@@ -160,26 +167,28 @@ function NavigationContent() {
               : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
           }`}>
             <span className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
-            <span>{connected ? 'LIVE SYNC' : 'DISCONNECTED'}</span>
+            <span>{connected ? t.nav.liveSync : t.nav.disconnected}</span>
           </div>
+
+          <PreferenceToggles className="hidden md:flex" />
 
           {isLoggedIn ? (
             <button
               onClick={handleLogout}
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-white hover:bg-rose-500/80 border border-rose-500/20 transition-all duration-300 whitespace-nowrap shrink-0 group"
-              title="ออกจากระบบ"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-on-accent hover:bg-rose-500/80 border border-rose-500/20 transition-all duration-300 whitespace-nowrap shrink-0 group"
+              title={t.nav.logout}
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>ออกจากระบบ</span>
+              <span>{t.nav.logout}</span>
             </button>
           ) : (
             <Link
               href="/login"
-              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-400 hover:text-white hover:bg-indigo-500/80 border border-indigo-500/20 transition-all duration-300 whitespace-nowrap shrink-0 group"
-              title="เข้าสู่ระบบ"
+              className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-400 hover:text-on-accent hover:bg-indigo-500/80 border border-indigo-500/20 transition-all duration-300 whitespace-nowrap shrink-0 group"
+              title={t.nav.login}
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>เข้าสู่ระบบ</span>
+              <span>{t.nav.login}</span>
             </Link>
           )}
 
@@ -187,7 +196,7 @@ function NavigationContent() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="lg:hidden p-2 rounded-xl bg-white/[0.05] border border-white/10 text-slate-300 hover:text-white"
-            aria-label="Toggle Navigation"
+            aria-label={t.nav.toggleMenu}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -198,6 +207,7 @@ function NavigationContent() {
       {mobileOpen && (
         <div className="lg:hidden mt-2 glass-panel-glow rounded-2xl p-4 border border-white/10 shadow-2xl animate-fade-in max-w-[1600px] mx-auto w-full">
           <div className="flex flex-col gap-1.5">
+            <PreferenceToggles className="md:hidden mb-2" />
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -208,12 +218,12 @@ function NavigationContent() {
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                      ? 'bg-indigo-600 text-on-accent shadow-lg shadow-indigo-600/30'
                       : 'text-slate-300 hover:bg-white/[0.05]'
                   }`}
                 >
                   <Icon className="w-4 h-4 text-cyan-400" />
-                  <span>{item.label}</span>
+                  <span>{t.nav[item.key]}</span>
                 </Link>
               );
             })}
@@ -224,7 +234,7 @@ function NavigationContent() {
                 className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition-all border border-rose-500/10"
               >
                 <LogOut className="w-4 h-4" />
-                <span>ออกจากระบบ</span>
+                <span>{t.nav.logout}</span>
               </button>
             ) : (
               <Link
@@ -233,7 +243,7 @@ function NavigationContent() {
                 className="flex items-center gap-3 px-4 py-3 mt-2 rounded-xl text-sm font-semibold text-indigo-400 hover:bg-indigo-500/10 transition-all border border-indigo-500/10"
               >
                 <LogIn className="w-4 h-4" />
-                <span>เข้าสู่ระบบ (Staff)</span>
+                <span>{t.nav.loginStaff}</span>
               </Link>
             )}
           </div>

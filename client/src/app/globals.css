@@ -1,5 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Prompt:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Sarabun:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+/* Light theme palette (generated: node scripts/gen-theme-light.mjs) */
+@import "./theme-light.css";
+
+/* Page surfaces — dark values here, light values in theme-light.css */
+@theme {
+  --color-surface: #060913;
+  --color-surface-2: #090d16;
+  --color-surface-3: #0b1120;
+  --color-surface-4: #0b1a1f;
+  --color-surface-5: #080b18;
+}
+
+/* Text on a solid/gradient accent background (buttons, active tabs): white in every theme.
+   Plain `text-white` is theme-aware (near-black ink in light mode). */
+@utility text-on-accent {
+  color: #ffffff;
+}
 
 :root {
   --background: #060913;
@@ -467,6 +484,55 @@ code, pre, .font-mono {
   }
 }
 
+/* ── Light theme: hand-tuned surfaces and effects (palette itself: theme-light.css) ── */
+:root[data-theme="light"] {
+  --background: #eef2f8;
+  --foreground: #0f172a;
+}
+:root[data-theme="light"] .bg-cyber-mesh {
+  background-color: #eef2f8;
+  background-image:
+    radial-gradient(at 10% 10%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.10) 0px, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(236, 72, 153, 0.07) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+}
+:root[data-theme="light"] .glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light"] .glass-panel-glow {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 12px 40px -12px rgba(79, 70, 229, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+:root[data-theme="light"] .glass-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0.015) 100%);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+:root[data-theme="light"] .card-3d:hover {
+  box-shadow: 0 20px 40px -18px rgba(79, 70, 229, 0.3), 0 0 18px 0 rgba(6, 182, 212, 0.12);
+}
+:root[data-theme="light"] .holo-text {
+  background: linear-gradient(135deg, #4f46e5 0%, #9333ea 40%, #0284c7 75%, #db2777 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+:root[data-theme="light"] .lucky-title {
+  background-image: linear-gradient(110deg, #312e81 5%, #7e22ce 30%, #b45309 52%, #0e7490 76%, #312e81 95%);
+}
+:root[data-theme="light"] .winner-name {
+  background-image: linear-gradient(100deg, #b45309 0%, #d97706 25%, #92400e 45%, #f59e0b 60%, #b45309 100%);
+}
+:root[data-theme="light"] .agenda-card:not(.agenda-card-active):hover {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+/* Native form controls (date/time pickers) follow the theme */
+:root[data-theme="light"] .scheme-dark {
+  color-scheme: light;
+}
+
 /* ── Custom Scrollbar ── */
 ::-webkit-scrollbar {
   width: 8px;
@@ -485,6 +551,10 @@ code, pre, .font-mono {
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
 }
+
+:root[data-theme="light"] ::-webkit-scrollbar-track { background: #e2e8f0; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb { background: #94a3b8; }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
 /* ── Print Styles for Digital Pass ── */
 @keyframes registration-hero-breathe { 0%,100% { box-shadow: 0 25px 80px rgba(37,99,235,.16); transform: translateY(0); } 50% { box-shadow: 0 30px 95px rgba(34,211,238,.23); transform: translateY(-3px); } }

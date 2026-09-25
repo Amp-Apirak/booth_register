@@ -46,7 +46,7 @@ export default function LoginPage() {
   };
 
   if (isSettingsLoading) {
-    return <div className="fixed inset-0 bg-[#060913] z-[200]"></div>;
+    return <div className="fixed inset-0 bg-surface z-[200]"></div>;
   }
 
   return (
@@ -124,7 +124,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 disabled:opacity-50 transition-all overflow-hidden"
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-on-accent bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 disabled:opacity-50 transition-all overflow-hidden"
               >
                 <div className="absolute inset-0 w-full h-full bg-white/20 group-hover:scale-x-100 scale-x-0 origin-left transition-transform duration-300 ease-out"></div>
                 {isLoading ? (

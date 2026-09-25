@@ -144,7 +144,7 @@ export default function HomePage() {
   ];
 
   if (isLoading) {
-    return <div className="fixed inset-0 bg-[#060913] z-[200]"></div>;
+    return <div className="fixed inset-0 bg-surface z-[200]"></div>;
   }
 
   return (

@@ -302,7 +302,7 @@ export default function ScannerPage() {
         <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* HUD Scanner Box Visual */}
-        <div className="relative w-full max-w-[300px] sm:max-w-sm mx-auto aspect-square rounded-2xl bg-gradient-to-br from-[#0b1120] via-[#090d16] to-[#0b1a1f] border border-cyan-500/20 mb-4 flex items-center justify-center overflow-hidden shadow-[inset_0_0_40px_rgba(6,182,212,0.08)]">
+        <div className="theme-fixed relative w-full max-w-[300px] sm:max-w-sm mx-auto aspect-square rounded-2xl bg-gradient-to-br from-surface-3 via-surface-2 to-surface-4 border border-cyan-500/20 mb-4 flex items-center justify-center overflow-hidden shadow-[inset_0_0_40px_rgba(6,182,212,0.08)]">
           {/* Live Camera Feed */}
           <video
             ref={videoRef}
@@ -393,7 +393,7 @@ export default function ScannerPage() {
           <button
             type="submit"
             disabled={loading || !ticketCode.trim()}
-            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-emerald-400/30"
+            className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-on-accent font-bold text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-emerald-400/30"
           >
             {loading ? (
               <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

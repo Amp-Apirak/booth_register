@@ -67,8 +67,8 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   privacy_policy: ''
 };
 
-// Formats event start/end into a readable Thai date (or date range)
-export const formatEventDateRange = (start: string, end: string): string => {
+// Formats event start/end into a readable date (or date range) for a locale ('th-TH' → Buddhist year)
+export const formatEventDateRange = (start: string, end: string, locale = 'th-TH'): string => {
   const parse = (v: string) => {
     if (!v) return null;
     const d = new Date(v);
@@ -76,24 +76,25 @@ export const formatEventDateRange = (start: string, end: string): string => {
   };
   const d1 = parse(start);
   const d2 = parse(end);
-  const dateStr = (d: Date) => d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+  const dateStr = (d: Date) => d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
   if (d1 && d2) {
     return d1.toDateString() === d2.toDateString() ? dateStr(d1) : `${dateStr(d1)} - ${dateStr(d2)}`;
   }
   return d1 ? dateStr(d1) : '';
 };
 
-// Formats event start/end into a readable Thai time range
-export const formatEventTimeRange = (start: string, end: string): string => {
+// Formats event start/end into a readable time range, e.g. "08:00 - 17:00 น." (Thai) / "08:00 - 17:00"
+export const formatEventTimeRange = (start: string, end: string, locale = 'th-TH'): string => {
   const timeStr = (v: string) => {
     if (!v) return '';
     const d = new Date(v);
-    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
   };
+  const suffix = locale.startsWith('th') ? ' น.' : '';
   const s = timeStr(start);
   const e = timeStr(end);
-  if (s && e) return `${s} - ${e} น.`;
-  return s ? `${s} น.` : '';
+  if (s && e) return `${s} - ${e}${suffix}`;
+  return s ? `${s}${suffix}` : '';
 };
 
 // Joins the venue/building/floor/address parts into a single location string
