@@ -65,9 +65,12 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
       "company": "Zoom Information System",
       "position": "IT Director",
       "email": "yanisa@zoom.com",
-      "phone": "081-234-5678"
+      "phone": "081-234-5678",
+      "pdpa_consent": true,
+      "organization_type_id": 2
     }
     ```
+*   **ประเภทองค์กร (บังคับ, 2026-09-25):** ส่ง `organization_type_id` (ประเภทที่เปิดใช้งานจาก `GET /events/:event_id/organization-types?active=true`) **หรือ** `organization_type_other` (ข้อความเมื่อเลือก "อื่นๆ", สูงสุด 150 ตัวอักษร) · ไม่ส่งเลย → 400 `ORGANIZATION_TYPE_REQUIRED` · รหัสไม่มีอยู่หรือถูกปิด → 400 `INVALID_ORGANIZATION_TYPE` ([ADR-0012](adr/0012-organization-types.md))
 *   **Response (201 Created)**:
     ```json
     {
@@ -226,11 +229,15 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
           "position": "IT Director",
           "email": "yanisa@zoom.com",
           "phone": "081-234-5678",
-          "status": "Checked-in"
+          "status": "Checked-in",
+          "checked_in_at": "2026-09-21T02:05:13.000Z",
+          "organization_type_id": 2,
+          "organization_type_other": null
         }
       ]
     }
     ```
+*   ต้องใช้ Staff JWT · `organization_type_id` = รหัสประเภทองค์กร, `organization_type_other` = ข้อความ "อื่นๆ" (มีได้อย่างใดอย่างหนึ่ง, ทั้งคู่ `null` = ไม่ระบุ) · `checked_in_at` = เวลาเช็คอิน (`null` ถ้ายังไม่เข้างาน) ใช้คำนวณกราฟช่วงเวลาเข้างาน
 
 #### 2.6.2 เพิ่มข้อมูลผู้ร่วมงานแมนวล (Add Participant Manually)
 *   **URL Route**: `POST /api/v1/participants`
@@ -261,6 +268,8 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
     }
     ```
 
+*   รับ `organization_type_id` / `organization_type_other` ได้เหมือนข้อ 2.1 แต่ **ไม่บังคับ** (เจ้าหน้าที่เพิ่มแทน)
+
 #### 2.6.3 แก้ไขโปรไฟล์ผู้ร่วมงาน (Edit Participant Profile)
 *   **URL Route**: `PUT /api/v1/participants/:id`
 *   **Request Body**:
@@ -285,6 +294,8 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
       }
     }
     ```
+
+*   ประเภทองค์กรเปลี่ยนเฉพาะเมื่อ body มี key `organization_type_id` หรือ `organization_type_other` (ส่ง `{"organization_type_id": null, "organization_type_other": null}` = ล้างเป็น "ไม่ระบุ") · ไม่ส่ง key = คงค่าเดิม
 
 #### 2.6.4 ลบรายชื่อผู้ร่วมงาน (Delete Participant)
 *   **URL Route**: `DELETE /api/v1/participants/:id`
@@ -407,6 +418,10 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 #### 3.2.6 `agenda:update` (อัปเดตกำหนดการจอ LED)
 *   **ทริกเกอร์จาก**: หลัง Staff บันทึกกำหนดการผ่าน `PUT /api/v1/events/:event_id/agenda`
 *   **การใช้งาน**: หน้า Event Agenda รับรายการล่าสุดทันทีและคำนวณรายการ Active ใหม่ตามเวลาของเครื่องแสดงผล
+
+#### 3.2.7 `organization-types:update` (ประเภทองค์กรเปลี่ยน)
+*   **ทริกเกอร์จาก**: เพิ่ม/แก้ไข/ลบ/เรียงลำดับประเภทองค์กร
+*   **Payload**: `{ "event_id": 1 }` — ผู้รับโหลด `GET /events/:event_id/organization-types` ใหม่
 # Lucky Draw Prizes
 
 - `GET /api/v1/events/:event_id/prizes` — รายการของรางวัล (`?active=true` สำหรับรายการเปิดใช้งาน)
@@ -429,11 +444,26 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 
 `POST /api/v1/participants/import` (Staff JWT)
 
-- Body: `{ "participants": [{ "row": 2, "name": "สมชาย ใจดี", "company": "ACME", "position": "", "email": "a@x.co", "phone": "0812345678", "attendee_type": "VIP" }] }` สูงสุด 5,000 แถว
+- Body: `{ "participants": [{ "row": 2, "name": "สมชาย ใจดี", "company": "ACME", "position": "", "email": "a@x.co", "phone": "0812345678", "attendee_type": "VIP", "organization_type": "สถานศึกษา" }] }` สูงสุด 5,000 แถว
+- `organization_type` (ไม่บังคับ): รหัสหรือชื่อไทย/อังกฤษของประเภทองค์กร (ไม่สนตัวพิมพ์เล็ก-ใหญ่และช่องว่างรอบ `/`) → จับคู่เป็น `organization_type_id`; ไม่ตรงกับประเภทใด → เก็บเป็น `organization_type_other`; ว่าง → ไม่ระบุ
 - ข้ามแถวที่ไม่มีชื่อ/บริษัท (`MISSING_REQUIRED_FIELDS`), อีเมลผิดรูปแบบ (`INVALID_EMAIL`), อีเมลซ้ำกับในระบบหรือแถวก่อนหน้า (`DUPLICATE_EMAIL`)
 - แถวที่ผ่านบันทึกใน transaction เดียว สร้างรหัสตั๋ว `SERYYYYMMDDxxxx` ที่ไม่ชนกับของเดิม ไม่ส่งอีเมลตั๋ว
 - Response (201): `{ "success": true, "data": { "imported_count": 117, "skipped_count": 3, "skipped": [{ "row": 9, "reason": "DUPLICATE_EMAIL" }] } }`
 - ส่ง WebSocket `participants:update` (`action: "import"`) และ `overview:update` ครั้งเดียวหลังนำเข้า
+
+# Organization types (ประเภทองค์กร)
+
+[ADR-0012](adr/0012-organization-types.md) · ทุกการเปลี่ยนแปลงส่ง WebSocket `organization-types:update`
+
+- `GET /api/v1/events/:event_id/organization-types` (Public) — เรียงตาม `sort_order` · `?active=true` = เฉพาะที่แสดงในหน้าลงทะเบียน
+  ```json
+  { "success": true, "data": [{ "id": 1, "name_th": "หน่วยงานราชการ / รัฐวิสาหกิจ", "name_en": "Government agency / State enterprise", "color": "blue", "sort_order": 1, "is_active": true, "usage_count": 5 }] }
+  ```
+- `POST /api/v1/events/:event_id/organization-types` (Staff JWT) — body `{ "name_th": "มูลนิธิ", "name_en": "Foundation", "color": "violet", "is_active": true }` → 201 ต่อท้ายลำดับ
+  - `name_th` ว่าง → 400 `NAME_TH_REQUIRED` · `color` ต้องเป็น `blue` `red` `green` `violet` `orange` `aqua` `yellow` `magenta` มิฉะนั้น 400 `INVALID_COLOR`
+- `PUT /api/v1/events/:event_id/organization-types/:id` (Staff JWT) — body แบบเดียวกับ POST (ส่งครบทุกช่อง) · ไม่พบ → 404 `NOT_FOUND`
+- `PUT /api/v1/events/:event_id/organization-types/reorder` (Staff JWT) — body `{ "ids": [3, 1, 2] }` ตั้ง `sort_order` ตามตำแหน่ง คืนรายการทั้งหมด · ids ผิดรูปแบบ → 400 `INVALID_IDS`
+- `DELETE /api/v1/events/:event_id/organization-types/:id` (Staff JWT) — มีผู้เข้าร่วมเลือกแล้ว → 409 `{ "error": "IN_USE", "usage_count": 12 }` (ให้ปิด `is_active` แทน)
 
 # Settings (ตั้งค่าระบบ)
 

@@ -57,4 +57,15 @@ kubectl -n booth rollout restart deploy/booth-server        # …restart
 kubectl -n booth create job --from=cronjob/booth-db-backup backup-now   # สำรองทันที
 ```
 
+## อัปเดตเวอร์ชันและการเปลี่ยนแปลงฐานข้อมูล
+
+- `database/schema.sql` + `seed.sql` รัน **ครั้งแรกที่สร้าง volume เท่านั้น** · ตาราง/คอลัมน์ที่เพิ่มภายหลังถูกสร้างโดย server ตอนเปิด (`initTable()` ในแต่ละ repository) จึง **ไม่ต้องรัน SQL เอง**
+- ทั้ง 2 ทางเลือก restart server ให้เองเมื่ออัปเดต (ทางเลือก 1 `up -d --build` สร้าง container ใหม่ · ทางเลือก 2 image tag = git commit จึง rollout ใหม่ทุกครั้ง)
+- ตรวจหลังอัปเดต: `kubectl -n booth logs deploy/booth-server | head -40` (หรือ `docker compose … logs server`) ต้องไม่มี error ตอน init
+- ลืมรหัสผ่านเจ้าหน้าที่: รันคำสั่ง `create-admin.js` ด้านบนด้วย username เดิม = ตั้งรหัสใหม่ (บัญชีเดิม, ข้อมูลไม่หาย)
+
+| รอบ | สิ่งที่ server เพิ่มให้เอง | หลังอัปเดตให้ทำ |
+|---|---|---|
+| 2026-09-25 | ตาราง `organization_types` (+ 6 ประเภทเริ่มต้น), คอลัมน์ `organization_type_id`, `organization_type_other` ใน `participants` | เปิด `/settings?tab=organizations` ตรวจรายการประเภทองค์กร · ผู้ลงทะเบียนเดิมเป็น "ไม่ระบุ" (เลือกแทนได้ในแดชบอร์ด) · ช่องประเภทองค์กรในหน้าลงทะเบียนกลายเป็นช่องบังคับ |
+
 หมายเหตุ: ค่า CPU request ตั้งไว้ต่ำ (10m) เพราะเครื่องนี้ยอดจอง CPU รวมเกือบเต็ม · ถ้าในอนาคตมีการรัน Ansible role `infra/mesh` ที่สร้าง Gateway ใหม่ทับ ให้รัน `deploy.sh` ซ้ำเพื่อเติม listener กลับ

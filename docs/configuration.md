@@ -1,6 +1,6 @@
 # การตั้งค่าระบบ (Configuration Reference)
 
-ปรับปรุง: 2026-09-23 · ใช้คู่กับ [runbook.md](runbook.md)
+ปรับปรุง: 2026-09-25 · ใช้คู่กับ [runbook.md](runbook.md)
 
 ระบบมีการตั้งค่า 3 ชั้น
 
@@ -73,7 +73,7 @@
 | `privacy_policy` | ข้อมูลทั่วไป → ข้อมูลติดต่อฯ | หน้า `/privacy` (เว้นบรรทัดว่าง = ย่อหน้าใหม่) |
 | `registration_hero_image` `registration_brochure_image` `registration_intro` `registration_objectives` `registration_terms` | หน้าลงทะเบียน | หน้า `/register` |
 
-ข้อมูลอื่นที่แก้จากหน้า `/settings` แต่อยู่คนละตาราง: กำหนดการ (`agenda_items`) และของรางวัล (`lucky_draw_prizes`)
+ข้อมูลอื่นที่แก้จากหน้า `/settings` แต่อยู่คนละตาราง: กำหนดการ (`agenda_items`), ของรางวัล (`lucky_draw_prizes`) และประเภทองค์กร (`organization_types` — แท็บ "ประเภทองค์กร": ชื่อไทย/อังกฤษ, สีในกราฟ 8 สี, แสดงในหน้าลงทะเบียน, ลำดับ; server ใส่ 6 ประเภทเริ่มต้นให้ถ้ายังไม่มี · [ADR-0012](adr/0012-organization-types.md))
 
 **เพิ่ม key ใหม่:** เพิ่มใน `initTable()` + ค่า fallback ใน `settingsRepository.js`, `allowedKeys` ใน `settingsController.js`, `SystemSettings` + `DEFAULT_SETTINGS` ใน `client/src/lib/api.ts` แล้วอัปเดตตารางนี้
 
@@ -83,7 +83,20 @@
 
 `client/src/lib/platform.ts` → `PLATFORM_CONTACT` ผู้ติดต่อสำหรับผู้สนใจนำแพลตฟอร์มไปใช้ (แสดงใน Footer ทุกหน้าผู้เข้าร่วม และ Footer เจ้าหน้าที่) ไม่ขึ้นกับงาน ผู้จัดงานแก้ไม่ได้ ([ADR-0010](adr/0010-footer-and-platform-contact.md))
 
-## 4. บัญชีเจ้าหน้าที่
+## 4. ภาษาและธีม
+
+ค่าที่ผู้ใช้เลือกจากปุ่มบนเมนู (ไม่ต้องตั้งค่าที่ server) · [ADR-0013](adr/0013-theme-and-language.md)
+
+| Cookie | ค่า | ค่าเริ่มต้น |
+|---|---|---|
+| `booth_lang` | `th` \| `en` | `th` |
+| `booth_theme` | `dark` \| `light` | `dark` |
+
+- เปิด URL ใดก็ได้พร้อม `?lang=en` หรือ `?theme=light` = บังคับค่าและจำไว้ในเครื่องนั้น (ใช้กับจอ LED/kiosk เช่น `/signage?screen=overview&lang=en&theme=light`)
+- ข้อความหน้าเว็บอยู่ใน `client/src/i18n/th/*.ts` (ต้นฉบับ) และ `client/src/i18n/en/*.ts`
+- สีธีมสว่างสร้างจาก `cd client && node scripts/gen-theme-light.mjs` (→ `src/app/theme-light.css`) รันใหม่เมื่ออัปเกรด Tailwind
+
+## 5. บัญชีเจ้าหน้าที่
 
 ไม่มีบัญชีที่ใช้ได้หลังติดตั้ง (บัญชีตัวอย่างใน `seed.sql` ไม่มีรหัสผ่านที่ใช้ได้) สร้าง/รีเซ็ตด้วย
 
