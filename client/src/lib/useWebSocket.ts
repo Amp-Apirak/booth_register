@@ -23,7 +23,7 @@ interface WebSocketState {
   connected: boolean;
   stats: Stats;
   latestCheckin: LatestCheckinData | null;
-  participants: Participant[];
+  participants: Participant[] | null; // full list from the last `participants:update` (null until one arrives)
   agenda: AgendaItem[] | null;
   latestWinner: LuckyWinnerData | null;
 }
@@ -34,7 +34,7 @@ export function useWebSocket() {
     connected: false,
     stats: { registered: 0, checked_in: 0, pending: 0 },
     latestCheckin: null,
-    participants: [],
+    participants: null,
     agenda: null,
     latestWinner: null,
   });

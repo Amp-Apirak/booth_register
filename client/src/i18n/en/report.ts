@@ -1,4 +1,48 @@
 import type { report as Th } from '../th/report';
 
 export const report: typeof Th = {
+  title: 'Registration and Attendance Summary Report',
+  previewTitle: 'Report preview',
+  previewHint: 'A4 portrait · margins top 2.5 cm, bottom 2 cm, left 3 cm, right 2 cm · in the print dialog choose scale 100% and turn off "Headers and footers"',
+  print: 'Print / Save as PDF',
+  back: 'Back to dashboard',
+  loading: 'Preparing the report...',
+  eventLabel: 'Event',
+  dateLabel: 'Event date',
+  venueLabel: 'Venue',
+  organizerLabel: 'Organizer',
+  generatedAt: 'Data as of',
+  scope: 'Scope',
+  allData: 'All registered attendees',
+  noDate: '—',
+  sections: {
+    summary: '1. Overview',
+    byOrg: '2. By organization type',
+    trend: '3. Registration trend',
+    hours: '4. Check-in times',
+    companies: '5. Top 10 registering organizations',
+    funnel: '6. Attendee journey',
+  },
+  summaryText: (registered: string, checkedIn: string, rate: string, orgs: string) =>
+    `${registered} people registered and ${checkedIn} checked in — a show-up rate of ${rate}% — from ${orgs} organizations.`,
+  byOrgText: (name: string, share: string) => `The largest group is ${name}, with ${share}% of all registrations.`,
+  trendText: (first: string, last: string, peakDay: string, peakCount: string) =>
+    `Registrations ran from ${first} to ${last}; the busiest day was ${peakDay} with ${peakCount} registrations.`,
+  hoursText: (range: string, count: string) => `The busiest check-in time was ${range} with ${count} check-ins.`,
+  noCheckins: 'No check-ins in the selected data yet.',
+  noRegistrations: 'No registrations in the selected scope.',
+  metric: 'Metric',
+  value: 'Value',
+  unitPeople: 'people',
+  unitPercent: '%',
+  unitOrgs: 'organizations',
+  privacyNote: 'This report contains aggregated figures only — no individual personal data.',
+  signatures: {
+    preparedBy: 'Prepared by',
+    approvedBy: 'Reviewed / approved by',
+    sign: 'Signature',
+    position: 'Position',
+    date: 'Date',
+  },
+  pageOf: 'Page',
 };

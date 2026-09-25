@@ -77,6 +77,16 @@ code, pre, .font-mono {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+/* Attendee table: the actions column stays in view when a narrow screen scrolls the table sideways */
+.sticky-actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: rgba(12, 18, 34, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 .glass-panel-glow {
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(24px);
@@ -484,6 +494,26 @@ code, pre, .font-mono {
   }
 }
 
+/* ── Analytics cards: layered depth + a gentle 3D tilt on hover (data marks are never distorted) ── */
+.analytics-card {
+  transform: perspective(1200px) rotateX(0deg) translateY(0);
+  transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s cubic-bezier(.16,1,.3,1);
+  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 18px 40px -22px rgba(0,0,0,.6), 0 6px 14px -10px rgba(99,102,241,.35);
+}
+.analytics-card:hover {
+  transform: perspective(1200px) rotateX(2.5deg) translateY(-4px);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 28px 50px -24px rgba(0,0,0,.65), 0 10px 24px -12px rgba(34,211,238,.35);
+}
+:root[data-theme="light"] .analytics-card {
+  box-shadow: 0 1px 0 #ffffff inset, 0 18px 40px -24px rgba(15,23,42,.35), 0 6px 14px -10px rgba(79,70,229,.25);
+}
+:root[data-theme="light"] .analytics-card:hover {
+  box-shadow: 0 1px 0 #ffffff inset, 0 28px 50px -26px rgba(15,23,42,.4), 0 10px 24px -12px rgba(8,145,178,.3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .analytics-card, .analytics-card:hover { transform: none; transition: none; }
+}
+
 /* ── Light theme: hand-tuned surfaces and effects (palette itself: theme-light.css) ── */
 :root[data-theme="light"] {
   --background: #eef2f8;
@@ -496,6 +526,9 @@ code, pre, .font-mono {
     radial-gradient(at 90% 10%, rgba(6, 182, 212, 0.10) 0px, transparent 50%),
     radial-gradient(at 50% 90%, rgba(236, 72, 153, 0.07) 0px, transparent 50%),
     radial-gradient(at 80% 50%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+}
+:root[data-theme="light"] .sticky-actions {
+  background: rgba(255, 255, 255, 0.6);
 }
 :root[data-theme="light"] .glass-panel {
   background: rgba(255, 255, 255, 0.78);
@@ -581,6 +614,10 @@ code, pre, .font-mono {
 @media print {
   @page {
     margin: 10mm;
+  }
+  /* Paper is always light: Chrome paints page margins with the color-scheme's canvas color */
+  :root {
+    color-scheme: light !important;
   }
   body, html {
     background: #ffffff !important;

@@ -1,0 +1,17 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+
+/** Width of an element, kept in sync with ResizeObserver (charts render in their container's pixels) */
+export function useWidth<T extends HTMLElement>(initial = 600) {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(initial);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setWidth(Math.max(240, Math.round(entry.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, width };
+}

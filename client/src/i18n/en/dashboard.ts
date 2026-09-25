@@ -1,4 +1,70 @@
 import type { dashboard as Th } from '../th/dashboard';
 
 export const dashboard: typeof Th = {
+  title: 'Data Management Dashboard (CMS)',
+  subtitle: 'Live statistics and management of the full attendee list',
+  actions: {
+    refresh: 'Refresh data',
+    exportExcel: 'Export Excel',
+    importExcel: 'Import Excel',
+    addAttendee: 'Add attendee',
+  },
+  stats: {
+    registered: 'Registrations',
+    pending: 'Pending',
+  },
+  searchPlaceholder: 'Search by name, company or email...',
+  table: {
+    attendee: 'Attendee',
+    companyPosition: 'Company / Position',
+    status: 'Status',
+    registeredAt: 'Registered at',
+    actions: 'Actions',
+    loading: 'Loading attendees...',
+    empty: 'No attendees match your search',
+  },
+  rowActions: {
+    checkInNow: 'Check in now',
+    checkIn: 'Check in',
+    viewQr: 'View QR code',
+    edit: 'Edit',
+    delete: 'Delete',
+  },
+  confirmDelete: 'Are you sure you want to delete this attendee?',
+  pagination: {
+    show: 'Show',
+    perPage: 'per page',
+    pageOf: (page: number, total: number) => `Page ${page} of ${total}`,
+  },
+  form: {
+    addTitle: 'Add new attendee',
+    editTitle: 'Edit attendee',
+    choosePhoto: 'Take / choose photo',
+    changePhoto: 'Change photo',
+    attendeeType: 'Attendee type',
+    name: 'Full name',
+    namePlaceholder: 'e.g. Nattapong Sitthichok',
+    company: 'Company / Organization',
+    companyPlaceholder: 'e.g. PTT Digital / KBTG',
+    position: 'Position',
+    positionPlaceholder: 'e.g. Senior Tech Lead',
+    email: 'Email',
+    phone: 'Phone number',
+    saveNew: 'Save attendee',
+    saveEdit: 'Save changes',
+  },
+  crop: {
+    zoom: 'Resize photo (zoom in/out)',
+    confirm: 'Use this photo',
+  },
+  qr: {
+    processing: 'Processing...',
+    save: 'Save QR code image',
+  },
+  exportColumns: {
+    id: 'ID',
+    status: 'Status',
+    ticketCode: 'Ticket code',
+    registeredAt: 'Registered at',
+  },
 };

@@ -1,14 +1,20 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as htmlToImage from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
-import api, { Participant, formatEventDateRange, formatEventTimeRange, formatEventLocation } from '@/lib/api';
+import api, { OrganizationType, Participant, formatEventDateRange, formatEventTimeRange, formatEventLocation } from '@/lib/api';
+import { orgKeyColor, orgTypeName, participantOrgKey, participantOrgLabel } from '@/lib/orgTypes';
+import OrganizationTypeField, { OrgChoice, orgChoiceOf } from '@/components/OrganizationTypeField';
+import AnalyticsPanel from '@/components/analytics/AnalyticsPanel';
 import useWebSocket from '@/lib/useWebSocket';
 import { useSettings } from '@/contexts/SettingsContext';
+import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/cropImage';
+import { columnHeader } from '@/lib/participantImport';
 import ParticipantImportModal from '@/components/ParticipantImportModal';
 import { 
   LayoutDashboard, 
@@ -36,11 +42,41 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  BarChart3,
+  List
 } from 'lucide-react';
 
+type DashboardTab = 'participants' | 'analytics';
+
+function SortIcon({ active, direction }: { active: boolean; direction: 'asc' | 'desc' }) {
+  if (!active) return <ChevronDown className="w-3 h-3 opacity-20 ml-1 inline-block" />;
+  return direction === 'asc'
+    ? <ChevronUp className="w-3 h-3 text-cyan-400 ml-1 inline-block" />
+    : <ChevronDown className="w-3 h-3 text-cyan-400 ml-1 inline-block" />;
+}
+
+// The tab lives in the URL (/dashboard?tab=analytics) so refresh and links keep it
 export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab: DashboardTab = searchParams.get('tab') === 'analytics' ? 'analytics' : 'participants';
+  const setTab = (next: DashboardTab) => router.replace(`/dashboard?tab=${next}`, { scroll: false });
   const { settings } = useSettings();
+  const t = useT();
+  const { lang, theme } = usePreferences();
+  const [orgTypes, setOrgTypes] = useState<OrganizationType[]>([]);
+  const [orgFilter, setOrgFilter] = useState<string>('all'); // 'all' | 'other' | 'none' | type id
+  const [newOrg, setNewOrg] = useState<{ choice: OrgChoice; other: string }>({ choice: null, other: '' });
+  const [editOrg, setEditOrg] = useState<{ choice: OrgChoice; other: string }>({ choice: null, other: '' });
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -66,7 +102,9 @@ export default function DashboardPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<Participant | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const { stats, connected } = useWebSocket();
+  const { stats, connected, participants: liveParticipants } = useWebSocket();
+  // after the first `participants:update` the live list (check-ins at the gate, other staff) is the source
+  const list = liveParticipants ?? participants;
 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -123,7 +161,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchParticipants();
+    api.getOrganizationTypes().then(setOrgTypes);
   }, []);
+
+  const orgPayload = (o: { choice: OrgChoice; other: string }) => ({
+    organization_type_id: typeof o.choice === 'number' ? o.choice : null,
+    organization_type_other: o.choice === 'other' ? o.other.trim() || null : null,
+  });
+
+  const openEdit = (p: Participant, forceOther = false) => {
+    setEditingAttendee(p);
+    setEditOrg({ choice: forceOther ? 'other' : orgChoiceOf(p), other: p.organization_type_other ?? '' });
+    setIsEditModalOpen(true);
+  };
+
+  // Staff can pick the organization type on an attendee's behalf straight from the table
+  const quickSetOrg = async (p: Participant, value: string) => {
+    if (value === 'other') { openEdit(p, true); return; }
+    const updated = await api.editParticipant(p.id, { ...p, organization_type_id: value === '' ? null : Number(value), organization_type_other: null });
+    if (updated) setParticipants(prev => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x));
+  };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,11 +188,12 @@ export default function DashboardPage() {
 
     setActionLoading(true);
     try {
-      const created = await api.addParticipant(newAttendee);
+      const created = await api.addParticipant({ ...newAttendee, ...orgPayload(newOrg) });
       if (created) {
         setParticipants(prev => [created, ...prev]);
         setIsAddModalOpen(false);
         setNewAttendee({ name: '', company: '', position: '', email: '', phone: '', profile_picture: '', attendee_type: 'General' });
+        setNewOrg({ choice: null, other: '' });
       }
     } finally {
       setActionLoading(false);
@@ -148,7 +206,7 @@ export default function DashboardPage() {
 
     setActionLoading(true);
     try {
-      const updated = await api.editParticipant(editingAttendee.id, editingAttendee);
+      const updated = await api.editParticipant(editingAttendee.id, { ...editingAttendee, ...orgPayload(editOrg) });
       if (updated) {
         setParticipants(prev => prev.map(p => p.id === updated.id ? updated : p));
         setIsEditModalOpen(false);
@@ -172,7 +230,7 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลผู้ร่วมงานรายนี้?')) return;
+    if (!confirm(t.dashboard.confirmDelete)) return;
     try {
       const ok = await api.deleteParticipant(id);
       if (ok) {
@@ -184,7 +242,7 @@ export default function DashboardPage() {
   };
 
     const filteredParticipants = useMemo(() => {
-    let result = participants.filter((p) => {
+    let result = list.filter((p) => {
       const query = search.toLowerCase();
       const matchesSearch = 
         p.name.toLowerCase().includes(query) ||
@@ -193,12 +251,21 @@ export default function DashboardPage() {
         (p.phone && p.phone.includes(query)) ||
         (p.position && p.position.toLowerCase().includes(query));
       const matchesFilter = filter === 'all' || p.status === filter;
-      return matchesSearch && matchesFilter;
+      const matchesOrg = orgFilter === 'all' || String(participantOrgKey(p)) === orgFilter;
+      return matchesSearch && matchesFilter && matchesOrg;
     });
 
+    const orgRank = (p: Participant) => {
+      const key = participantOrgKey(p);
+      if (key === 'other') return orgTypes.length;
+      if (key === 'none') return orgTypes.length + 1;
+      const index = orgTypes.findIndex((type) => type.id === key);
+      return index < 0 ? orgTypes.length : index;
+    };
+
     result.sort((a, b) => {
-      let valA = (a as any)[sortColumn];
-      let valB = (b as any)[sortColumn];
+      let valA = sortColumn === 'organization_type_id' ? orgRank(a) : (a as any)[sortColumn];
+      let valB = sortColumn === 'organization_type_id' ? orgRank(b) : (b as any)[sortColumn];
       
       if (valA === undefined || valA === null) valA = '';
       if (valB === undefined || valB === null) valB = '';
@@ -209,7 +276,7 @@ export default function DashboardPage() {
     });
 
     return result;
-  }, [participants, search, filter, sortColumn, sortDirection]);
+  }, [list, search, filter, orgFilter, orgTypes, sortColumn, sortDirection]);
 
   const totalPages = Math.ceil(filteredParticipants.length / itemsPerPage);
   const paginatedParticipants = useMemo(() => {
@@ -219,7 +286,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filter, itemsPerPage]);
+  }, [search, filter, orgFilter, itemsPerPage]);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -230,20 +297,21 @@ export default function DashboardPage() {
     }
   };
 
-  const SortIcon = ({ column }: { column: string }) => {
-    if (sortColumn !== column) return <ChevronDown className="w-3 h-3 opacity-20 ml-1 inline-block" />;
-    return sortDirection === 'asc' 
-      ? <ChevronUp className="w-3 h-3 text-cyan-400 ml-1 inline-block" /> 
-      : <ChevronDown className="w-3 h-3 text-cyan-400 ml-1 inline-block" />;
-  };
-
   const downloadQrCode = async () => {
     if (!qrModalParticipant) return;
     setDownloadingQr(true);
     try {
       const element = document.getElementById('dashboard-qr-ticket');
       if (element) {
-        const dataUrl = await htmlToImage.toPng(element, { backgroundColor: '#ffffff', pixelRatio: 2 });
+        const rect = element.getBoundingClientRect();
+        // the capture copies the card's own margin into the picture, which shifts it off-center — drop it
+        const dataUrl = await htmlToImage.toPng(element, {
+          backgroundColor: '#ffffff',
+          pixelRatio: 2,
+          width: rect.width,
+          height: rect.height,
+          style: { margin: '0', transform: 'none' },
+        });
         const link = document.createElement('a');
         link.download = `QR_${qrModalParticipant.name.replace(/\s+/g, '_')}.png`;
         link.href = dataUrl;
@@ -256,22 +324,26 @@ export default function DashboardPage() {
     }
   };
 
-  const totalRegistered = stats.registered || participants.length;
-  const totalCheckedIn = stats.checked_in || participants.filter(p => p.status === 'Checked-in').length;
+  const totalRegistered = stats.registered || list.length;
+  const totalCheckedIn = stats.checked_in || list.filter(p => p.status === 'Checked-in').length;
   const totalPending = stats.pending || (totalRegistered - totalCheckedIn);
   const showUpRate = totalRegistered > 0 ? Math.round((totalCheckedIn / totalRegistered) * 100) : 0;
 
     const exportExcel = () => {
-    const dataToExport = participants.map(p => ({
-      'รหัส ID': p.id,
-      'ชื่อ-นามสกุล': p.name,
-      'บริษัท/องค์กร': p.company,
-      'ตำแหน่ง': p.position || '',
-      'อีเมล': p.email || '',
-      'เบอร์โทร': p.phone || '',
-      'สถานะ': p.status,
-      'รหัสตั๋ว': p.ticket_code || '',
-      'วันเวลาที่ลงทะเบียน': p.registered_at ? new Date(p.registered_at).toLocaleString('th-TH') : ''
+    // Headers follow the UI language; name…phone use the import headers so the file can be imported back
+    const col = t.dashboard.exportColumns;
+    const orgLabels = { other: t.orgTypes.other, none: t.orgTypes.none };
+    const dataToExport = list.map(p => ({
+      [col.id]: p.id,
+      [columnHeader('name', lang)]: p.name,
+      [columnHeader('company', lang)]: p.company,
+      [columnHeader('position', lang)]: p.position || '',
+      [columnHeader('email', lang)]: p.email || '',
+      [columnHeader('phone', lang)]: p.phone || '',
+      [columnHeader('organization_type', lang)]: participantOrgKey(p) === 'other' ? (p.organization_type_other || '') : participantOrgKey(p) === 'none' ? '' : participantOrgLabel(p, orgTypes, lang, orgLabels),
+      [col.status]: p.status,
+      [col.ticketCode]: p.ticket_code || '',
+      [col.registeredAt]: p.registered_at ? new Date(p.registered_at).toLocaleString(t.common.locale) : ''
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -290,18 +362,18 @@ export default function DashboardPage() {
             <span>Event Management & Analytics Operations</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-            แดชบอร์ดจัดการข้อมูล (CMS)
+            {t.dashboard.title}
           </h1>
           <p className="text-sm text-slate-400">
-            ระบบรายงานสถิติสดและบริหารจัดการรายชื่อผู้เข้าร่วมงานทั้งหมด
+            {t.dashboard.subtitle}
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {tab === 'participants' && <div className="flex items-center gap-3">
           <button
             onClick={fetchParticipants}
             className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 transition-colors"
-            title="รีเฟรชข้อมูล"
+            title={t.dashboard.actions.refresh}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -311,7 +383,7 @@ export default function DashboardPage() {
             className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2"
           >
             <Download className="w-4 h-4 text-cyan-400" />
-            <span>ส่งออก Excel</span>
+            <span>{t.dashboard.actions.exportExcel}</span>
           </button>
 
           <button
@@ -319,7 +391,7 @@ export default function DashboardPage() {
             className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2"
           >
             <Upload className="w-4 h-4 text-cyan-400" />
-            <span>นำเข้า Excel</span>
+            <span>{t.dashboard.actions.importExcel}</span>
           </button>
 
           <button
@@ -327,16 +399,33 @@ export default function DashboardPage() {
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>เพิ่มผู้ร่วมงาน</span>
+            <span>{t.dashboard.actions.addAttendee}</span>
           </button>
-        </div>
+        </div>}
       </div>
+
+      {/* ── Tabs: attendee list | reports & charts ── */}
+      <div role="tablist" className="inline-flex p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
+        {([
+          ['participants', t.analytics.tabParticipants, List],
+          ['analytics', t.analytics.tabAnalytics, BarChart3],
+        ] as const).map(([id, label, Icon]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === id ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            <Icon className="w-4 h-4" />{label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'analytics' ? (
+        <AnalyticsPanel participants={list} loading={loading} />
+      ) : (<>
 
       {/* ── 4 Executive 3D Metrics Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 perspective-1000">
         <div className="glass-panel rounded-2xl p-5 border border-indigo-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-400">ยอดลงทะเบียน</span>
+            <span className="text-xs font-semibold text-slate-400">{t.dashboard.stats.registered}</span>
             <Users className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-3xl font-extrabold text-white font-heading">{totalRegistered}</div>
@@ -345,7 +434,7 @@ export default function DashboardPage() {
 
         <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-400">เช็คอินแล้ว</span>
+            <span className="text-xs font-semibold text-slate-400">{t.common.status.checkedIn}</span>
             <UserCheck className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-3xl font-extrabold text-emerald-400 font-heading">{totalCheckedIn}</div>
@@ -354,7 +443,7 @@ export default function DashboardPage() {
 
         <div className="glass-panel rounded-2xl p-5 border border-amber-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-400">รอดำเนินการ</span>
+            <span className="text-xs font-semibold text-slate-400">{t.dashboard.stats.pending}</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
           <div className="text-3xl font-extrabold text-amber-400 font-heading">{totalPending}</div>
@@ -384,11 +473,22 @@ export default function DashboardPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white/[0.04] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white text-xs placeholder-slate-500"
-            placeholder="ค้นหาชื่อ, บริษัท, หรืออีเมล..."
+            placeholder={t.dashboard.searchPlaceholder}
           />
         </div>
 
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+          <select
+            value={orgFilter}
+            onChange={(e) => setOrgFilter(e.target.value)}
+            aria-label={t.orgTypes.column}
+            className="mr-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.04] text-slate-200 border border-white/10 max-w-[14rem]"
+          >
+            <option value="all" className="bg-slate-900">{t.orgTypes.filterAll}</option>
+            {orgTypes.map((type) => <option key={type.id} value={type.id} className="bg-slate-900">{orgTypeName(type, lang)}</option>)}
+            <option value="other" className="bg-slate-900">{t.orgTypes.other}</option>
+            <option value="none" className="bg-slate-900">{t.orgTypes.none}</option>
+          </select>
           {(['all', 'Pending', 'Checked-in'] as const).map((f) => (
             <button
               key={f}
@@ -399,7 +499,7 @@ export default function DashboardPage() {
                   : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
               }`}
             >
-              {f === 'all' ? 'ทั้งหมด' : f === 'Pending' ? 'ยังไม่เช็คอิน' : 'เช็คอินแล้ว'}
+              {f === 'all' ? t.common.all : f === 'Pending' ? t.common.status.pending : t.common.status.checkedIn}
             </button>
           ))}
         </div>
@@ -411,33 +511,36 @@ export default function DashboardPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-white/[0.02] border-b border-white/10 text-slate-400 font-mono uppercase tracking-wider text-xs">
               <tr>
-                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('name')}>
-                  ผู้เข้าร่วมงาน <SortIcon column="name" />
+                <th className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('name')}>
+                  {t.dashboard.table.attendee} <SortIcon active={sortColumn === 'name'} direction={sortDirection} />
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('company')}>
-                  บริษัท / ตำแหน่ง <SortIcon column="company" />
+                <th className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('company')}>
+                  {t.dashboard.table.companyPosition} <SortIcon active={sortColumn === 'company'} direction={sortDirection} />
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('status')}>
-                  สถานะ <SortIcon column="status" />
+                <th className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('organization_type_id')}>
+                  {t.orgTypes.column} <SortIcon active={sortColumn === 'organization_type_id'} direction={sortDirection} />
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('registered_at')}>
-                  วันเวลาลงทะเบียน <SortIcon column="registered_at" />
+                <th className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('status')}>
+                  {t.dashboard.table.status} <SortIcon active={sortColumn === 'status'} direction={sortDirection} />
                 </th>
-                <th className="px-6 py-4 text-right">การจัดการ</th>
+                <th className="px-4 py-4 cursor-pointer hover:bg-white/5 transition-colors whitespace-nowrap" onClick={() => handleSort('registered_at')}>
+                  {t.dashboard.table.registeredAt} <SortIcon active={sortColumn === 'registered_at'} direction={sortDirection} />
+                </th>
+                <th className="px-4 py-4 text-right sticky-actions">{t.dashboard.table.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.05]">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
                     <span className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin inline-block mr-2" />
-                    กำลังโหลดข้อมูลผู้ร่วมงาน...
+                    {t.dashboard.table.loading}
                   </td>
                 </tr>
               ) : paginatedParticipants.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                    ไม่พบข้อมูลผู้ร่วมงานที่ตรงกับเงื่อนไขการค้นหา
+                  <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                    {t.dashboard.table.empty}
                   </td>
                 </tr>
               ) : (
@@ -446,7 +549,7 @@ export default function DashboardPage() {
                   return (
                     <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
                       {/* Name & Avatar */}
-                      <td className="py-4 px-6 relative whitespace-nowrap">
+                      <td className="py-4 px-4 relative">
                         <div className="flex items-center gap-4 group/item relative z-10">
                           {p.profile_picture ? (
                             <img 
@@ -482,7 +585,7 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Company & Position */}
-                      <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
+                      <td className="px-4 py-4 min-w-[180px]">
                         <span className="font-semibold text-slate-200 block text-base">{p.company}</span>
                         {p.position && (
                           <span className="text-indigo-400 font-mono text-sm uppercase tracking-wider block mt-1">
@@ -491,22 +594,40 @@ export default function DashboardPage() {
                         )}
                       </td>
 
+                      {/* Organization type — staff can choose on the attendee's behalf */}
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: orgKeyColor(participantOrgKey(p), orgTypes, theme) }} aria-hidden="true" />
+                          <select
+                            value={typeof participantOrgKey(p) === 'number' ? String(p.organization_type_id) : participantOrgKey(p) === 'other' ? 'other' : ''}
+                            onChange={(e) => quickSetOrg(p, e.target.value)}
+                            title={t.orgTypes.changeTitle}
+                            aria-label={`${t.orgTypes.changeTitle}: ${p.name}`}
+                            className="w-40 truncate bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="" className="bg-slate-900">{t.orgTypes.none}</option>
+                            {orgTypes.map((type) => <option key={type.id} value={type.id} className="bg-slate-900">{orgTypeName(type, lang)}</option>)}
+                            <option value="other" className="bg-slate-900">{p.organization_type_other ? `${t.orgTypes.other}: ${p.organization_type_other}` : t.orgTypes.otherOption}</option>
+                          </select>
+                        </div>
+                      </td>
+
                       {/* Status Tag */}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-mono font-semibold border ${
                           isChecked
                             ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
                             : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
                         }`}>
                           <span className={`w-2 h-2 rounded-full ${isChecked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                          <span>{isChecked ? 'Checked-in' : 'Pending'}</span>
+                          <span>{isChecked ? t.common.status.checkedIn : t.common.status.pending}</span>
                         </span>
                       </td>
 
                       {/* Registered At & Ticket Code */}
-                      <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
+                      <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-slate-300 text-sm mb-1">
-                          {p.registered_at ? new Date(p.registered_at).toLocaleString('th-TH') : '-'}
+                          {p.registered_at ? new Date(p.registered_at).toLocaleString(t.common.locale) : '-'}
                         </div>
                         {p.ticket_code ? (
                           <span className="bg-white/[0.04] px-2 py-0.5 rounded border border-white/5 text-cyan-300 select-all text-xs font-mono">
@@ -518,37 +639,37 @@ export default function DashboardPage() {
                       </td>
 
                       {/* Quick Actions */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-4 text-right whitespace-nowrap sticky-actions">
                         <div className="flex items-center justify-end gap-2">
                           {!isChecked && (
                             <button
                               onClick={() => handleQuickCheckin(p.ticket_code)}
                               className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-on-accent border border-emerald-500/30 text-sm font-semibold transition-all"
-                              title="เช็คอินทันที"
+                              title={t.dashboard.rowActions.checkInNow}
                             >
-                              สแกนเข้า
+                              {t.dashboard.rowActions.checkIn}
                             </button>
                           )}
                           {p.ticket_code && (
                             <button
                               onClick={() => setQrModalParticipant(p)}
                               className="p-2 rounded-lg text-indigo-400 hover:text-white hover:bg-indigo-500/20 transition-colors"
-                              title="ดู QR Code"
+                              title={t.dashboard.rowActions.viewQr}
                             >
                               <QrCode className="w-5 h-5" />
                             </button>
                           )}
                           <button
-                            onClick={() => { setEditingAttendee(p); setIsEditModalOpen(true); }}
+                            onClick={() => openEdit(p)}
                             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="แก้ไขข้อมูล"
+                            title={t.dashboard.rowActions.edit}
                           >
                             <Edit3 className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleDelete(p.id)}
                             className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title="ลบข้อมูล"
+                            title={t.dashboard.rowActions.delete}
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -565,7 +686,7 @@ export default function DashboardPage() {
         {/* Pagination Controls */}
         <div className="px-6 py-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">แสดงผล</span>
+            <span className="text-sm text-slate-400">{t.dashboard.pagination.show}</span>
             <select
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
@@ -576,7 +697,7 @@ export default function DashboardPage() {
               <option value={50}>50</option>
               <option value={100}>100</option>
             </select>
-            <span className="text-sm text-slate-400">รายการ / หน้า</span>
+            <span className="text-sm text-slate-400">{t.dashboard.pagination.perPage}</span>
           </div>
           
           <div className="flex items-center gap-2">
@@ -588,7 +709,7 @@ export default function DashboardPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className="text-sm text-white font-medium px-3">
-              หน้า {currentPage} จาก {totalPages || 1}
+              {t.dashboard.pagination.pageOf(currentPage, totalPages || 1)}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -601,6 +722,8 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      </>)}
 
       {/* ── Add Attendee Modal ── */}
       {isImportModalOpen && (
@@ -618,7 +741,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
                   <UserPlus className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-white">เพิ่มผู้เข้าร่วมงานใหม่</h3>
+                <h3 className="text-xl font-bold text-white">{t.dashboard.form.addTitle}</h3>
               </div>
               <button
                 onClick={() => setIsAddModalOpen(false)}
@@ -639,7 +762,7 @@ export default function DashboardPage() {
                       ) : (
                         <>
                           <Camera className="w-8 h-8 opacity-60 mb-1" />
-                          <span className="text-[10px] font-semibold opacity-80">ถ่าย/เลือกรูป</span>
+                          <span className="text-[10px] font-semibold opacity-80">{t.dashboard.form.choosePhoto}</span>
                         </>
                       )}
                     </div>
@@ -659,14 +782,14 @@ export default function DashboardPage() {
                 </div>
                 
                 <div className="flex-1 w-full flex flex-col gap-3">
-                  <label className="block font-semibold text-slate-300">ประเภทผู้เข้าร่วมงาน</label>
+                  <label className="block font-semibold text-slate-300">{t.dashboard.form.attendeeType}</label>
                   <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/10 w-full">
                     <button
                       type="button"
                       onClick={() => setNewAttendee({ ...newAttendee, attendee_type: 'General' })}
                       className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${newAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-on-accent shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
-                      <UserCircle className="w-4 h-4" /> ทั่วไป
+                      <UserCircle className="w-4 h-4" /> {t.common.attendeeType.General}
                     </button>
                     <button
                       type="button"
@@ -680,43 +803,51 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">ชื่อ-นามสกุล *</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
                 <input
                   type="text"
                   required
                   value={newAttendee.name}
                   onChange={(e) => setNewAttendee({ ...newAttendee, name: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
-                  placeholder="เช่น นัฐพงศ์ สิทธิโชค"
+                  placeholder={t.dashboard.form.namePlaceholder}
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">บริษัท / องค์กร *</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
                 <input
                   type="text"
                   required
                   value={newAttendee.company}
                   onChange={(e) => setNewAttendee({ ...newAttendee, company: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
-                  placeholder="เช่น PTT Digital / KBTG"
+                  placeholder={t.dashboard.form.companyPlaceholder}
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">ตำแหน่งงาน</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
                 <input
                   type="text"
                   value={newAttendee.position}
                   onChange={(e) => setNewAttendee({ ...newAttendee, position: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
-                  placeholder="เช่น Senior Tech Lead"
+                  placeholder={t.dashboard.form.positionPlaceholder}
                 />
               </div>
 
+              <OrganizationTypeField
+                idPrefix="add-org"
+                types={orgTypes}
+                choice={newOrg.choice}
+                other={newOrg.other}
+                onChange={(choice, other) => setNewOrg({ choice, other })}
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">อีเมล</label>
+                  <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.email}</label>
                   <input
                     type="email"
                     value={newAttendee.email}
@@ -726,7 +857,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">เบอร์โทรศัพท์</label>
+                  <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.phone}</label>
                   <input
                     type="tel"
                     value={newAttendee.phone}
@@ -743,14 +874,14 @@ export default function DashboardPage() {
                   onClick={() => setIsAddModalOpen(false)}
                   className="flex-1 py-3 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 font-semibold transition-all border border-white/10"
                 >
-                  ยกเลิก
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
                 >
-                  {actionLoading ? 'กำลังบันทึก...' : 'บันทึกข้อมูลผู้เข้าร่วมงาน'}
+                  {actionLoading ? t.common.saving : t.dashboard.form.saveNew}
                 </button>
               </div>
             </form>
@@ -766,7 +897,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
                   <Edit3 className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-white">แก้ไขข้อมูลผู้เข้าร่วมงาน</h3>
+                <h3 className="text-xl font-bold text-white">{t.dashboard.form.editTitle}</h3>
               </div>
               <button
                 onClick={() => { setIsEditModalOpen(false); setEditingAttendee(null); }}
@@ -787,7 +918,7 @@ export default function DashboardPage() {
                       ) : (
                         <>
                           <Camera className="w-8 h-8 opacity-60 mb-1" />
-                          <span className="text-[10px] font-semibold opacity-80">เปลี่ยนรูปภาพ</span>
+                          <span className="text-[10px] font-semibold opacity-80">{t.dashboard.form.changePhoto}</span>
                         </>
                       )}
                     </div>
@@ -807,14 +938,14 @@ export default function DashboardPage() {
                 </div>
                 
                 <div className="flex-1 w-full flex flex-col gap-3">
-                  <label className="block font-semibold text-slate-300">ประเภทผู้เข้าร่วมงาน</label>
+                  <label className="block font-semibold text-slate-300">{t.dashboard.form.attendeeType}</label>
                   <div className="flex bg-white/[0.03] p-1 rounded-xl border border-white/10 w-full">
                     <button
                       type="button"
                       onClick={() => setEditingAttendee({ ...editingAttendee, attendee_type: 'General' })}
                       className={`flex-1 py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-lg transition-all ${editingAttendee.attendee_type === 'General' ? 'bg-indigo-600 text-on-accent shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white'}`}
                     >
-                      <UserCircle className="w-4 h-4" /> ทั่วไป
+                      <UserCircle className="w-4 h-4" /> {t.common.attendeeType.General}
                     </button>
                     <button
                       type="button"
@@ -828,7 +959,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">ชื่อ-นามสกุล *</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
                 <input
                   type="text"
                   required
@@ -839,7 +970,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">บริษัท / องค์กร *</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
                 <input
                   type="text"
                   required
@@ -850,7 +981,7 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">ตำแหน่งงาน</label>
+                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
                 <input
                   type="text"
                   value={editingAttendee.position}
@@ -859,20 +990,28 @@ export default function DashboardPage() {
                 />
               </div>
 
+              <OrganizationTypeField
+                idPrefix="edit-org"
+                types={orgTypes}
+                choice={editOrg.choice}
+                other={editOrg.other}
+                onChange={(choice, other) => setEditOrg({ choice, other })}
+              />
+
               <div className="pt-4 flex gap-3">
                 <button
                   type="button"
                   onClick={() => { setIsEditModalOpen(false); setEditingAttendee(null); }}
                   className="flex-1 py-3 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 font-semibold transition-all border border-white/10"
                 >
-                  ยกเลิก
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
                   className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all border border-indigo-500/50"
                 >
-                  {actionLoading ? 'กำลังบันทึก...' : 'บันทึกการแก้ไขข้อมูล'}
+                  {actionLoading ? t.common.saving : t.dashboard.form.saveEdit}
                 </button>
               </div>
             </form>
@@ -896,7 +1035,7 @@ export default function DashboardPage() {
           </div>
           <div className="p-6 bg-surface-2 border-t border-white/10">
             <div className="max-w-md mx-auto space-y-4 text-center">
-              <label className="block text-sm font-semibold text-slate-300">ปรับขนาดรูปภาพ (ซูมเข้า-ออก)</label>
+              <label className="block text-sm font-semibold text-slate-300">{t.dashboard.crop.zoom}</label>
               <input
                 type="range"
                 value={zoom}
@@ -913,14 +1052,14 @@ export default function DashboardPage() {
                   onClick={() => { setIsCropping(false); setRawImageSrc(null); }}
                   className="flex-1 py-3 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 font-semibold transition-all border border-white/10"
                 >
-                  ยกเลิก
+                  {t.common.cancel}
                 </button>
                 <button
                   type="button"
                   onClick={handleCropSave}
                   className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-on-accent font-bold transition-all shadow-lg shadow-indigo-600/30 border border-indigo-500/50"
                 >
-                  ยืนยันรูปภาพ
+                  {t.dashboard.crop.confirm}
                 </button>
               </div>
             </div>
@@ -964,21 +1103,21 @@ export default function DashboardPage() {
               <X className="w-5 h-5" />
             </button>
             
-            <div id="dashboard-qr-ticket" className="theme-fixed bg-white p-6 rounded-2xl mb-6 flex flex-col items-center mx-auto" style={{ width: 'fit-content' }}>
+            <div id="dashboard-qr-ticket" className="theme-fixed bg-white p-6 rounded-2xl mb-6 flex flex-col items-center w-full text-center">
               <QRCodeSVG
                 value={qrModalParticipant.ticket_code || ''}
                 size={200}
                 level="H"
                 includeMargin={true}
               />
-              <div className="mt-3 text-black font-bold text-lg">{qrModalParticipant.name}</div>
-              <div className="text-slate-600 text-sm font-mono mt-1">{qrModalParticipant.ticket_code}</div>
-              {(formatEventDateRange(settings.event_start, settings.event_end) || formatEventLocation(settings)) && (
+              <div className="mt-3 text-black font-bold text-lg break-words">{qrModalParticipant.name}</div>
+              <div className="text-slate-600 text-sm font-mono mt-1 break-all">{qrModalParticipant.ticket_code}</div>
+              {(formatEventDateRange(settings.event_start, settings.event_end, t.common.locale) || formatEventLocation(settings)) && (
                 <div className="mt-3 pt-3 border-t border-slate-200 w-full text-center space-y-0.5">
-                  {formatEventDateRange(settings.event_start, settings.event_end) && (
+                  {formatEventDateRange(settings.event_start, settings.event_end, t.common.locale) && (
                     <div className="text-slate-700 text-xs font-medium">
-                      {formatEventDateRange(settings.event_start, settings.event_end)}
-                      {formatEventTimeRange(settings.event_start, settings.event_end) ? ` • ${formatEventTimeRange(settings.event_start, settings.event_end)}` : ''}
+                      {formatEventDateRange(settings.event_start, settings.event_end, t.common.locale)}
+                      {formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale) ? ` • ${formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale)}` : ''}
                     </div>
                   )}
                   {formatEventLocation(settings) && (
@@ -994,7 +1133,7 @@ export default function DashboardPage() {
               className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
             >
               <Download className="w-5 h-5" />
-              {downloadingQr ? 'กำลังประมวลผล...' : 'บันทึกรูป QR Code'}
+              {downloadingQr ? t.dashboard.qr.processing : t.dashboard.qr.save}
             </button>
           </div>
         </div>

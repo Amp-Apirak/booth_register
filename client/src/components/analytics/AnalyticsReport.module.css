@@ -1,0 +1,227 @@
+/* A4 portrait report. On screen: a white "sheet" preview. In print: the @page rule in
+   AnalyticsReport.tsx sets the paper and margins (Thai official-document convention:
+   top 2.5 cm, bottom 2 cm, left 3 cm, right 2 cm), so the sheet drops its padding. */
+
+.toolbar {
+  max-width: 210mm;
+  margin: 0 auto 16px;
+}
+
+.sheet {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 25mm 20mm 20mm 30mm;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  font-family: 'Sarabun', 'TH Sarabun New', 'Prompt', sans-serif;
+  font-size: 12pt;
+  line-height: 1.55;
+  /* print the colored bars, swatches and header shading even when the browser's
+     "Background graphics" option is off (its default) */
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+.logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.eventName {
+  font-size: 13pt;
+  font-weight: 700;
+  color: #111827;
+}
+.organizer {
+  font-size: 10.5pt;
+  color: #4b5563;
+}
+.title {
+  margin: 14px 0 4px;
+  text-align: center;
+  font-size: 17pt;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+.meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 10px 0 14px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 10.5pt;
+  color: #374151;
+}
+.meta dt {
+  font-weight: 600;
+  color: #111827;
+}
+.rule {
+  height: 2px;
+  margin: 6px 0 12px;
+  background: linear-gradient(90deg, #1e3a8a, #0e7490);
+}
+
+.section {
+  margin-top: 16px;
+}
+/* keep each heading with what follows; never split a chart, a KPI grid or a table row */
+.sectionTitle {
+  break-after: avoid;
+  page-break-after: avoid;
+  font-size: 13.5pt;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #cbd5e1;
+}
+.paragraph {
+  break-after: avoid;
+  orphans: 3;
+  widows: 3;
+  text-indent: 2.5em;
+  margin: 4px 0 8px;
+  text-align: justify;
+}
+
+.kpis {
+  break-inside: avoid;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.kpi {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #f8fafc;
+}
+.kpiLabel {
+  font-size: 10pt;
+  color: #4b5563;
+}
+.kpiValue {
+  font-size: 17pt;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+.kpiSub {
+  font-size: 9pt;
+  color: #6b7280;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5pt;
+  margin-top: 8px;
+}
+.table th,
+.table td {
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  vertical-align: top;
+}
+.table th {
+  background: #eef2f7;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap; /* Thai has no spaces: a narrow header would otherwise break mid-word */
+}
+.table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.table td.center {
+  text-align: center;
+}
+.table .totalRow td {
+  font-weight: 700;
+  background: #f8fafc;
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.chart {
+  margin-top: 8px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.table tr {
+  break-inside: avoid;
+}
+.table thead {
+  display: table-header-group; /* repeat the header row on the next page */
+}
+/* short tables (top 10, journey) move to the next page whole instead of leaving one row behind */
+.table.keep {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.note {
+  margin-top: 18px;
+  font-size: 9.5pt;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 36px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.signature {
+  text-align: center;
+  font-size: 11pt;
+  line-height: 2;
+}
+
+@media screen and (max-width: 900px) {
+  .sheet {
+    width: 100%;
+    min-height: 0;
+    padding: 24px 18px;
+  }
+  .kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media print {
+  .toolbar {
+    display: none !important;
+  }
+  .sheet {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+}

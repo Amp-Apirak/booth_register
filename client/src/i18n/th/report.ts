@@ -1,3 +1,47 @@
-// Thai UI text for the "report" area (source of truth — en/report.ts must mirror every key)
+// Thai text for the printable A4 report (source of truth — en/report.ts must mirror every key)
 export const report = {
+  title: 'รายงานสรุปผลการลงทะเบียนและการเข้าร่วมงาน',
+  previewTitle: 'ตัวอย่างรายงานก่อนพิมพ์',
+  previewHint: 'กระดาษ A4 แนวตั้ง · ระยะขอบ บน 2.5 ซม. ล่าง 2 ซม. ซ้าย 3 ซม. ขวา 2 ซม. · ในหน้าต่างพิมพ์ให้เลือกขนาด 100% (ไม่ปรับขนาด) และปิด "หัวกระดาษและท้ายกระดาษ"',
+  print: 'พิมพ์ / บันทึกเป็น PDF',
+  back: 'กลับไปแดชบอร์ด',
+  loading: 'กำลังเตรียมรายงาน...',
+  eventLabel: 'งาน',
+  dateLabel: 'วันที่จัดงาน',
+  venueLabel: 'สถานที่',
+  organizerLabel: 'ผู้จัดงาน',
+  generatedAt: 'ข้อมูล ณ วันที่',
+  scope: 'ขอบเขตข้อมูล',
+  allData: 'ผู้ลงทะเบียนทั้งหมดในระบบ',
+  noDate: '—',
+  sections: {
+    summary: '1. สรุปภาพรวม',
+    byOrg: '2. จำแนกตามประเภทองค์กร',
+    trend: '3. แนวโน้มการลงทะเบียน',
+    hours: '4. ช่วงเวลาการเข้างาน',
+    companies: '5. องค์กรที่ลงทะเบียนสูงสุด 10 อันดับ',
+    funnel: '6. เส้นทางผู้เข้าร่วมงาน',
+  },
+  summaryText: (registered: string, checkedIn: string, rate: string, orgs: string) =>
+    `มีผู้ลงทะเบียนทั้งสิ้น ${registered} คน เข้าร่วมงานแล้ว ${checkedIn} คน คิดเป็นอัตราการเข้างานร้อยละ ${rate} จาก ${orgs} องค์กร`,
+  byOrgText: (name: string, share: string) => `กลุ่มที่ลงทะเบียนมากที่สุดคือ ${name} คิดเป็นร้อยละ ${share} ของผู้ลงทะเบียนทั้งหมด`,
+  trendText: (first: string, last: string, peakDay: string, peakCount: string) =>
+    `ช่วงการลงทะเบียน ${first} ถึง ${last} · วันที่มีผู้ลงทะเบียนมากที่สุดคือ ${peakDay} จำนวน ${peakCount} คน`,
+  hoursText: (range: string, count: string) => `ช่วงเวลาที่มีผู้เช็คอินมากที่สุดคือ ${range} จำนวน ${count} คน`,
+  noCheckins: 'ยังไม่มีการเช็คอินในข้อมูลที่เลือก',
+  noRegistrations: 'ไม่มีข้อมูลการลงทะเบียนในขอบเขตที่เลือก',
+  metric: 'รายการ',
+  value: 'จำนวน',
+  unitPeople: 'คน',
+  unitPercent: 'ร้อยละ',
+  unitOrgs: 'องค์กร',
+  privacyNote: 'รายงานนี้แสดงเฉพาะข้อมูลสรุป ไม่มีข้อมูลส่วนบุคคลรายบุคคล',
+  signatures: {
+    preparedBy: 'ผู้จัดทำรายงาน',
+    approvedBy: 'ผู้ตรวจสอบ / ผู้อนุมัติ',
+    sign: 'ลงชื่อ',
+    position: 'ตำแหน่ง',
+    date: 'วันที่',
+  },
+  pageOf: 'หน้า',
 };
