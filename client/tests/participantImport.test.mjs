@@ -5,13 +5,19 @@ import { mapImportRows, detectColumns, normalizePhone } from '../src/lib/partici
 
 test('maps Thai template headers and normalizes values', () => {
   const rows = mapImportRows([
-    { 'ชื่อ-นามสกุล': ' สมชาย ใจดี ', 'บริษัท/องค์กร': 'ACME', 'ตำแหน่ง': 'CTO', 'อีเมล': 'a@x.co', 'เบอร์โทร': '812345678', 'ประเภท': 'vip' },
+    { 'ชื่อ-นามสกุล': ' สมชาย ใจดี ', 'บริษัท/องค์กร': 'ACME', 'ตำแหน่ง': 'CTO', 'อีเมล': 'a@x.co', 'เบอร์โทร': '812345678', 'ประเภท': 'vip', 'ประเภทองค์กร': ' สถานศึกษา ' },
   ]);
   assert.equal(rows.length, 1);
   assert.deepEqual(rows[0], {
     row: 2, name: 'สมชาย ใจดี', company: 'ACME', position: 'CTO', email: 'a@x.co',
-    phone: '0812345678', attendee_type: 'VIP', issues: [],
+    phone: '0812345678', attendee_type: 'VIP', organization_type: 'สถานศึกษา', issues: [],
   });
+});
+
+test('organization type column: Thai and English headers, blank when missing', () => {
+  assert.deepEqual(detectColumns(['Organization type', 'ประเภทผู้เข้าร่วม']), { organization_type: 'Organization type', attendee_type: 'ประเภทผู้เข้าร่วม' });
+  const [row] = mapImportRows([{ 'Full name': 'A', Company: 'B' }]);
+  assert.equal(row.organization_type, '');
 });
 
 test('accepts English headers and re-imports the export format (extra columns ignored)', () => {

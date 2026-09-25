@@ -1,3 +1,66 @@
 // Thai UI text for the "register" area (source of truth — en/register.ts must mirror every key)
 export const register = {
+  title: 'ลงทะเบียนเข้าร่วมงาน',
+  // Shown when the organizer has not written their own intro in settings
+  introFallback: 'กรอกข้อมูลเพื่อรับตั๋วผ่านประตูดิจิทัล (Digital Pass) สำหรับใช้สแกนเช็คอินหน้างาน',
+  // Shown on the pass when the event has no start/end date yet
+  fallbackDateTime: '30 สิงหาคม 2026 | 09:00 - 17:00 น.',
+  heroAlt: (eventName: string) => `ภาพประชาสัมพันธ์ ${eventName}`,
+  alerts: {
+    ok: 'ตกลง',
+    incompleteTitle: 'ข้อมูลไม่ครบถ้วน',
+    incompleteText: 'กรุณากรอกข้อมูลในช่องที่มีเครื่องหมายดอกจัน (*) ให้ครบถ้วน',
+    consentTitle: 'จำเป็นต้องยินยอม PDPA',
+    consentText: 'กรุณายินยอมเงื่อนไขการประมวลผลข้อมูลส่วนบุคคล (PDPA) เพื่อดำเนินการต่อ',
+    successTitle: 'ลงทะเบียนสำเร็จ!',
+    successText: 'ตั๋วเข้างานของคุณพร้อมใช้งานแล้ว',
+    viewTicket: 'ดูตั๋วเข้างาน',
+    failedText: 'ลงทะเบียนไม่สำเร็จ กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
+    connectionTitle: 'เชื่อมต่อขัดข้อง',
+    connectionText: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์',
+  },
+  success: {
+    heading: 'ลงทะเบียนสำเร็จเรียบร้อย!',
+    message: 'ลงทะเบียนสำเร็จ! ตั๋วอิเล็กทรอนิกส์พร้อมใช้งานทันที',
+    ticketCode: 'รหัสตั๋วของคุณ (SECURITY CODE)',
+    copyCode: 'คัดลอกรหัส',
+    codeCopied: 'คัดลอกรหัสแล้ว!',
+    savingImage: 'กำลังบันทึกรูป...',
+    saveQrImage: 'บันทึกรูป QR ลงมือถือ',
+    printOrPdf: 'พิมพ์บัตร / บันทึก PDF',
+    share: 'แชร์ตั๋วเข้างาน',
+    openTicketPage: 'เปิดดูในหน้ารหัสตั๋ว',
+    shareTitle: 'บัตรเข้างาน Tech Innovation Summit 2026',
+    shareText: (code: string) => `ตั๋วเข้างานของฉัน รหัสตั๋ว: ${code}`,
+  },
+  form: {
+    takePhoto: 'ถ่ายรูปใบหน้า',
+    photoHint: 'ใช้สำหรับแสดงผลบนจอ LED ตอนสแกนเข้างาน',
+    fullName: 'ชื่อ-นามสกุล',
+    fullNamePlaceholder: 'เช่น ฐากูร พัฒนกิจ หรือ Jane Doe',
+    company: 'บริษัท / องค์กร',
+    companyPlaceholder: 'เช่น Google DeepMind / SCG Group',
+    position: 'ตำแหน่งงาน (Position)',
+    positionPlaceholder: 'เช่น Software Architect / Managing Director',
+    email: 'อีเมล (สำหรับรับตั๋วทางเมล)',
+    phone: 'เบอร์โทรศัพท์มือถือ',
+    submitting: 'กำลังประมวลผลการลงทะเบียน...',
+    submit: 'ยืนยันการลงทะเบียน & รับตั๋ว QR Code',
+  },
+  consent: {
+    title: 'ความยินยอมตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA Consent)',
+    text: 'ข้าพเจ้ายินยอมให้ผู้จัดงานจัดเก็บ รวบรวม และประมวลผลข้อมูลส่วนบุคคลนี้เพื่อวัตถุประสงค์ในการออกตั๋วเข้างาน การสแกนเช็คอินผ่านประตู และการติดต่อประชาสัมพันธ์กิจกรรมสัมมนาในอนาคต',
+    readPolicy: 'อ่านนโยบายความเป็นส่วนตัว',
+  },
+  // Headings around the objectives/terms the organizer writes in settings (that content itself is not translated)
+  info: {
+    brochureAlt: (eventName: string) => `โบรชัวร์ ${eventName}`,
+    objectives: 'วัตถุประสงค์ของงาน',
+    terms: 'เงื่อนไขและข้อมูลสำคัญ',
+    readBefore: 'โปรดอ่านรายละเอียดและเงื่อนไขก่อนลงทะเบียนเข้าร่วมงาน',
+  },
+  crop: {
+    zoomLabel: 'ปรับขนาดรูปภาพ (ซูมเข้า-ออก)',
+    confirm: 'ยืนยันรูปภาพ',
+  },
 };

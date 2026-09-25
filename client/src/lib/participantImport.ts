@@ -1,8 +1,10 @@
 // Maps spreadsheet rows (Excel / CSV) to participants for bulk import.
 // Kept free of UI and XLSX code so it can be unit-tested with `node --test`.
+import type { Lang } from '@/i18n';
 
-export type ImportField = 'name' | 'company' | 'position' | 'email' | 'phone' | 'attendee_type';
+export type ImportField = 'name' | 'company' | 'position' | 'email' | 'phone' | 'attendee_type' | 'organization_type';
 
+// Display text for these codes (and the server's skip reasons) is in i18n/<lang>/participantImport.ts
 export type ImportIssue = 'MISSING_NAME' | 'MISSING_COMPANY' | 'INVALID_EMAIL' | 'DUPLICATE_IN_FILE';
 
 export interface ImportRow {
@@ -13,24 +15,13 @@ export interface ImportRow {
   email: string;
   phone: string;
   attendee_type: 'General' | 'VIP';
+  // Organization type as written in the sheet; the server matches it to a type name (TH/EN) or stores it as "Other"
+  organization_type: string;
   issues: ImportIssue[];
 }
 
-export const IMPORT_ISSUE_LABELS: Record<ImportIssue, string> = {
-  MISSING_NAME: 'ไม่มีชื่อ',
-  MISSING_COMPANY: 'ไม่มีบริษัท',
-  INVALID_EMAIL: 'อีเมลไม่ถูกต้อง',
-  DUPLICATE_IN_FILE: 'อีเมลซ้ำในไฟล์',
-};
-
-export const SERVER_SKIP_LABELS: Record<string, string> = {
-  DUPLICATE_EMAIL: 'อีเมลนี้มีในระบบแล้ว',
-  MISSING_REQUIRED_FIELDS: 'ไม่มีชื่อหรือบริษัท',
-  INVALID_EMAIL: 'อีเมลไม่ถูกต้อง',
-};
-
 // Header names accepted per field (compared case/space-insensitively).
-// The first entry of each list is used in the downloadable template.
+// The first entry of each list is the Thai header of the downloadable template / Excel export.
 export const IMPORT_HEADERS: Record<ImportField, string[]> = {
   name: ['ชื่อ-นามสกุล', 'ชื่อ', 'ชื่อ นามสกุล', 'name', 'fullname', 'full name'],
   company: ['บริษัท/องค์กร', 'บริษัท', 'องค์กร', 'หน่วยงาน', 'company', 'organization', 'organisation'],
@@ -38,7 +29,24 @@ export const IMPORT_HEADERS: Record<ImportField, string[]> = {
   email: ['อีเมล', 'อีเมล์', 'email', 'e-mail'],
   phone: ['เบอร์โทร', 'เบอร์โทรศัพท์', 'โทรศัพท์', 'phone', 'tel', 'mobile'],
   attendee_type: ['ประเภท', 'ประเภทผู้เข้าร่วม', 'attendee_type', 'type'],
+  organization_type: ['ประเภทองค์กร', 'ประเภทหน่วยงาน', 'organization type', 'organisation type', 'org type', 'type of organization'],
 };
+
+// English header of the template / export. Each one must also match an alias above,
+// so a file downloaded in English imports back.
+export const IMPORT_HEADERS_EN: Record<ImportField, string> = {
+  name: 'Full name',
+  company: 'Company',
+  position: 'Position',
+  email: 'Email',
+  phone: 'Phone',
+  attendee_type: 'Attendee type',
+  organization_type: 'Organization type',
+};
+
+// Column header written to the template / export for the current UI language
+export const columnHeader = (field: ImportField, lang: Lang): string =>
+  lang === 'en' ? IMPORT_HEADERS_EN[field] : IMPORT_HEADERS[field][0];
 
 const normalizeHeader = (h: string) => h.toLowerCase().replace(/[\s_]+/g, ' ').trim();
 
@@ -84,6 +92,7 @@ export function mapImportRows(records: Record<string, unknown>[]): ImportRow[] {
       email: get(record, 'email'),
       phone: normalizePhone(get(record, 'phone')),
       attendee_type: get(record, 'attendee_type').toUpperCase() === 'VIP' ? 'VIP' : 'General',
+      organization_type: get(record, 'organization_type'),
       issues: [],
     };
     // Skip fully blank lines (common at the bottom of sheets)

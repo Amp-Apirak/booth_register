@@ -1,16 +1,17 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import api from '@/lib/api';
+import api, { OrganizationType } from '@/lib/api';
+import { orgTypeName } from '@/lib/orgTypes';
 import {
   IMPORT_HEADERS,
-  IMPORT_ISSUE_LABELS,
-  SERVER_SKIP_LABELS,
   ImportRow,
+  columnHeader,
   detectColumns,
   mapImportRows,
 } from '@/lib/participantImport';
+import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload, X } from 'lucide-react';
 
 const MAX_ROWS = 5000;
@@ -24,6 +25,10 @@ interface Props {
 }
 
 export default function ParticipantImportModal({ onClose, onImported }: Props) {
+  const t = useT();
+  const { lang } = usePreferences();
+  // Server skip reasons are free-form codes; unknown ones are shown as-is
+  const serverSkipLabels: Record<string, string> = t.participantImport.serverSkip;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [rows, setRows] = useState<ImportRow[]>([]);
@@ -31,6 +36,15 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState('');
+  const [orgTypes, setOrgTypes] = useState<OrganizationType[]>([]);
+  useEffect(() => { api.getOrganizationTypes(true).then(setOrgTypes); }, []);
+  // Preview only: the server does the real matching (Thai or English name, case/space-insensitive)
+  const normalizeOrg = (v: string) => v.toLowerCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+  const orgPreview = (value: string) => {
+    if (!value) return { label: t.orgTypes.none, matched: false };
+    const match = orgTypes.find((ot) => [ot.name_th, ot.name_en].some((n) => n && normalizeOrg(n) === normalizeOrg(value)));
+    return match ? { label: orgTypeName(match, lang), matched: true } : { label: `${t.orgTypes.other}: ${value}`, matched: false };
+  };
 
   const validRows = rows.filter((r) => r.issues.length === 0);
   const invalidRows = rows.filter((r) => r.issues.length > 0);
@@ -45,18 +59,19 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
   };
 
   const downloadTemplate = () => {
-    const header = (Object.keys(IMPORT_HEADERS) as (keyof typeof IMPORT_HEADERS)[]).map((f) => IMPORT_HEADERS[f][0]);
+    const header = (Object.keys(IMPORT_HEADERS) as (keyof typeof IMPORT_HEADERS)[]).map((f) => columnHeader(f, lang));
+    const sample = t.participantImport.template;
     const sheet = XLSX.utils.aoa_to_sheet([
       header,
-      ['สมชาย ใจดี', 'บริษัท ตัวอย่าง จำกัด', 'ผู้จัดการฝ่ายไอที', 'somchai@example.com', '0812345678', 'General'],
-      ['สมหญิง รักงาน', 'ACME Co., Ltd.', 'CEO', 'somying@example.com', '0898765432', 'VIP'],
+      [sample.sampleName1, sample.sampleCompany1, sample.samplePosition1, 'somchai@example.com', '0812345678', 'General', orgTypes[0] ? orgTypeName(orgTypes[0], lang) : ''],
+      [sample.sampleName2, 'ACME Co., Ltd.', 'CEO', 'somying@example.com', '0898765432', 'VIP', orgTypes[1] ? orgTypeName(orgTypes[1], lang) : ''],
     ]);
     // Keep phone numbers as text so Excel does not drop the leading 0
     for (let r = 1; r <= 2; r++) {
       const cell = sheet[XLSX.utils.encode_cell({ r, c: 4 })];
       if (cell) cell.t = 's';
     }
-    sheet['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 22 }, { wch: 28 }, { wch: 14 }, { wch: 12 }];
+    sheet['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 22 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 36 }];
     const book = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(book, sheet, 'Attendees');
     XLSX.writeFile(book, 'attendee_import_template.xlsx');
@@ -71,21 +86,21 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
       const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '', raw: false });
       const columns = detectColumns(records.length > 0 ? Object.keys(records[0]) : []);
       if (!columns.name || !columns.company) {
-        setParseError('ไม่พบคอลัมน์ "ชื่อ-นามสกุล" หรือ "บริษัท/องค์กร" ในแถวแรกของไฟล์ — ลองดาวน์โหลดไฟล์ตัวอย่าง');
+        setParseError(t.participantImport.errors.missingColumns);
         return;
       }
       const mapped = mapImportRows(records);
       if (mapped.length === 0) {
-        setParseError('ไม่พบข้อมูลในไฟล์');
+        setParseError(t.participantImport.errors.noData);
         return;
       }
       if (mapped.length > MAX_ROWS) {
-        setParseError(`ไฟล์มี ${mapped.length.toLocaleString()} แถว — นำเข้าได้สูงสุด ${MAX_ROWS.toLocaleString()} แถวต่อครั้ง`);
+        setParseError(t.participantImport.errors.tooManyRows(mapped.length, MAX_ROWS));
         return;
       }
       setRows(mapped);
     } catch {
-      setParseError('อ่านไฟล์ไม่ได้ — รองรับเฉพาะ .xlsx, .xls และ .csv');
+      setParseError(t.participantImport.errors.unreadable);
     }
   };
 
@@ -95,12 +110,12 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
     setImportError('');
     try {
       const res = await api.importParticipants(
-        validRows.map((r) => ({ row: r.row, name: r.name, company: r.company, position: r.position, email: r.email, phone: r.phone, attendee_type: r.attendee_type }))
+        validRows.map((r) => ({ row: r.row, name: r.name, company: r.company, position: r.position, email: r.email, phone: r.phone, attendee_type: r.attendee_type, organization_type: r.organization_type }))
       );
       setResult(res);
       if (res.imported_count > 0) onImported();
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : 'นำเข้าไม่สำเร็จ');
+      setImportError(err instanceof Error ? err.message : t.participantImport.errors.importFailed);
     } finally {
       setImporting(false);
     }
@@ -115,8 +130,8 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">นำเข้ารายชื่อผู้เข้าร่วมงาน</h3>
-              <p className="text-xs text-slate-400">รองรับไฟล์ Excel (.xlsx, .xls) และ CSV · สูงสุด {MAX_ROWS.toLocaleString()} แถว</p>
+              <h3 className="text-xl font-bold text-white">{t.participantImport.title}</h3>
+              <p className="text-xs text-slate-400">{t.participantImport.subtitle(MAX_ROWS)}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
@@ -130,28 +145,28 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
             <div className="flex items-center gap-4 p-5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10">
               <CheckCircle2 className="w-10 h-10 text-emerald-400 shrink-0" />
               <div>
-                <div className="text-lg font-bold text-white">นำเข้าสำเร็จ {result.imported_count.toLocaleString()} รายการ</div>
+                <div className="text-lg font-bold text-white">{t.participantImport.result.imported(result.imported_count)}</div>
                 <div className="text-slate-300">
                   {result.skipped_count + invalidRows.length > 0
-                    ? `ข้าม ${(result.skipped_count + invalidRows.length).toLocaleString()} รายการ (รายละเอียดด้านล่าง)`
-                    : 'ทุกแถวถูกนำเข้าเรียบร้อย'}
-                  {' · '}ระบบสร้างรหัสตั๋ว QR ให้ทุกคนอัตโนมัติ
+                    ? t.participantImport.result.skipped(result.skipped_count + invalidRows.length)
+                    : t.participantImport.result.allImported}
+                  {' · '}{t.participantImport.result.ticketsCreated}
                 </div>
               </div>
             </div>
 
             {(result.skipped.length > 0 || invalidRows.length > 0) && (
               <div className="rounded-2xl border border-white/10 overflow-hidden">
-                <div className="px-4 py-2.5 bg-white/[0.04] text-xs font-semibold text-slate-300">แถวที่ไม่ได้นำเข้า</div>
+                <div className="px-4 py-2.5 bg-white/[0.04] text-xs font-semibold text-slate-300">{t.participantImport.result.notImported}</div>
                 <div className="max-h-64 overflow-y-auto divide-y divide-white/5">
                   {[
-                    ...invalidRows.map((r) => ({ row: r.row, reason: r.issues.map((i) => IMPORT_ISSUE_LABELS[i]).join(', ') })),
-                    ...result.skipped.map((s) => ({ row: s.row, reason: SERVER_SKIP_LABELS[s.reason] || s.reason })),
+                    ...invalidRows.map((r) => ({ row: r.row, reason: r.issues.map((i) => t.participantImport.issues[i]).join(', ') })),
+                    ...result.skipped.map((s) => ({ row: s.row, reason: serverSkipLabels[s.reason] || s.reason })),
                   ]
                     .sort((a, b) => a.row - b.row)
                     .map((s) => (
                       <div key={s.row} className="px-4 py-2 flex gap-4 text-xs">
-                        <span className="font-mono text-slate-500 w-16">แถว {s.row}</span>
+                        <span className="font-mono text-slate-500 w-16">{t.participantImport.result.rowNumber(s.row)}</span>
                         <span className="text-amber-300">{s.reason}</span>
                       </div>
                     ))}
@@ -161,10 +176,10 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
 
             <div className="flex justify-end gap-3">
               <button onClick={reset} className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10">
-                นำเข้าไฟล์อื่น
+                {t.participantImport.result.importAnother}
               </button>
               <button onClick={onClose} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent text-xs font-bold">
-                เสร็จสิ้น
+                {t.participantImport.result.done}
               </button>
             </div>
           </div>
@@ -185,8 +200,8 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
               >
                 <Upload className="w-6 h-6 text-cyan-400" />
                 <span className="text-left">
-                  <span className="block font-semibold">{fileName || 'เลือกไฟล์ หรือลากไฟล์มาวางที่นี่'}</span>
-                  <span className="block text-xs text-slate-400">คอลัมน์ที่ต้องมี: ชื่อ-นามสกุล, บริษัท/องค์กร</span>
+                  <span className="block font-semibold">{fileName || t.participantImport.pickFile}</span>
+                  <span className="block text-xs text-slate-400">{t.participantImport.requiredColumns}</span>
                 </span>
               </button>
               <button
@@ -195,7 +210,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                 className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-slate-200 text-xs font-semibold"
               >
                 <Download className="w-4 h-4 text-cyan-400" />
-                ดาวน์โหลดไฟล์ตัวอย่าง
+                {t.participantImport.downloadTemplate}
               </button>
               <input
                 ref={fileInputRef}
@@ -220,10 +235,10 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
             {rows.length > 0 && (
               <>
                 <div className="flex flex-wrap gap-3 text-xs">
-                  <span className="px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-slate-300">ทั้งหมด {rows.length.toLocaleString()} แถว</span>
-                  <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">พร้อมนำเข้า {validRows.length.toLocaleString()}</span>
+                  <span className="px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 text-slate-300">{t.participantImport.preview.total(rows.length)}</span>
+                  <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300">{t.participantImport.preview.ready(validRows.length)}</span>
                   {invalidRows.length > 0 && (
-                    <span className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">มีปัญหา (จะข้าม) {invalidRows.length.toLocaleString()}</span>
+                    <span className="px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">{t.participantImport.preview.withIssues(invalidRows.length)}</span>
                   )}
                 </div>
 
@@ -232,7 +247,17 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                     <table className="w-full text-xs">
                       <thead className="bg-white/[0.04] text-slate-400 sticky top-0">
                         <tr>
-                          {['แถว', 'ชื่อ-นามสกุล', 'บริษัท/องค์กร', 'ตำแหน่ง', 'อีเมล', 'เบอร์โทร', 'ประเภท', 'สถานะ'].map((h) => (
+                          {[
+                            t.participantImport.table.row,
+                            t.participantImport.table.name,
+                            t.participantImport.table.company,
+                            t.participantImport.table.position,
+                            t.participantImport.table.email,
+                            t.participantImport.table.phone,
+                            t.participantImport.table.type,
+                            t.orgTypes.column,
+                            t.participantImport.table.status,
+                          ].map((h) => (
                             <th key={h} className="px-3 py-2.5 text-left font-semibold whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
@@ -246,12 +271,13 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                             <td className="px-3 py-2 text-slate-400">{r.position}</td>
                             <td className="px-3 py-2 text-slate-400">{r.email}</td>
                             <td className="px-3 py-2 text-slate-400 font-mono">{r.phone}</td>
-                            <td className="px-3 py-2">{r.attendee_type === 'VIP' ? <span className="text-amber-300 font-bold">VIP</span> : <span className="text-slate-400">General</span>}</td>
+                            <td className="px-3 py-2">{r.attendee_type === 'VIP' ? <span className="text-amber-300 font-bold">VIP</span> : <span className="text-slate-400">{t.common.attendeeType.General}</span>}</td>
+                            <td className={`px-3 py-2 whitespace-nowrap ${orgPreview(r.organization_type).matched ? 'text-slate-200' : 'text-slate-400'}`}>{orgPreview(r.organization_type).label}</td>
                             <td className="px-3 py-2 whitespace-nowrap">
                               {r.issues.length ? (
-                                <span className="text-amber-300">{r.issues.map((i) => IMPORT_ISSUE_LABELS[i]).join(', ')}</span>
+                                <span className="text-amber-300">{r.issues.map((i) => t.participantImport.issues[i]).join(', ')}</span>
                               ) : (
-                                <span className="text-emerald-400">พร้อม</span>
+                                <span className="text-emerald-400">{t.participantImport.preview.rowReady}</span>
                               )}
                             </td>
                           </tr>
@@ -260,24 +286,24 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                     </table>
                   </div>
                   {rows.length > PREVIEW_LIMIT && (
-                    <div className="px-4 py-2 text-xs text-slate-500 bg-white/[0.02]">แสดงตัวอย่าง {PREVIEW_LIMIT} แถวแรก จากทั้งหมด {rows.length.toLocaleString()} แถว</div>
+                    <div className="px-4 py-2 text-xs text-slate-500 bg-white/[0.02]">{t.participantImport.preview.limited(PREVIEW_LIMIT, rows.length)}</div>
                   )}
                 </div>
 
                 <p className="text-xs text-slate-400">
-                  ผู้ที่มีอีเมลซ้ำกับข้อมูลในระบบจะถูกข้ามอัตโนมัติ · ระบบจะสร้างรหัสตั๋ว QR ให้ทุกคน (ไม่ส่งอีเมลตั๋ว)
+                  {t.participantImport.preview.note}
                 </p>
 
                 {importError && (
                   <div className="flex items-center gap-3 p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-200">
                     <AlertTriangle className="w-5 h-5 shrink-0" />
-                    นำเข้าไม่สำเร็จ ไม่มีข้อมูลใดถูกบันทึก — {importError}
+                    {t.participantImport.errors.nothingSaved(importError)}
                   </div>
                 )}
 
                 <div className="flex justify-end gap-3">
                   <button onClick={onClose} className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10">
-                    ยกเลิก
+                    {t.common.cancel}
                   </button>
                   <button
                     onClick={handleImport}
@@ -289,7 +315,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
                     ) : (
                       <Upload className="w-4 h-4" />
                     )}
-                    นำเข้า {validRows.length.toLocaleString()} รายการ
+                    {t.participantImport.preview.importButton(validRows.length)}
                   </button>
                 </div>
               </>

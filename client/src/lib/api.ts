@@ -13,6 +13,21 @@ export interface Participant {
   registered_at?: string;
   profile_picture?: string;
   attendee_type?: string;
+  // Organization type: a listed type (id) or free text for "อื่นๆ / Other"; both empty = not specified
+  organization_type_id?: number | null;
+  organization_type_other?: string | null;
+  checked_in_at?: string | null;
+}
+
+// A choice on the registration form, managed in Settings → organization types
+export interface OrganizationType {
+  id: number;
+  name_th: string;
+  name_en: string;
+  color: string; // chart color slot, see lib/orgTypes.ts
+  sort_order: number;
+  is_active: boolean;
+  usage_count?: number;
 }
 
 export interface Stats {
@@ -109,6 +124,7 @@ export const formatEventLocation = (s: {
 
 // Winner as shown on the LED signage (socket event and public winners list)
 export interface LuckyWinnerData {
+  participant_id?: number;
   name: string;
   company: string;
   position?: string;
@@ -217,6 +233,8 @@ export const api = {
     phone?: string;
     profile_picture?: string;
     attendee_type?: string;
+    organization_type_id?: number | null;
+    organization_type_other?: string | null;
   }): Promise<{ participant_id: number; ticket_code: string } | null> {
     try {
       const res = await fetch(`${API_BASE}/api/v1/events/1/register`, {
@@ -346,6 +364,44 @@ export const api = {
     }
   },
 
+  // Organization types (public list; staff-only changes). Throws with the server's message on failure.
+  async getOrganizationTypes(activeOnly = false): Promise<OrganizationType[]> {
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/events/1/organization-types${activeOnly ? '?active=true' : ''}`);
+      const data = await handleResponse(res);
+      return data.data || [];
+    } catch {
+      return [];
+    }
+  },
+
+  async saveOrganizationType(type: Pick<OrganizationType, 'name_th' | 'name_en' | 'color' | 'is_active'> & { id?: number }): Promise<OrganizationType> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/organization-types${type.id ? `/${type.id}` : ''}`, {
+      method: type.id ? 'PUT' : 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(type),
+    });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || `API Error: ${res.status}`), { code: data.error });
+    return data.data;
+  },
+
+  async deleteOrganizationType(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/organization-types/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || `API Error: ${res.status}`), { code: data.error, usage: data.usage_count });
+  },
+
+  async reorderOrganizationTypes(ids: number[]): Promise<OrganizationType[]> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/organization-types/reorder`, { method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ ids }) });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || `API Error: ${res.status}`), { code: data.error });
+    return data.data || [];
+  },
+
   async getPrizes(activeOnly = false): Promise<Prize[]> {
     const res = await fetch(`${API_BASE}/api/v1/events/1/prizes${activeOnly ? '?active=true' : ''}`);
     const data = await handleResponse(res);
@@ -387,7 +443,7 @@ export const api = {
 
   // Add participant manually
   // Bulk import participants (Staff CMS). Throws with the server's message on failure.
-  async importParticipants(rows: { row: number; name: string; company: string; position?: string; email?: string; phone?: string; attendee_type?: string }[]): Promise<{
+  async importParticipants(rows: { row: number; name: string; company: string; position?: string; email?: string; phone?: string; attendee_type?: string; organization_type?: string }[]): Promise<{
     imported_count: number;
     skipped_count: number;
     skipped: { row: number; reason: string }[];
@@ -412,6 +468,8 @@ export const api = {
     status?: string;
     profile_picture?: string;
     attendee_type?: string;
+    organization_type_id?: number | null;
+    organization_type_other?: string | null;
   }): Promise<Participant | null> {
     try {
       const res = await fetch(`${API_BASE}/api/v1/participants`, {
