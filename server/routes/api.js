@@ -6,6 +6,7 @@ const authController = require('../controllers/authController');
 const settingsController = require('../controllers/settingsController');
 const agendaController = require('../controllers/agendaController');
 const prizeController = require('../controllers/prizeController');
+const organizationTypeController = require('../controllers/organizationTypeController');
 const { verifyToken } = require('../middlewares/authMiddleware');
 
 // ─────────────────────────────────────────────────
@@ -46,6 +47,13 @@ router.post('/checkin', verifyToken, (req, res) => participantController.checkIn
 router.post('/events/:event_id/lucky-draw/spin', (req, res) => luckyDrawController.spin(req, res));
 router.get('/events/:event_id/lucky-draw/winners', (req, res) => luckyDrawController.getWinners(req, res));
 router.get('/events/:event_id/lucky-draw/eligible', (req, res) => luckyDrawController.getEligible(req, res));
+// Organization types (registration form choice; staff manage them in Settings)
+router.get('/events/:event_id/organization-types', (req, res) => organizationTypeController.list(req, res));
+router.post('/events/:event_id/organization-types', verifyToken, (req, res) => organizationTypeController.create(req, res));
+router.put('/events/:event_id/organization-types/reorder', verifyToken, (req, res) => organizationTypeController.reorder(req, res));
+router.put('/events/:event_id/organization-types/:id', verifyToken, (req, res) => organizationTypeController.update(req, res));
+router.delete('/events/:event_id/organization-types/:id', verifyToken, (req, res) => organizationTypeController.delete(req, res));
+
 router.get('/events/:event_id/prizes', (req, res) => prizeController.list(req, res));
 router.post('/events/:event_id/prizes', verifyToken, (req, res) => prizeController.create(req, res));
 router.put('/events/:event_id/prizes/reorder', verifyToken, (req, res) => prizeController.reorder(req, res));

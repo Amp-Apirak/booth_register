@@ -1,6 +1,8 @@
 const participantRepository = require('../repositories/participantRepository');
 const checkinService = require('../services/checkinService');
 const { sendTicketEmail } = require('../utils/email_sender');
+const organizationTypeRepository = require('../repositories/organizationTypeRepository');
+const { resolveOrganizationType } = require('./organizationTypeController');
 
 const IMPORT_MAX_ROWS = 5000;
 
@@ -42,6 +44,10 @@ class ParticipantController {
           message: 'กรุณากดยอมรับเงื่อนไขการประมวลผลข้อมูลส่วนบุคคล (PDPA)' 
         });
       }
+      const organization = await resolveOrganizationType(1, req.body, { required: true, activeOnly: true });
+      if (organization.error) {
+        return res.status(400).json({ success: false, error: organization.error, message: organization.message });
+      }
 
       // 2. Generate secure ticket code
       const ticketCode = generateTicketCode();
@@ -54,7 +60,8 @@ class ParticipantController {
         phone: phone || '',
         profile_picture: profile_picture || null,
         attendee_type: attendee_type || 'General',
-        ticket_code: ticketCode
+        ticket_code: ticketCode,
+        ...organization
       });
 
       // 3. Trigger Real-time broadcasts to Staff Dashboard (Socket.io)
@@ -102,6 +109,10 @@ class ParticipantController {
           message: 'กรุณากรอกชื่อและบริษัท'
         });
       }
+      const organization = await resolveOrganizationType(1, req.body);
+      if (organization.error) {
+        return res.status(400).json({ success: false, error: organization.error, message: organization.message });
+      }
 
       const ticketCode = generateTicketCode();
 
@@ -113,7 +124,8 @@ class ParticipantController {
         phone: phone || '',
         profile_picture: profile_picture || null,
         attendee_type: attendee_type || 'General',
-        ticket_code: ticketCode
+        ticket_code: ticketCode,
+        ...organization
       });
 
       const io = req.app.get('io');
@@ -147,6 +159,23 @@ class ParticipantController {
       }
 
       const text = (v, max) => String(v ?? '').trim().slice(0, max);
+      // Organization type from the sheet: an id, or a Thai/English type name; unknown names become "อื่นๆ" text
+      const normalize = (v) => String(v ?? '').toLowerCase().replace(/\s*\/\s*/g, '/').replace(/\s+/g, ' ').trim();
+      const orgTypes = await organizationTypeRepository.findByEvent(1);
+      const orgIds = new Set(orgTypes.map(t => t.id));
+      const orgByName = new Map();
+      for (const t of orgTypes) {
+        if (t.name_th) orgByName.set(normalize(t.name_th), t.id);
+        if (t.name_en) orgByName.set(normalize(t.name_en), t.id);
+      }
+      const organizationOf = (raw) => {
+        const id = Number(raw?.organization_type_id);
+        if (Number.isInteger(id) && orgIds.has(id)) return { organization_type_id: id, organization_type_other: null };
+        const label = text(raw?.organization_type, 150);
+        if (!label) return { organization_type_id: null, organization_type_other: null };
+        const match = orgByName.get(normalize(label));
+        return match ? { organization_type_id: match, organization_type_other: null } : { organization_type_id: null, organization_type_other: label };
+      };
       const valid = [];
       const skipped = [];
       input.forEach((raw, i) => {
@@ -169,7 +198,8 @@ class ParticipantController {
           position: text(raw?.position, 100),
           email,
           phone: text(raw?.phone, 50),
-          attendee_type: String(raw?.attendee_type ?? '').trim().toUpperCase() === 'VIP' ? 'VIP' : 'General'
+          attendee_type: String(raw?.attendee_type ?? '').trim().toUpperCase() === 'VIP' ? 'VIP' : 'General',
+          ...organizationOf(raw)
         });
       });
 
@@ -236,6 +266,11 @@ class ParticipantController {
     try {
       const { id } = req.params;
       const { name, fullname, company, position, email, phone, profile_picture, attendee_type } = req.body;
+      const sentOrganization = 'organization_type_id' in req.body || 'organization_type_other' in req.body;
+      const organization = sentOrganization ? await resolveOrganizationType(1, req.body) : undefined;
+      if (organization?.error) {
+        return res.status(400).json({ success: false, error: organization.error, message: organization.message });
+      }
       const updated = await participantRepository.update(id, {
         name: name || fullname,
         company,
@@ -243,7 +278,8 @@ class ParticipantController {
         email: email || '',
         phone: phone || '',
         profile_picture: profile_picture !== undefined ? profile_picture : null,
-        attendee_type: attendee_type || 'General'
+        attendee_type: attendee_type || 'General',
+        organization_type: organization
       });
       if (!updated) {
         return res.status(404).json({ success: false, error: 'PARTICIPANT_NOT_FOUND', message: 'ไม่พบผู้เข้าร่วมงานนี้' });

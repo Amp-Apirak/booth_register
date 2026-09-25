@@ -7,6 +7,7 @@ class ParticipantRepository {
   async getAll() {
     const queryStr = `
       SELECT p.participant_id AS id, p.event_id, p.fullname AS name, p.company, p.position, p.email, p.phone, p.ticket_code, p.registered_at, p.profile_picture, p.attendee_type,
+             p.organization_type_id, p.organization_type_other, c.checked_in_at,
              CASE WHEN c.checkin_id IS NOT NULL THEN 'Checked-in' ELSE 'Pending' END AS status
       FROM participants p
       LEFT JOIN checkins c ON p.participant_id = c.participant_id
@@ -22,6 +23,7 @@ class ParticipantRepository {
   async getById(id) {
     const queryStr = `
       SELECT p.participant_id AS id, p.event_id, p.fullname AS name, p.company, p.position, p.email, p.phone, p.ticket_code, p.registered_at, p.profile_picture, p.attendee_type,
+             p.organization_type_id, p.organization_type_other, c.checked_in_at,
              CASE WHEN c.checkin_id IS NOT NULL THEN 'Checked-in' ELSE 'Pending' END AS status
       FROM participants p
       LEFT JOIN checkins c ON p.participant_id = c.participant_id
@@ -38,6 +40,7 @@ class ParticipantRepository {
   async getByTicketCode(ticketCode) {
     const queryStr = `
       SELECT p.participant_id AS id, p.event_id, p.fullname AS name, p.company, p.position, p.email, p.phone, p.ticket_code, p.registered_at, p.profile_picture, p.attendee_type,
+             p.organization_type_id, p.organization_type_other, c.checked_in_at,
              CASE WHEN c.checkin_id IS NOT NULL THEN 'Checked-in' ELSE 'Pending' END AS status
       FROM participants p
       LEFT JOIN checkins c ON p.participant_id = c.participant_id
@@ -52,9 +55,10 @@ class ParticipantRepository {
    */
   async create(data) {
     const queryStr = `
-      INSERT INTO participants (event_id, ticket_code, fullname, company, position, email, phone, profile_picture, attendee_type) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-      RETURNING participant_id AS id, event_id, fullname AS name, company, position, email, phone, ticket_code, registered_at, profile_picture, attendee_type;
+      INSERT INTO participants (event_id, ticket_code, fullname, company, position, email, phone, profile_picture, attendee_type, organization_type_id, organization_type_other)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING participant_id AS id, event_id, fullname AS name, company, position, email, phone, ticket_code, registered_at, profile_picture, attendee_type,
+                organization_type_id, organization_type_other;
     `;
     const values = [
       data.event_id || 1, // Default to Tech Innovation Summit 2026
@@ -65,7 +69,9 @@ class ParticipantRepository {
       data.email || '',
       data.phone || '',
       data.profile_picture || null,
-      data.attendee_type || 'General'
+      data.attendee_type || 'General',
+      data.organization_type_id ?? null,
+      data.organization_type_other ?? null
     ];
     const result = await db.query(queryStr, values);
     
@@ -82,7 +88,9 @@ class ParticipantRepository {
   async update(id, data) {
     const queryStr = `
       UPDATE participants 
-      SET fullname = $1, company = $2, position = $3, email = $4, phone = $5, profile_picture = $6, attendee_type = $7
+      SET fullname = $1, company = $2, position = $3, email = $4, phone = $5, profile_picture = $6, attendee_type = $7,
+          organization_type_id = CASE WHEN $9 THEN $10::int ELSE organization_type_id END,
+          organization_type_other = CASE WHEN $9 THEN $11::varchar ELSE organization_type_other END
       WHERE participant_id = $8
       RETURNING participant_id AS id, event_id, fullname AS name, company, position, email, phone, registered_at, profile_picture, attendee_type;
     `;
@@ -94,7 +102,11 @@ class ParticipantRepository {
       data.phone,
       data.profile_picture,
       data.attendee_type,
-      id
+      id,
+      // organization type is only changed when the caller sent it
+      data.organization_type !== undefined,
+      data.organization_type?.organization_type_id ?? null,
+      data.organization_type?.organization_type_other ?? null
     ];
     const result = await db.query(queryStr, values);
     if (!result.rows[0]) return null;
@@ -159,10 +171,11 @@ class ParticipantRepository {
         if (emailKey) seenEmails.add(emailKey);
 
         const result = await client.query(
-          `INSERT INTO participants (event_id, ticket_code, fullname, company, position, email, phone, attendee_type)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          `INSERT INTO participants (event_id, ticket_code, fullname, company, position, email, phone, attendee_type, organization_type_id, organization_type_other)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING participant_id AS id, fullname AS name, ticket_code`,
-          [eventId, ticketCode, r.name, r.company, r.position, r.email, r.phone, r.attendee_type]
+          [eventId, ticketCode, r.name, r.company, r.position, r.email, r.phone, r.attendee_type,
+           r.organization_type_id ?? null, r.organization_type_other ?? null]
         );
         imported.push({ row: r.row, ...result.rows[0] });
       }

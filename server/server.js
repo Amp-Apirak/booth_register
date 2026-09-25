@@ -5,6 +5,7 @@ const { testConnection } = require('./config/db');
 const settingsRepository = require('./repositories/settingsRepository');
 const agendaRepository = require('./repositories/agendaRepository');
 const prizeRepository = require('./repositories/prizeRepository');
+const organizationTypeRepository = require('./repositories/organizationTypeRepository');
 
 const PORT = process.env.PORT || 3000;
 
@@ -38,6 +39,7 @@ io.on('connection', (socket) => {
     await settingsRepository.initTable();
     await agendaRepository.initTable();
     await prizeRepository.initTable();
+    await organizationTypeRepository.initTable();
   } catch (err) {
     console.warn(`⚠️  Database connection failed on startup: ${err.message}`);
     console.warn(`    Server will start anyway. DB operations will fail until connection is restored.`);

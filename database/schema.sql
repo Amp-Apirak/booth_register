@@ -40,6 +40,21 @@ CREATE INDEX idx_users_username ON users(username);
 
 
 -- 3. Create PARTICIPANTS Table (ผู้ลงทะเบียนเข้าร่วมงาน)
+-- Organization types offered on the registration form (managed in Settings; server/organizationTypeRepository.js
+-- also creates this table and seeds the default types on start-up for existing databases)
+CREATE TABLE organization_types (
+    org_type_id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+    name_th VARCHAR(150) NOT NULL,
+    name_en VARCHAR(150) NOT NULL DEFAULT '',
+    color VARCHAR(20) NOT NULL DEFAULT 'blue', -- chart color slot: blue|red|green|violet|orange|aqua|yellow|magenta
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_organization_types_event ON organization_types(event_id, sort_order, org_type_id);
+
 CREATE TABLE participants (
     participant_id SERIAL PRIMARY KEY,
     event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
@@ -52,8 +67,11 @@ CREATE TABLE participants (
     registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     profile_picture TEXT, -- Data URL of the attendee photo (shown on LED welcome / lucky draw)
-    attendee_type VARCHAR(50) DEFAULT 'General' -- 'General' | 'VIP'
+    attendee_type VARCHAR(50) DEFAULT 'General', -- 'General' | 'VIP'
+    organization_type_id INTEGER REFERENCES organization_types(org_type_id) ON DELETE SET NULL,
+    organization_type_other VARCHAR(150) -- free text when "อื่นๆ / Other" was chosen
 );
+CREATE INDEX idx_participants_org_type ON participants(organization_type_id);
 
 -- Indices for scanning ticket_code (QR Code) and searching participants by name/company
 CREATE INDEX idx_participants_ticket_code ON participants(ticket_code);
