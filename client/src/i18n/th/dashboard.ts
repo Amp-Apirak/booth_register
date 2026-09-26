@@ -76,5 +76,6 @@ export const dashboard = {
     status: 'สถานะ',
     ticketCode: 'รหัสตั๋ว',
     registeredAt: 'วันเวลาที่ลงทะเบียน',
+    checkedInAt: 'วันเวลาที่เช็คอิน',
   },
 };

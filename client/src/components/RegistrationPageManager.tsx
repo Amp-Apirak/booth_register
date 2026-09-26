@@ -4,15 +4,17 @@ import { useState } from 'react';
 import Swal from 'sweetalert2';
 import { FileImage, ImagePlus, Save, Trash2 } from 'lucide-react';
 import Cropper from 'react-easy-crop';
-import api from '@/lib/api';
+import api, { type ResetResult } from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useT } from '@/contexts/PreferencesContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import getCroppedImg from '@/lib/cropImage';
+import { exportSection } from '@/lib/sectionExport';
+import { ExportExcelButton, ResetSectionButton } from '@/components/DataResetControls';
 
 type CropTarget = 'hero' | 'brochure';
 
 export default function RegistrationPageManager() {
-  const t = useT();
+  const { t, lang } = usePreferences();
   const { settings, updateSettingsContext } = useSettings();
   const [hero, setHero] = useState(settings.registration_hero_image || '');
   const [brochure, setBrochure] = useState(settings.registration_brochure_image || '');
@@ -42,6 +44,15 @@ export default function RegistrationPageManager() {
     catch (e) { Swal.fire(t.registrationPage.alerts.saveFailedTitle, e instanceof Error ? e.message : t.registrationPage.alerts.checkConnection, 'error'); }
     finally { setSaving(false); }
   };
+  // Saved on the server after a confirmation popup: show the (empty) defaults straight away
+  const afterReset = ({ settings: defaults }: ResetResult) => {
+    setHero(defaults.registration_hero_image ?? '');
+    setBrochure(defaults.registration_brochure_image ?? '');
+    setIntro(defaults.registration_intro ?? '');
+    setObjectives(defaults.registration_objectives ?? '');
+    setTerms(defaults.registration_terms ?? '');
+    updateSettingsContext(defaults);
+  };
   const upload = (title: string, value: string, setter: (value: string) => void, ratio: string, target: CropTarget) => <div className="space-y-3">
     <div className="flex items-center justify-between"><label className="font-bold text-white flex items-center gap-2"><FileImage className="w-5 h-5 text-cyan-300"/>{title}</label>{value && <button onClick={()=>setter('')} className="text-xs text-rose-300 flex gap-1"><Trash2 className="w-4 h-4"/>{t.registrationPage.images.remove}</button>}</div>
     <label className={`relative ${ratio} rounded-xl border border-dashed border-indigo-300/30 bg-black/20 overflow-hidden flex items-center justify-center cursor-pointer group`}>
@@ -51,7 +62,15 @@ export default function RegistrationPageManager() {
   </div>;
   const textarea = 'w-full min-h-32 bg-surface/65 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-cyan-400/60 resize-y leading-relaxed';
   return <div className="space-y-6">
-    <div className="glass-panel rounded-3xl p-6 border border-white/10"><h2 className="text-2xl font-extrabold text-white">{t.registrationPage.title}</h2><p className="text-sm text-slate-400 mt-1">{t.registrationPage.subtitle}</p></div>
+    <div className="glass-panel rounded-3xl p-6 border border-white/10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-w-0"><h2 className="text-2xl font-extrabold text-white">{t.registrationPage.title}</h2><p className="text-sm text-slate-400 mt-1">{t.registrationPage.subtitle}</p></div>
+        <div className="grid grid-cols-2 sm:flex gap-2 md:shrink-0">
+          <ExportExcelButton onExport={() => exportSection('registration', t, lang)} />
+          <ResetSectionButton section="registration" onExport={() => exportSection('registration', t, lang)} onDone={afterReset} />
+        </div>
+      </div>
+    </div>
     <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/10 space-y-8">{upload(t.registrationPage.images.hero,hero,setHero,'aspect-[16/7]', 'hero')}{upload(t.registrationPage.images.brochure,brochure,setBrochure,'aspect-[4/5] max-w-2xl', 'brochure')}
       <div className="grid lg:grid-cols-2 gap-5"><label className="space-y-2"><span className="font-bold text-white">{t.registrationPage.intro}</span><textarea className={textarea} value={intro} onChange={e=>setIntro(e.target.value)} placeholder={t.registrationPage.introPlaceholder}/></label><label className="space-y-2"><span className="font-bold text-white">{t.registrationPage.objectives}</span><textarea className={textarea} value={objectives} onChange={e=>setObjectives(e.target.value)} placeholder={t.registrationPage.objectivesPlaceholder}/></label></div>
       <label className="space-y-2 block"><span className="font-bold text-white">{t.registrationPage.terms}</span><textarea className={textarea} value={terms} onChange={e=>setTerms(e.target.value)} placeholder={t.registrationPage.termsPlaceholder}/></label>

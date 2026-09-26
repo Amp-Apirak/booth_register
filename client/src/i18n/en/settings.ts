@@ -8,6 +8,7 @@ export const settings: typeof Th = {
     agenda: 'Agenda',
     registration: 'Registration page',
     prizes: 'Prizes',
+    backup: 'Backup & reset',
   },
   event: {
     name: 'Event name',
@@ -51,7 +52,6 @@ export const settings: typeof Th = {
     remove: 'Remove image',
   },
   save: 'Save settings',
-  resetDefaults: 'Reset to defaults',
   messages: {
     mapUrlInvalid: 'The map link must start with https://, e.g. https://maps.app.goo.gl/...',
     saved: 'Settings saved.',

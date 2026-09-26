@@ -72,5 +72,6 @@ export const dashboard: typeof Th = {
     status: 'Status',
     ticketCode: 'Ticket code',
     registeredAt: 'Registered at',
+    checkedInAt: 'Checked in at',
   },
 };

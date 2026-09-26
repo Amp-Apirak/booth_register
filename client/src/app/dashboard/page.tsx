@@ -4,10 +4,9 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as htmlToImage from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
-import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import api, { CheckInError, OrganizationType, Participant, formatEventDateRange, formatEventTimeRange, formatEventLocation } from '@/lib/api';
-import { orgKeyColor, orgTypeName, participantOrgKey, participantOrgLabel } from '@/lib/orgTypes';
+import { orgKeyColor, orgTypeName, participantOrgKey } from '@/lib/orgTypes';
 import OrganizationTypeField, { OrgChoice, orgChoiceOf } from '@/components/OrganizationTypeField';
 import AnalyticsPanel from '@/components/analytics/AnalyticsPanel';
 import useWebSocket from '@/lib/useWebSocket';
@@ -15,7 +14,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/cropImage';
-import { columnHeader } from '@/lib/participantImport';
+import { attendeeRows, downloadWorkbook } from '@/lib/backupExport';
 import ParticipantImportModal from '@/components/ParticipantImportModal';
 import StaffGate from '@/components/StaffGate';
 import { useStaffSession } from '@/lib/staffSession';
@@ -339,28 +338,11 @@ function DashboardContent() {
   const totalPending = stats.pending || (totalRegistered - totalCheckedIn);
   const showUpRate = totalRegistered > 0 ? Math.round((totalCheckedIn / totalRegistered) * 100) : 0;
 
-    const exportExcel = () => {
-    // Headers follow the UI language; name…phone use the import headers so the file can be imported back
-    const col = t.dashboard.exportColumns;
-    const orgLabels = { other: t.orgTypes.other, none: t.orgTypes.none };
-    const dataToExport = list.map(p => ({
-      [col.id]: p.id,
-      [columnHeader('name', lang)]: p.name,
-      [columnHeader('company', lang)]: p.company,
-      [columnHeader('position', lang)]: p.position || '',
-      [columnHeader('email', lang)]: p.email || '',
-      [columnHeader('phone', lang)]: p.phone || '',
-      [columnHeader('organization_type', lang)]: participantOrgKey(p) === 'other' ? (p.organization_type_other || '') : participantOrgKey(p) === 'none' ? '' : participantOrgLabel(p, orgTypes, lang, orgLabels),
-      [col.status]: p.status,
-      [col.ticketCode]: p.ticket_code || '',
-      [col.registeredAt]: p.registered_at ? new Date(p.registered_at).toLocaleString(t.common.locale) : ''
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendees');
-    XLSX.writeFile(workbook, `event_attendees_${Date.now()}.xlsx`);
-  };
+  // Same file as Settings → Backup & reset → Attendee data (headers follow the UI language; import accepts it back)
+  const exportExcel = () => downloadWorkbook(
+    [{ name: 'Attendees', rows: attendeeRows(list, orgTypes, t, lang) }],
+    `event_attendees_${Date.now()}.xlsx`,
+  );
 
   // ── Pieces shared by the table (≥1024px) and the card list (phones/tablets) ──
   const renderAvatar = (p: Participant, isChecked: boolean) => p.profile_picture ? (

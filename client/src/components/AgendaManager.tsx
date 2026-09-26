@@ -9,7 +9,10 @@ import {
 } from 'lucide-react';
 import api, { AgendaItem } from '@/lib/api';
 import { usePreferences, useT } from '@/contexts/PreferencesContext';
-import type { Dict, Lang } from '@/i18n';
+import type { Dict } from '@/i18n';
+import { AGENDA_PHOTO_IN_SYSTEM, agendaRows, downloadWorkbook, toLocalInput } from '@/lib/backupExport';
+import { exportSection } from '@/lib/sectionExport';
+import { ResetSectionButton } from '@/components/DataResetControls';
 
 type SpreadsheetRow = Record<string, string | number | boolean | Date | null | undefined>;
 
@@ -31,13 +34,6 @@ const formatCardTime = (start: string, end: string, t: Dict) => {
   const [date, time] = start.split('T');
   const [y, m, d] = date.split('-');
   return `${d}/${m}/${y} · ${time}${end ? `–${end.slice(11, 16)}` : ''}`;
-};
-
-const toLocalInput = (value: string | Date): string => {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const offset = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
 const pick = (row: SpreadsheetRow, keys: string[]) => {
@@ -83,10 +79,9 @@ const combineExcelDateTime = (dayValue: unknown, timeValue: unknown): string => 
   return day && time ? `${day}T${time}` : '';
 };
 
-// Export writes this (in the UI language) instead of the (huge) uploaded image data;
+// Export writes AGENDA_PHOTO_IN_SYSTEM (in the UI language) instead of the (huge) uploaded image data;
 // import maps the marker of any language back to the stored photo
-const PHOTO_IN_SYSTEM: Record<Lang, string> = { th: 'จัดเก็บรูปในระบบแล้ว', en: 'Stored in system' };
-const isPhotoInSystem = (value: string) => Object.values(PHOTO_IN_SYSTEM).includes(value);
+const isPhotoInSystem = (value: string) => Object.values(AGENDA_PHOTO_IN_SYSTEM).includes(value);
 
 // Guide sheet (how to fill each column) of the template, in the UI language
 const templateGuide = (t: Dict) => {
@@ -214,28 +209,7 @@ export default function AgendaManager() {
     XLSX.writeFile(workbook, 'agenda-import-template.xlsx');
   };
 
-  const exportExcel = () => {
-    const c = t.agenda.excel.columns;
-    const rows = items.map((item, index) => ({
-      [c.order]: index + 1,
-      [c.date]: item.start_at.slice(0, 10),
-      [c.startTime]: item.start_at.slice(11, 16),
-      [c.endTime]: item.end_at.slice(11, 16),
-      [c.title]: item.title,
-      [c.description]: item.description,
-      [c.speaker]: item.speaker,
-      [c.location]: item.location,
-      [c.highlight]: item.is_highlight ? t.common.yes : t.common.no,
-      [c.speakerImage]: item.speaker_image?.startsWith('data:') ? PHOTO_IN_SYSTEM[lang] : (item.speaker_image || ''),
-    }));
-    const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{
-      [c.order]: 1, [c.date]: '', [c.startTime]: '', [c.endTime]: '', [c.title]: '', [c.description]: '', [c.speaker]: '', [c.location]: '', [c.highlight]: t.common.no, [c.speakerImage]: '',
-    }]);
-    sheet['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 48 }, { wch: 28 }, { wch: 24 }, { wch: 12 }, { wch: 36 }];
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, sheet, 'Agenda');
-    XLSX.writeFile(workbook, 'event-agenda.xlsx', { cellDates: true });
-  };
+  const exportExcel = () => downloadWorkbook([{ name: 'Agenda', rows: agendaRows(items, t, lang, true) }], 'event-agenda.xlsx');
 
   const importExcel = async (file?: File) => {
     if (!file) return;
@@ -295,6 +269,13 @@ export default function AgendaManager() {
   const resetFilters = () => {
     setQuery(''); setSpeakerQuery(''); setFilterDate(''); setTimeFrom(''); setTimeTo(''); setPage(1);
   };
+
+  // The agenda was emptied on the server (after a confirmation popup)
+  const afterReset = () => {
+    setItems([]);
+    resetFilters();
+  };
+
   const addItem = () => {
     resetFilters();
     setPage(1);
@@ -326,6 +307,7 @@ export default function AgendaManager() {
             <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 font-semibold text-sm"><Upload className="w-4 h-4" />{t.agenda.actions.importExcel}</button>
             <button type="button" onClick={downloadTemplate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 font-semibold text-sm"><FileSpreadsheet className="w-4 h-4 text-emerald-400" />{t.agenda.actions.template}</button>
             <button type="button" onClick={exportExcel} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 font-semibold text-sm"><Download className="w-4 h-4" />{t.agenda.actions.exportExcel}</button>
+            <ResetSectionButton section="agenda" onExport={() => exportSection('agenda', t, lang)} onDone={afterReset} />
             <button type="button" onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-on-accent hover:bg-indigo-500 font-semibold text-sm"><CalendarPlus className="w-4 h-4" />{t.agenda.actions.add}</button>
           </div>
         </div>

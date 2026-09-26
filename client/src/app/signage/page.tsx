@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense, type CSSProperties } from 'react
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useWebSocket from '@/lib/useWebSocket';
+import { acquireSocket, releaseSocket } from '@/lib/socket';
 import api, { AgendaItem, LuckyWinnerData } from '@/lib/api';
 import LuckyWinnerReveal from '@/components/LuckyWinnerReveal';
 import { getAgendaForDate, getAgendaStatus } from '@/lib/agenda';
@@ -160,6 +161,22 @@ function SignageDisplay() {
       window.removeEventListener('pointerdown', wake);
     };
   }, [fullscreenMode]);
+
+  // Settings → Backup & reset removed the attendees: stop showing the previous event's guests and winner
+  useEffect(() => {
+    const socket = acquireSocket();
+    const onReset = (payload: { sections?: string[] }) => {
+      if (!payload.sections?.includes('attendees')) return;
+      setWelcomeQueue([]);
+      setCurrentIdx(0);
+      setLastKnownWinner(null);
+    };
+    socket.on('data:reset', onReset);
+    return () => {
+      socket.off('data:reset', onReset);
+      releaseSocket();
+    };
+  }, []);
 
   // Add to welcome queue on new incoming check-in from WebSocket
   useEffect(() => {

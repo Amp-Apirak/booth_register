@@ -20,6 +20,7 @@ import { orgTypes } from './orgTypes';
 import { analytics } from './analytics';
 import { report } from './report';
 import { staffGate } from './staffGate';
+import { dataReset } from './dataReset';
 
 export const en = {
   common,
@@ -43,4 +44,5 @@ export const en = {
   analytics,
   report,
   staffGate,
+  dataReset,
 };

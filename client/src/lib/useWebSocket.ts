@@ -73,12 +73,19 @@ export function useWebSocket(options: { staff?: boolean } = {}) {
       },
     }));
 
+    // Settings → Backup & reset removed the attendees: forget the last guest and winner shown on screen
+    const onReset = (payload: { sections?: string[] }) => {
+      if (!payload.sections?.includes('attendees')) return;
+      setData((prev) => ({ ...prev, latestCheckin: null, latestWinner: null, participants: prev.participants && [] }));
+    };
+
     socket.on('connect', loadStats);
     socket.on('overview:update', onOverview);
     socket.on('welcome:new_checkin', onCheckin);
     socket.on('participants:update', onParticipants);
     socket.on('agenda:update', onAgenda);
     socket.on('luckydraw:winner_announced', onWinner);
+    socket.on('data:reset', onReset);
     if (socket.connected) loadStats();
 
     return () => {
@@ -88,6 +95,7 @@ export function useWebSocket(options: { staff?: boolean } = {}) {
       socket.off('participants:update', onParticipants);
       socket.off('agenda:update', onAgenda);
       socket.off('luckydraw:winner_announced', onWinner);
+      socket.off('data:reset', onReset);
       releaseSocket({ staff });
     };
   }, [staff]);

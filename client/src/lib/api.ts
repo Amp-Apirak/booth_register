@@ -162,6 +162,29 @@ export interface Prize {
   sort_order: number;
 }
 
+// Settings → Backup & reset (ADR-0017): what an Admin can put back to a new event's defaults
+export type ResetSection = 'general' | 'registration' | 'organizations' | 'agenda' | 'prizes' | 'attendees';
+export const RESET_SECTIONS: ResetSection[] = ['general', 'registration', 'organizations', 'agenda', 'prizes', 'attendees'];
+
+export interface ResetSummary {
+  general_changed: number; // fields that differ from their default
+  registration_changed: number;
+  organization_types: number;
+  default_organization_types: number;
+  participants_with_organization_type: number;
+  agenda_items: number;
+  prizes: number;
+  participants: number;
+  checkins: number;
+  winners: number;
+}
+
+export interface ResetResult {
+  sections: ResetSection[];
+  removed: Partial<Record<'participants' | 'checkins' | 'winners' | 'organization_types' | 'agenda_items' | 'prizes', number>>;
+  settings: Partial<SystemSettings>; // the defaults now in force
+}
+
 export interface AgendaItem {
   id?: number;
   event_id?: number;
@@ -553,6 +576,36 @@ export const api = {
     } catch {
       return false;
     }
+  },
+
+  // Everything the backup file holds. Unlike the getters above it throws when any part fails,
+  // so a backup is never silently incomplete (Admin; the attendee list needs a staff login).
+  async getBackupSources(): Promise<{ settings: SystemSettings; organizationTypes: OrganizationType[]; agenda: AgendaItem[]; prizes: Prize[]; participants: Participant[]; winners: LuckyWinnerData[] }> {
+    const get = async (path: string) => {
+      const data = await handleResponse(await fetch(`${API_BASE}/api/v1${path}`, { headers: getAuthHeaders() }));
+      if (!data.success) throw new Error(data.message || `API Error: ${path}`);
+      return data.data;
+    };
+    const [settings, organizationTypes, agenda, prizes, participants, winners] = await Promise.all([
+      get('/settings'), get('/events/1/organization-types'), get('/events/1/agenda'), get('/events/1/prizes'),
+      get('/participants'), get('/events/1/lucky-draw/winners'),
+    ]);
+    return { settings: { ...DEFAULT_SETTINGS, ...settings }, organizationTypes, agenda, prizes, participants, winners };
+  },
+
+  // Backup & reset (Admin): how much each reset would remove. Throws on failure.
+  async getResetSummary(): Promise<ResetSummary> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/reset-summary`, { headers: getAuthHeaders() });
+    return (await handleResponse(res)).data;
+  },
+
+  // Puts the sections back to their defaults (all or nothing). Throws with the server's code on failure.
+  async resetData(sections: ResetSection[]): Promise<ResetResult> {
+    const res = await fetch(`${API_BASE}/api/v1/events/1/reset`, { method: 'POST', headers: getAuthHeaders(), body: JSON.stringify({ sections }) });
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || `API Error: ${res.status}`), { code: data.error });
+    return data.data;
   },
 };
 

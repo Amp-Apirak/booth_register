@@ -6,6 +6,8 @@ import { ArrowDown, ArrowUp, Building2, Check, Info, Plus, Save, Trash2, X } fro
 import api, { OrganizationType } from '@/lib/api';
 import { ORG_COLOR_SLOTS, nextFreeSlot, orgTypeName, slotColor } from '@/lib/orgTypes';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { exportSection } from '@/lib/sectionExport';
+import { ExportExcelButton, ResetSectionButton } from '@/components/DataResetControls';
 
 type Draft = Pick<OrganizationType, 'name_th' | 'name_en' | 'color' | 'is_active'> & { id?: number };
 
@@ -157,12 +159,16 @@ export default function OrganizationTypeManager() {
   return (
     <div className="space-y-5">
       <div className="glass-panel rounded-3xl border border-white/10 p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="min-w-0">
             <h2 className="text-xl font-extrabold text-white flex items-center gap-2"><Building2 className="w-5 h-5 text-cyan-400" />{tt.managerTitle}</h2>
             <p className="text-sm text-slate-400 mt-1">{tt.managerSubtitle}</p>
           </div>
-          <button type="button" onClick={addType} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold text-sm shadow-lg shadow-indigo-500/20"><Plus className="w-4 h-4" />{tt.add}</button>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 lg:shrink-0">
+            <ExportExcelButton onExport={() => exportSection('organizations', t, lang)} />
+            <ResetSectionButton section="organizations" onExport={() => exportSection('organizations', t, lang)} onDone={() => { setDraft(null); load(); }} />
+            <button type="button" onClick={addType} className="col-span-2 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent font-bold text-sm shadow-lg shadow-indigo-500/20"><Plus className="w-4 h-4" />{tt.add}</button>
+          </div>
         </div>
         <ul className="mt-4 space-y-1.5 text-xs text-slate-400">
           <li className="flex gap-2"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-cyan-400" />{tt.otherNote}</li>

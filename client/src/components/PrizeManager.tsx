@@ -6,6 +6,9 @@ import * as XLSX from 'xlsx';
 import { ArrowDown, ArrowUp, Download, FileSpreadsheet, Gift, ImagePlus, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import api, { Prize } from '@/lib/api';
 import { PRIZE_PHOTO_IN_SYSTEM, PrizeField, mapPrizeRows, prizeColumnHeader } from '@/lib/prizeImport';
+import { prizeRows } from '@/lib/backupExport';
+import { exportSection } from '@/lib/sectionExport';
+import { ResetSectionButton } from '@/components/DataResetControls';
 import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import type { Dict, Lang } from '@/i18n';
 
@@ -117,13 +120,7 @@ export default function PrizeManager() {
     [1, 'iPhone 16 Pro Max 256GB', 'GRAND-01', t.prizes.excel.sampleGrandDescription, 1, t.common.yes, ''],
     [2, t.prizes.excel.sampleVoucherName, 'VOUCHER-01', t.prizes.excel.sampleVoucherDescription, 10, t.common.yes, ''],
   ], 'prize-import-template.xlsx', true);
-  const exportExcel = () => writeBook([
-    [...header, t.prizes.excel.awardedHeader],
-    ...items.map((p, i) => [
-      i + 1, p.name, p.code, p.description, p.quantity, p.is_active ? t.common.yes : t.common.no,
-      p.image?.startsWith('data:') ? PRIZE_PHOTO_IN_SYSTEM[lang] : (p.image || ''), p.awarded_count ?? 0,
-    ]),
-  ], `lucky-draw-prizes-${Date.now()}.xlsx`, true);
+  const exportExcel = () => writeBook(prizeRows(items, t, lang), `lucky-draw-prizes-${Date.now()}.xlsx`, true);
 
   const importExcel = async (file?: File) => {
     if (!file) return;
@@ -214,6 +211,7 @@ export default function PrizeManager() {
           <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 hover:bg-emerald-500/20 font-semibold text-sm"><Upload className="w-4 h-4" />{t.prizes.actions.importExcel}</button>
           <button type="button" onClick={downloadTemplate} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-slate-200 border border-white/10 hover:bg-white/10 font-semibold text-sm"><FileSpreadsheet className="w-4 h-4 text-emerald-400" />{t.prizes.actions.template}</button>
           <button type="button" onClick={exportExcel} disabled={items.length === 0} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 hover:bg-cyan-500/20 font-semibold text-sm disabled:opacity-40"><Download className="w-4 h-4" />{t.prizes.actions.exportExcel}</button>
+          <ResetSectionButton section="prizes" onExport={() => exportSection('prizes', t, lang)} onDone={() => { setDraft(null); load(); }} />
           <button type="button" onClick={addPrize} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 text-on-accent hover:from-fuchsia-500 hover:to-purple-500 font-bold text-sm shadow-lg shadow-fuchsia-500/20"><Plus className="w-4 h-4" />{t.prizes.actions.add}</button>
         </div>
       </div>

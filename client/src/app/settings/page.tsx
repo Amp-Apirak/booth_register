@@ -2,16 +2,20 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Save, Image as ImageIcon, Settings, LayoutTemplate, RefreshCcw, Check, X as XIcon, MapPin, Map, Building2, Layers, CalendarClock, CalendarRange, Gift, PanelsTopLeft, Phone, Mail, MessageCircle, Users, ShieldCheck, LifeBuoy } from 'lucide-react';
+import { Save, Image as ImageIcon, Settings, LayoutTemplate, Check, X as XIcon, MapPin, Map, Building2, Layers, CalendarClock, CalendarRange, Gift, PanelsTopLeft, Phone, Mail, MessageCircle, Users, ShieldCheck, LifeBuoy, Archive } from 'lucide-react';
 import api from '@/lib/api';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useT } from '@/contexts/PreferencesContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import Cropper from 'react-easy-crop';
 import AgendaManager from '@/components/AgendaManager';
 import PrizeManager from '@/components/PrizeManager';
 import RegistrationPageManager from '@/components/RegistrationPageManager';
 import OrganizationTypeManager from '@/components/OrganizationTypeManager';
 import StaffGate from '@/components/StaffGate';
+import BackupResetManager from '@/components/BackupResetManager';
+import { ExportExcelButton, ResetSectionButton } from '@/components/DataResetControls';
+import { exportSection } from '@/lib/sectionExport';
+import type { ResetResult } from '@/lib/api';
 
 const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> => {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -50,8 +54,8 @@ const formatDT = (v: string, locale: string): string => {
 
 const EMPTY_FOOTER_INFO = { organizer_name: '', contact_phone: '', contact_email: '', contact_line: '', event_map_url: '', privacy_policy: '' };
 
-type SettingsTab = 'general' | 'registration' | 'organizations' | 'agenda' | 'prizes';
-const SETTINGS_TABS: SettingsTab[] = ['general', 'registration', 'organizations', 'agenda', 'prizes'];
+type SettingsTab = 'general' | 'registration' | 'organizations' | 'agenda' | 'prizes' | 'backup';
+const SETTINGS_TABS: SettingsTab[] = ['general', 'registration', 'organizations', 'agenda', 'prizes', 'backup'];
 
 // The active tab lives in the URL (/settings?tab=agenda) so it survives a refresh
 // Event configuration is for administrators (server: ADR-0015)
@@ -72,7 +76,7 @@ function SettingsContent() {
   const activeTab: SettingsTab = requestedTab && SETTINGS_TABS.includes(requestedTab) ? requestedTab : 'general';
   const setActiveTab = (tab: SettingsTab) => router.replace(`/settings?tab=${tab}`, { scroll: false });
   const { settings, updateSettingsContext } = useSettings();
-  const t = useT();
+  const { t, lang } = usePreferences();
   const [eventName, setEventName] = useState('');
   const [eventLogo, setEventLogo] = useState('');
   const [eventVenue, setEventVenue] = useState('');
@@ -128,17 +132,11 @@ function SettingsContent() {
     }
   };
 
-  const handleReset = () => {
-    setEventName('SMART EVENT REGISTRATION');
-    setEventLogo('');
-    setEventVenue('');
-    setEventAddress('');
-    setEventBuilding('');
-    setEventFloor('');
-    setEventStart('');
-    setEventEnd('');
-    setFooterInfo({ ...EMPTY_FOOTER_INFO });
+  // Saved on the server (after a confirmation popup); the form follows the settings context
+  const handleResetDone = (result: ResetResult) => {
+    updateSettingsContext(result.settings);
     setImageToCrop(null);
+    setMessage({ text: '', type: '' });
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -191,21 +189,24 @@ function SettingsContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:inline-flex sm:flex-wrap w-full sm:w-auto p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
-        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:inline-flex lg:flex-wrap w-full lg:w-auto p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
+        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Settings className="w-4 h-4" />{t.settings.tabs.general}
         </button>
-        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <CalendarRange className="w-4 h-4" />{t.settings.tabs.agenda}
         </button>
-        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <PanelsTopLeft className="w-4 h-4" />{t.settings.tabs.registration}
         </button>
-        <button type="button" onClick={() => setActiveTab('organizations')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'organizations' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('organizations')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'organizations' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Building2 className="w-4 h-4" />{t.orgTypes.tab}
         </button>
-        <button type="button" onClick={() => setActiveTab('prizes')} className={`col-span-2 sm:col-span-1 inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('prizes')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Gift className="w-4 h-4" />{t.settings.tabs.prizes}
+        </button>
+        <button type="button" onClick={() => setActiveTab('backup')} className={`inline-flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-3.5 xl:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'backup' ? 'bg-gradient-to-r from-rose-600 to-orange-500 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+          <Archive className="w-4 h-4" />{t.settings.tabs.backup}
         </button>
       </div>
 
@@ -479,14 +480,8 @@ function SettingsContent() {
                   )}
                   <span>{t.settings.save}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold transition-all border border-white/10 active:scale-[0.98]"
-                >
-                  <RefreshCcw className="w-4 h-4" />
-                  {t.settings.resetDefaults}
-                </button>
+                <ExportExcelButton onExport={() => exportSection('general', t, lang)} className="sm:py-3.5" />
+                <ResetSectionButton section="general" onExport={() => exportSection('general', t, lang)} onDone={handleResetDone} className="sm:py-3.5" />
               </div>
             </div>
           </form>
@@ -555,8 +550,10 @@ function SettingsContent() {
         <OrganizationTypeManager />
       ) : activeTab === 'agenda' ? (
         <AgendaManager />
-      ) : (
+      ) : activeTab === 'prizes' ? (
         <PrizeManager />
+      ) : (
+        <BackupResetManager />
       )}
     </div>
   );

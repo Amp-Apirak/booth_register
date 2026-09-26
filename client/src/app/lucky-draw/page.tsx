@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import api, { Participant, LuckyDrawWinner, Prize } from '@/lib/api';
 import { useT } from '@/contexts/PreferencesContext';
 import StaffGate from '@/components/StaffGate';
+import { acquireSocket, releaseSocket } from '@/lib/socket';
 import { 
   Sparkles, 
   Trophy, 
@@ -69,6 +70,21 @@ function LuckyDrawPageContent() {
     fetchDrawData().then((data) => { if (active) applyDrawData(data); });
     return () => { active = false; };
   }, [applyDrawData]);
+
+  // Settings → Backup & reset changed the people or prizes: reload, and drop the previous event's winner
+  useEffect(() => {
+    const socket = acquireSocket();
+    const onReset = (payload: { sections?: string[] }) => {
+      const sections = payload.sections ?? [];
+      if (sections.includes('attendees')) setWinner(null);
+      if (sections.includes('attendees') || sections.includes('prizes')) loadDrawData();
+    };
+    socket.on('data:reset', onReset);
+    return () => {
+      socket.off('data:reset', onReset);
+      releaseSocket();
+    };
+  }, [loadDrawData]);
 
   const selectedPrize = prizes.find(p => p.prize_id === selectedPrizeId) || prizes[0] || { ...FALLBACK_PRIZE, name: t.luckyDraw.prizes.fallbackName, description: t.luckyDraw.prizes.fallbackDescription };
 

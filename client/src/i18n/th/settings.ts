@@ -7,6 +7,7 @@ export const settings = {
     agenda: 'จัดการกำหนดการ',
     registration: 'หน้าลงทะเบียน',
     prizes: 'จัดการของรางวัล',
+    backup: 'สำรองและรีเซ็ต',
   },
   event: {
     name: 'ชื่องาน (Event Name)',
@@ -52,7 +53,6 @@ export const settings = {
     remove: 'ลบรูปภาพ',
   },
   save: 'บันทึกการตั้งค่า',
-  resetDefaults: 'คืนค่าเริ่มต้น',
   messages: {
     mapUrlInvalid: 'ลิงก์แผนที่ต้องขึ้นต้นด้วย https:// เช่น https://maps.app.goo.gl/...',
     saved: 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว',
