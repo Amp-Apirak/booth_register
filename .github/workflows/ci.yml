@@ -47,7 +47,8 @@ jobs:
           psql -h localhost -U ci_user -d booth_register_db -v ON_ERROR_STOP=1 -f ../database/schema.sql
           psql -h localhost -U ci_user -d booth_register_db -v ON_ERROR_STOP=1 -f ../database/seed.sql
       - run: npm ci
-      - run: npx jest --forceExit
+      # test files share one database: run them one after another
+      - run: npx jest --runInBand --forceExit
 
   client:
     name: Client typecheck + unit tests
@@ -64,4 +65,6 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
-      - run: node --test tests/agenda.test.mjs
+      - run: node --test tests/*.test.mjs
+        env:
+          TZ: Asia/Bangkok
