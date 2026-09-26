@@ -66,6 +66,9 @@ const PROTECTED = [
   ['put', '/api/v1/events/1/organization-types/reorder', true],
   ['put', '/api/v1/events/1/organization-types/999999', true],
   ['delete', '/api/v1/events/1/organization-types/999999', true],
+  // with the empty body sent below the reset is refused (400), so these checks never remove anything
+  ['get', '/api/v1/events/1/reset-summary', true],
+  ['post', '/api/v1/events/1/reset', true],
 ];
 
 describe('access levels', () => {
