@@ -6,11 +6,22 @@
 ---
 
 ## 1. ข้อมูลส่วนหัวสำหรับการเรียกใช้งาน (HTTP Headers)
-ทุก ๆ REST API Request (ยกเว้นหน้าลงทะเบียนออนไลน์) จะต้องแนบส่วนหัวดังนี้:
+Endpoint ของเจ้าหน้าที่ต้องแนบส่วนหัวดังนี้ (endpoint สาธารณะไม่ต้องมี `Authorization`):
 ```http
 Content-Type: application/json
 Authorization: Bearer <JWT_ACCESS_TOKEN>
 ```
+
+### 1.1 ระดับสิทธิ์ ([ADR-0015](adr/0015-roles-and-access.md))
+
+| ระดับ | Endpoint |
+|---|---|
+| สาธารณะ | `POST /login` · `POST /events/:id/register` · `POST /tickets/lookup` · `GET /events/:id/stats` · `GET /settings` · `GET /events/:id/agenda` · `GET /events/:id/prizes` · `GET /events/:id/organization-types` · `GET /events/:id/lucky-draw/winners` · `GET /ping` |
+| เจ้าหน้าที่ (Staff หรือ Admin) | `GET/POST /participants` · `GET /participants/:ticket_code` · `PUT /participants/:id` · `POST /checkin` · `POST /events/:id/lucky-draw/spin` · `GET /events/:id/lucky-draw/eligible` |
+| Admin เท่านั้น | `POST /participants/import` · `DELETE /participants/:id` · `PUT /settings` · `PUT /events/:id/agenda` · ของรางวัลทั้งหมดที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder/import) · ประเภทองค์กรที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder) |
+
+- ไม่มี token / token ผิด / หมดอายุ → **401** (`UNAUTHORIZED` / `INVALID_TOKEN` / `TOKEN_EXPIRED`) · role ไม่พอ → **403** `FORBIDDEN`
+- `POST /login` ผิด 10 ครั้งต่อ username + เครื่อง ภายใน 15 นาที → **429** `TOO_MANY_ATTEMPTS` (มี `retry_after` วินาที และ header `Retry-After`)
 
 ---
 
@@ -70,6 +81,7 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
       "organization_type_id": 2
     }
     ```
+*   **ตรวจข้อมูล (2026-09-26):** ความยาวสูงสุด ชื่อ 150 / บริษัท 150 / ตำแหน่ง 100 / อีเมล 255 / เบอร์ 50 (`FIELD_TOO_LONG`) · อีเมลผิดรูปแบบ `INVALID_EMAIL` · เบอร์ผิดรูปแบบ `INVALID_PHONE` · รูปต้องเป็น data URL ของ PNG/JPG/WebP (`INVALID_PHOTO`) ไม่เกิน ~2.2 MB (`PHOTO_TOO_LARGE`) · `attendee_type` จากหน้าสาธารณะเป็น `General` เสมอ · รหัสตั๋ว `SER` + วันที่ + ตัวเลขสุ่ม 6 หลัก (ตั๋วเก่า 4 หลัก) ชนกันระบบสุ่มใหม่ให้
 *   **ประเภทองค์กร (บังคับ, 2026-09-25):** ส่ง `organization_type_id` (ประเภทที่เปิดใช้งานจาก `GET /events/:event_id/organization-types?active=true`) **หรือ** `organization_type_other` (ข้อความเมื่อเลือก "อื่นๆ", สูงสุด 150 ตัวอักษร) · ไม่ส่งเลย → 400 `ORGANIZATION_TYPE_REQUIRED` · รหัสไม่มีอยู่หรือถูกปิด → 400 `INVALID_ORGANIZATION_TYPE` ([ADR-0012](adr/0012-organization-types.md))
 *   **Response (201 Created)**:
     ```json
@@ -121,6 +133,8 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 
 ### 2.3 สแกนเช็คอินเข้าร่วมงาน (Scan Check-in Gateway)
 เมื่อสตาฟยืนยันการเช็คอินหน้างานสำเร็จ จะส่งประวัติการเช็คอินและทริกเกอร์ WebSocket
+
+> **ปัจจุบัน (2026-09-26):** ต้องใช้ token เจ้าหน้าที่ · body `{ "ticket_code": "SER20260921123456" }` · 200 → `data` = ผู้เข้าร่วม (`name`, `company`, `status: "Checked-in"`, `checked_in_at` …) · บันทึก `checkins.scanned_by` = บัญชีที่สแกน · 400 `TICKET_CODE_REQUIRED` / `TICKET_NOT_FOUND` / `ALREADY_CHECKED_IN` (มี `participant: { name, company, checked_in_at }` บอกว่าใครเข้าไปแล้วเมื่อไร) · สองจุดสแกนตั๋วเดียวกันพร้อมกัน: สำเร็จ 1 ครั้ง อีกครั้งได้ `ALREADY_CHECKED_IN` · ตัวอย่างด้านล่างเป็นแบบร่างเดิม
 
 *   **URL Route**: `POST /api/v1/checkin`
 *   **Request Body**:
@@ -179,6 +193,8 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 ### 2.5 การสุ่มจับรางวัลผู้โชคดี (Lucky Draw Spin)
 แอดมินหลักกดเริ่มหมุนรางวัลสุ่มชื่อผู้ร่วมงาน
 
+> **ปัจจุบัน (2026-09-26):** ต้องใช้ token เจ้าหน้าที่ · รางวัลต้องมีใน `lucky_draw_prizes`, เปิดการสุ่ม และยังเหลือจำนวน · สุ่มทีละครั้งต่องาน (ล็อกใน DB) จึงไม่ได้ผู้ชนะซ้ำหรือเกินจำนวน · 400 `PRIZE_NAME_REQUIRED` / `PRIZE_NOT_FOUND` / `PRIZE_INACTIVE` / `PRIZE_SOLD_OUT` / `NO_ELIGIBLE_PARTICIPANTS` · ผลลัพธ์และ event `luckydraw:winner_announced` **ไม่มี `email`** (ตัวอย่างด้านล่างที่มี email เป็นรูปแบบเดิม) · `GET /events/:id/lucky-draw/eligible` ต้องใช้ token เจ้าหน้าที่
+
 *   **URL Route**: `POST /api/v1/events/:event_id/lucky-draw/spin`
 *   **Request Body**:
     ```json
@@ -211,6 +227,14 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 *   **รายชื่อผู้โชคดีทั้งหมด (Public)**: `GET /api/v1/events/:event_id/lucky-draw/winners` → array ของ object รูปแบบเดียวกัน (ไม่มี email) เรียงจากเก่าไปใหม่ ใช้โดยจอ LED แท็บ Lucky เพื่อแสดงผู้โชคดีล่าสุดหลังรีเฟรช
 
 ---
+
+### 2.5.1 ค้นหาตั๋วของตัวเอง (Public ticket lookup)
+ผู้เข้าร่วม (ไม่ต้อง login) พิสูจน์ว่าเป็นเจ้าของตั๋ว
+
+*   **URL Route**: `POST /api/v1/tickets/lookup`
+*   **Request Body**: `{ "ticket_code": "SER20260921123456", "verifier": "5678" }` — `verifier` = เบอร์โทร 4 ตัวท้าย หรืออีเมลที่ลงทะเบียน (ไม่สนตัวพิมพ์เล็ก-ใหญ่)
+*   **Response (200)**: `{ "success": true, "data": { "name", "company", "position", "ticket_code", "attendee_type", "status", "checked_in_at" } }` — ไม่มีอีเมล เบอร์โทร หรือ id
+*   **404** `TICKET_NOT_FOUND` (ตอบแบบเดียวกันทั้งรหัสผิดและข้อมูลยืนยันผิด) · **400** `LOOKUP_FIELDS_REQUIRED` · **429** `TOO_MANY_ATTEMPTS` หลังผิด 5 ครั้งต่อรหัสตั๋ว หรือ 30 ครั้งต่อเครื่อง ภายใน 15 นาที
 
 ### 2.6 การจัดการข้อมูลผู้ร่วมงาน (Participant CRUD REST APIs)
 ใช้สำหรับดึง เพิ่ม แก้ไข หรือลบข้อมูลผู้ร่วมงานจากหน้าต่างแอดมิน (CMS Panel)
@@ -340,6 +364,8 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 
 ### 3.1 การเชื่อมต่อ (Handshake Connection)
 *   **Endpoint URL**: `ws://<domain>:<port>/socket.io/` หรือ namespace `/signage`
+
+> **ปัจจุบัน (2026-09-26, [ADR-0016](adr/0016-live-updates-and-network-access.md)):** namespace เดียว `/` ที่ `<API URL>/socket.io/` (WebSocket ก่อน, สำรองด้วย long-polling) · ทุกหน้าจอได้ event สาธารณะ (`overview:update`, `welcome:new_checkin`, `luckydraw:*`, `agenda:update`, `prizes:update`, `settings:update`, `organization-types:update`) · **`participants:update` ส่งเฉพาะหน้าจอเจ้าหน้าที่**: client ส่ง `socket.emit('staff:join', <token>, ack)` → `ack({ ok: true })` แล้วอยู่ในห้อง `staff` จนกว่าจะ `staff:leave` หรือ token หมดอายุ · `welcome:new_checkin` = `{ name, company, position, profile_picture, attendee_type, timestamp }` (ไม่มีอีเมล/เบอร์โทร) · ลำดับตอนเช็คอิน: `welcome:new_checkin` → `overview:update` → `participants:update`
 
 ---
 

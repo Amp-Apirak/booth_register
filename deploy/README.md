@@ -66,6 +66,7 @@ kubectl -n booth create job --from=cronjob/booth-db-backup backup-now   # สำ
 
 | รอบ | สิ่งที่ server เพิ่มให้เอง | หลังอัปเดตให้ทำ |
 |---|---|---|
+| 2026-09-26 | คอลัมน์ `checkins.scanned_by` เริ่มถูกบันทึก (มีอยู่แล้วใน schema) · env `TRUST_PROXY=1` (อยู่ใน `server.yaml` / `docker-compose.prod.yml` แล้ว) | ตั้ง role บัญชี: ผู้ที่ต้องตั้งค่าระบบ = Admin, เจ้าหน้าที่หน้างาน = Staff (`create-admin.js`) · ทดสอบลงทะเบียนแล้วตรวจอีเมลตั๋วว่าเป็นชื่อ/วัน/สถานที่ของงานจริง |
 | 2026-09-25 | ตาราง `organization_types` (+ 6 ประเภทเริ่มต้น), คอลัมน์ `organization_type_id`, `organization_type_other` ใน `participants` | เปิด `/settings?tab=organizations` ตรวจรายการประเภทองค์กร · ผู้ลงทะเบียนเดิมเป็น "ไม่ระบุ" (เลือกแทนได้ในแดชบอร์ด) · ช่องประเภทองค์กรในหน้าลงทะเบียนกลายเป็นช่องบังคับ |
 
 หมายเหตุ: ค่า CPU request ตั้งไว้ต่ำ (10m) เพราะเครื่องนี้ยอดจอง CPU รวมเกือบเต็ม · ถ้าในอนาคตมีการรัน Ansible role `infra/mesh` ที่สร้าง Gateway ใหม่ทับ ให้รัน `deploy.sh` ซ้ำเพื่อเติม listener กลับ

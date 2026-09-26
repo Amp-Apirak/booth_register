@@ -1,6 +1,6 @@
 # HANDOFF — ส่งต่องานพัฒนา
 
-ปรับปรุง: 2026-09-25 · branch `Dev` · repo https://github.com/Amp-Apirak/booth_register
+ปรับปรุง: 2026-09-26 · branch `Dev` · repo https://github.com/Amp-Apirak/booth_register
 
 > เอกสารนี้สำหรับนักพัฒนาที่มารับงานต่อ อ่านจบแล้วควรรู้ว่าระบบอยู่ตรงไหน ต้องทำอะไรต่อ และไปดูรายละเอียดที่ไหน · (คู่มือสาธิตระบบให้ผู้บริหารเดิมอยู่ที่ [handoff_guide.md](handoff_guide.md))
 
@@ -35,9 +35,9 @@ WebSocket events ที่ใช้จริง: `overview:update`, `participant
 
 ## 3. สถานะปัจจุบัน
 
-**ใช้งานได้:** ลงทะเบียน + PDPA consent + ประเภทองค์กร (บังคับ), ตั๋ว QR, สแกนเช็คอิน (กล้อง/เครื่องยิง), Dashboard CRUD + คอลัมน์ประเภทองค์กร + นำเข้า/ส่งออก Excel, แท็บรายงานและกราฟ (กรองไขว้, ช่วงวันเวลา) + รายงาน A4, ตั้งค่างาน, กำหนดการ + Excel, ประเภทองค์กร, ของรางวัล + ลำดับ + Excel, จอ LED 4 หน้า (URL แยก), สุ่มรางวัล + หน้าประกาศผู้โชคดี, Footer + `/privacy`, หน้าแรก Event Experience, 2 ภาษา (ไทย/อังกฤษ) + 2 ธีม (มืด/สว่าง) ทุกหน้า, CI
+**ใช้งานได้:** ลงทะเบียน + PDPA consent + ประเภทองค์กร (บังคับ), ตั๋ว QR, สแกนเช็คอิน (กล้อง/เครื่องยิง), Dashboard CRUD + คอลัมน์ประเภทองค์กร + นำเข้า/ส่งออก Excel, แท็บรายงานและกราฟ (กรองไขว้, ช่วงวันเวลา) + รายงาน A4, ตั้งค่างาน, กำหนดการ + Excel, ประเภทองค์กร, ของรางวัล + ลำดับ + Excel, จอ LED 4 หน้า (URL แยก), สุ่มรางวัล + หน้าประกาศผู้โชคดี, Footer + `/privacy`, หน้าแรก Event Experience, 2 ภาษา (ไทย/อังกฤษ) + 2 ธีม (มืด/สว่าง) ทุกหน้า, รองรับทุกขนาดจอ 360–1920 px (มือถือ/แท็บเล็ต/คอมพิวเตอร์/จอ LED), CI
 
-**งานรอบล่าสุด (2026-09-25)** — ภาษา/ธีม, ประเภทองค์กร (dropdown ในหน้าลงทะเบียน), รายงานและกราฟ + A4, แก้รูป QR/ตั๋วที่บันทึกลงเครื่อง, หัวเว็บบนมือถือ · รายการเต็มใน [CHANGELOG.md](../CHANGELOG.md), เหตุผลใน [decision.md](decision.md) (ADR 0012–0014), ผลตรวจใน [qa.md](qa.md)
+**งานรอบล่าสุด (2026-09-26)** — จอ LED อัปเดตทันทีทุกกรณี (รวมเปิดจากเครื่องอื่นในวง LAN), ปิดช่องข้อมูลส่วนบุคคลรั่วผ่านข้อมูลสด, สิทธิ์ Admin/Staff, ค้นหาตั๋วสาธารณะ, สุ่มรางวัลต้อง login และไม่เกินจำนวน, อีเมลตั๋วใช้ข้อมูลงานจริง, รหัสตั๋วไม่ชน, เทสต์ครบ (Playwright 39 · Jest 111 · unit 24) ([ADR-0015](adr/0015-roles-and-access.md), [ADR-0016](adr/0016-live-updates-and-network-access.md)) · ก่อนหน้า (2026-09-25): ภาษา/ธีม, ประเภทองค์กร, รายงานและกราฟ + A4 · รายการเต็มใน [CHANGELOG.md](../CHANGELOG.md), เหตุผลใน [decision.md](decision.md) (ADR 0012–0014), ผลตรวจใน [qa.md](qa.md)
 
 > **Deploy รอบนี้:** production ต้อง restart server หนึ่งครั้งหลังอัปเดตโค้ด เพื่อสร้างตาราง `organization_types` (ไม่ต้องรัน SQL เอง) · ผู้ลงทะเบียนเดิมจะเป็น "ไม่ระบุ" จนกว่าเจ้าหน้าที่เลือกให้
 
@@ -45,29 +45,29 @@ WebSocket events ที่ใช้จริง: `overview:update`, `participant
 
 | # | งาน | ทำไมสำคัญ | ที่เกี่ยวข้อง |
 |---|---|---|---|
-| 1 | ใส่ `verifyToken` ให้ `POST /lucky-draw/spin` | ตอนนี้ใครก็สุ่มรางวัลได้ | `server/routes/api.js`, `client/src/app/lucky-draw/page.tsx` |
-| 1.1 | Deploy รอบ 2026-09-25 ขึ้น event-bbk.com แล้ว restart server | ตาราง/คอลัมน์ประเภทองค์กรสร้างตอนเปิด server | `deploy/k8s/deploy.sh`, [runbook.md](runbook.md) |
-| 1.2 | ไล่ตรวจทุกหน้าทั้ง TH/EN × มืด/สว่าง บนจอจริง + พิมพ์รายงาน A4 กับเครื่องพิมพ์จริง | ตรวจอัตโนมัติไปบางหน้า | [qa.md](qa.md) §4 |
-| 1.3 | **รอเจ้าของระบบตัดสินใจ:** เมนู/หน้าสแกนต้อง login หรือไม่ (A คง login แต่ใช้ง่ายขึ้น — แนะนำ · B PIN จุดสแกน · C เปิดสาธารณะ) | เช็คอินมีผลกับสิทธิ์ลุ้นรางวัลและตัวเลขรายงาน | [qa.md](qa.md) Q-13 |
-| 1.4 | **รอเจ้าของระบบตัดสินใจ:** หน้า `/ticket` ให้ผู้เข้าร่วมค้นตั๋วเองได้ (รหัสตั๋ว + 4 ตัวท้ายเบอร์โทร) | ตอนนี้คนที่ไม่ได้ login ค้นตั๋วไม่ได้ | [qa.md](qa.md) Q-12 |
-| 2 | แก้เทสต์ server 9 ข้อที่ล้าสมัย → CI เขียว → เปิด branch protection `main` | CI แดง, รวม PR ไม่มั่นใจ | `server/tests/`, [qa.md](qa.md) Q-1 |
-| 3 | HTTPS สำหรับหน้างาน (กล้องสแกนบนแท็บเล็ต) | กล้องไม่ทำงานบน `http://IP` | [runbook.md](runbook.md) §3 |
-| 4 | ทดสอบด้วยมือตามเช็กลิสต์ [qa.md](qa.md) §4 | หลายฟีเจอร์ยังไม่ได้ทดสอบในเบราว์เซอร์จริง | |
-| 5 | ขยายรหัสตั๋ว (~9,000/วัน) | งานใหญ่ | `participantController.js` `generateTicketCode` |
-| 6 | เก็บกวาด ESLint แล้วเพิ่มใน CI | คุณภาพโค้ด | |
-| 7 | ยืนยัน LINE ID ผู้ติดต่อแพลตฟอร์ม | ลิงก์อาจเปิดไม่ได้ | `client/src/lib/platform.ts` |
-| 8 | ADR 0001–0004 (Local sync, signed ticket, queue, แจ้งผลหลายช่องทาง) ยังเป็นแผน | ตัดสินใจว่าจะทำหรือยกเลิก | [decision.md](decision.md) |
-| 9 | แปลรายละเอียด error จาก server ในหน้าเจ้าหน้าที่ที่เหลือ | โหมดอังกฤษยังเห็นภาษาไทยตอนบันทึกไม่ผ่าน | [qa.md](qa.md) Q-9 |
+| 1 | Deploy รอบ 2026-09-25 + 2026-09-26 ขึ้น event-bbk.com (restart server ครั้งเดียว) | ประเภทองค์กร, สิทธิ์, ค้นหาตั๋ว, อีเมลตั๋วที่ถูกต้อง, ปิดช่องข้อมูลรั่ว | `deploy/k8s/deploy.sh`, [deploy/README.md](../deploy/README.md) |
+| 2 | บัญชีเจ้าหน้าที่บน production: ใครต้องตั้งค่าได้ให้เป็น **Admin** ที่เหลือเป็น **Staff** | Staff เข้าหน้าตั้งค่า ลบ นำเข้าไม่ได้แล้ว | [configuration.md](configuration.md) §5 |
+| 3 | เปิด branch protection `main` ให้ต้องผ่าน CI (CI เขียวแล้วรอบนี้) | กันโค้ดที่ทดสอบไม่ผ่านเข้า main | GitHub Settings |
+| 4 | ทดสอบด้วยมือบนอุปกรณ์จริง: มือถือ iPhone/Android, แท็บเล็ต, ทีวีจอ LED, เครื่องพิมพ์ A4 | Playwright ครอบคลุมเบราว์เซอร์ Chrome แล้ว | [qa.md](qa.md) §4 |
+| 5 | HTTPS สำหรับหน้างาน (กล้องสแกนบนแท็บเล็ตผ่าน IP) | กล้องไม่ทำงานบน `http://IP` | [runbook.md](runbook.md) §3 |
+| 6 | สร้างรูป QR ใน server แนบในอีเมล (แทนบริการภายนอก) | อีเมลบางโปรแกรมบล็อกรูปภายนอก | [qa.md](qa.md) Q-15 |
+| 7 | เก็บกวาด ESLint แล้วเพิ่มใน CI | คุณภาพโค้ด | |
+| 8 | ยืนยัน LINE ID ผู้ติดต่อแพลตฟอร์ม | ลิงก์อาจเปิดไม่ได้ | `client/src/lib/platform.ts` |
+| 9 | ADR 0001–0004 (Local sync, signed ticket, queue, แจ้งผลหลายช่องทาง) ยังเป็นแผน | ตัดสินใจว่าจะทำหรือยกเลิก | [decision.md](decision.md) |
+| 10 | แปลรายละเอียด error จาก server ในหน้าเจ้าหน้าที่ที่เหลือ | โหมดอังกฤษยังเห็นภาษาไทยตอนบันทึกไม่ผ่าน | [qa.md](qa.md) Q-9 |
 
 ## 5. ข้อตกลงการทำงาน
 
 - **Branch:** พัฒนาบน `Dev` (หรือ `feature/*` แตกจาก `Dev`) → Pull Request เข้า `main` เมื่อพร้อมใช้งาน
 - **Commit:** รูปแบบ `type(scope): สรุป` เช่น `feat(prizes): …`, `fix(stats): …` แยก commit ตามเรื่อง
 - **ความลับ:** ห้าม commit `.env*` (ยกเว้น `*.env.example`) · repo เป็น Public ([ADR-0009](adr/0009-secrets-from-env-only.md))
-- **ก่อน push:** `cd client && npx tsc --noEmit && node --test tests/*.test.mjs` (+ `cd server && npm test` ถ้าแตะ server)
+- **ก่อน push:** `cd client && npx tsc --noEmit && TZ=Asia/Bangkok node --test tests/*.test.mjs` + `cd server && npm test` + `cd client && npx playwright test` สำหรับหน้าที่แก้ (ตั้งค่าครั้งแรก: [client/e2e/README.md](../client/e2e/README.md))
+- **สิทธิ์:** endpoint ใหม่กำหนด `staff` หรือ `admin` ใน `routes/api.js` แล้วเพิ่มในรายการ `PROTECTED` ของ `server/tests/security.test.js` · หน้าเจ้าหน้าที่ครอบด้วย `<StaffGate>` ([ADR-0015](adr/0015-roles-and-access.md))
+- **ข้อมูลสด:** ข้อมูลส่วนบุคคลส่งเข้าห้อง `staff` เท่านั้น (`broadcastParticipants`) · ใช้ `useWebSocket()` / `useWebSocket({ staff: true })` / `useSocketStatus()` ไม่สร้าง socket เอง ([ADR-0016](adr/0016-live-updates-and-network-access.md))
 - **เพิ่ม endpoint:** route ใน `routes/api.js` (ใส่ `verifyToken` ถ้าเป็นงานเจ้าหน้าที่) → controller → repository → function ใน `client/src/lib/api.ts` → อัปเดต [api_spec.md](api_spec.md)
 - **เพิ่มค่าตั้งค่า:** ดู [configuration.md](configuration.md) §2 (แก้ 4 จุด)
 - **ข้อความบนหน้าเว็บ:** เพิ่ม key ใน `client/src/i18n/th/<เรื่อง>.ts` แล้วแปลใน `en/<เรื่อง>.ts` ห้ามพิมพ์ข้อความลง JSX ตรง ๆ · ตัวอักษรบนปุ่มพื้นสีใช้ `text-on-accent` · ตรวจทั้ง 2 ธีม ([ADR-0013](adr/0013-theme-and-language.md))
+- **หน้าจอ:** ออกแบบจากมือถือขึ้นไป ตรวจที่ 360 / 390 / 768 / 1024 / 1440 / 1920 px (Chrome DevTools → Toggle device toolbar) ต้องไม่มีส่วนล้นจอ · ตารางกว้างให้มีมุมมองการ์ดบนจอเล็ก (ดูแดชบอร์ด) · ข้อความยาวใช้ `break-words` แทนการตัด
 - **การตัดสินใจที่มีผลระยะยาว:** เขียน ADR + เพิ่มแถวใน [decision.md](decision.md)
 - **หลังงานเสร็จ:** อัปเดต CHANGELOG, qa.md (ตรวจอะไรไปแล้ว), HANDOFF §3–4
 

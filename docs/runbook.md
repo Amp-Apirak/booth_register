@@ -1,6 +1,6 @@
 # Runbook — ติดตั้ง ใช้งาน และแก้ปัญหา
 
-ปรับปรุง: 2026-09-25 · ค่าตั้งค่าทั้งหมดดู [configuration.md](configuration.md)
+ปรับปรุง: 2026-09-26 · ค่าตั้งค่าทั้งหมดดู [configuration.md](configuration.md)
 
 ## 1. ติดตั้งเครื่องใหม่ (ครั้งแรก)
 
@@ -61,12 +61,12 @@ cd client && npm run dev             # เว็บ :3000 (พอร์ตไม
 3. `/settings?tab=prizes`: ของรางวัล + รูป + ลำดับการสุ่ม
 3.1 `/settings?tab=organizations`: ประเภทองค์กรที่ให้ผู้ลงทะเบียนเลือก (ชื่อไทย/อังกฤษ, สี, ลำดับ) — ผู้ลงทะเบียน **ต้องเลือก** ก่อนส่งฟอร์ม
 4. `/dashboard` → นำเข้า Excel รายชื่อที่ลงทะเบียนล่วงหน้า (ถ้ามี)
-5. สร้างบัญชีเจ้าหน้าที่ประจำจุดสแกน (`create-admin.js ... Staff`)
+5. สร้างบัญชีเจ้าหน้าที่ประจำจุดสแกน (`create-admin.js ... Staff`) — Staff สแกน/เพิ่ม/แก้ไข/สุ่มรางวัลได้ แต่ตั้งค่า ลบ และนำเข้าไม่ได้ ([configuration.md](configuration.md) §5)
 6. เปิดจอ LED แต่ละจอด้วย URL ของตัวเอง → กด **เต็มจอ**
 7. ทดสอบ: ลงทะเบียน 1 คน → สแกน → ดูจอ Welcome/Overview เปลี่ยน → ลบรายการทดสอบ
 8. สำรองฐานข้อมูล (ข้อ 5)
 
-**เครื่องอื่นในวง LAN:** ตั้ง `NEXT_PUBLIC_API_URL=http://<IP-server>:3005` แล้ว build client ใหม่ · **กล้องสแกน QR ใช้ได้เฉพาะ `localhost` หรือ `https://`** เบราว์เซอร์จะไม่เปิดกล้องบน `http://<IP>` — ใช้เครื่องยิงบาร์โค้ด USB หรือตั้ง HTTPS (reverse proxy) สำหรับแท็บเล็ต
+**เครื่องอื่นในวง LAN (มือถือ, ทีวี, PC จอ LED):** เปิด `http://<IP-เครื่อง server>:3000` ได้เลย ระบบเรียก API ที่ IP เดียวกันให้เอง (ไม่ต้องแก้ `NEXT_PUBLIC_API_URL`) · ถ้าเปลี่ยน Wi-Fi แล้ว IP นอกช่วง 192.168.x.x / 10.x.x.x / 172.x.x.x ให้ restart `npm run dev` ของ client · **กล้องสแกน QR ใช้ได้เฉพาะ `localhost` หรือ `https://`** เบราว์เซอร์จะไม่เปิดกล้องบน `http://<IP>` — ใช้เครื่องยิงบาร์โค้ด USB หรือตั้ง HTTPS (reverse proxy) สำหรับแท็บเล็ต
 
 **พิมพ์รายงาน A4** (`/dashboard` → รายงานและกราฟ → พิมพ์รายงาน A4 → พิมพ์ / บันทึก PDF): ขนาด A4 แนวตั้ง, Scale **100% (Default)**, ปิด **Headers and footers** ของเบราว์เซอร์ (ระบบใส่เลขหน้าเอง), ขอบ **Default** (รายงานกำหนดขอบ บน 2.5 ซม. ล่าง 2 ซม. ซ้าย 3 ซม. ขวา 2 ซม.) · ใช้ Chrome/Edge รุ่นใหม่ (เลขหน้า "หน้า X / Y" ใช้ความสามารถ CSS ที่เบราว์เซอร์อื่นอาจยังไม่รองรับ)
 
@@ -77,6 +77,9 @@ cd client && npm run dev             # เว็บ :3000 (พอร์ตไม
 | Server ไม่เปิด: `Missing required environment variable: …` | ไม่มี `server/.env` หรือขาดค่า | สร้างจาก `.env.example` / รัน `setup.sh` |
 | เรียก endpoint ใหม่ได้ **404** | server รันด้วย `node server.js` (ไม่โหลดโค้ดใหม่) | restart หรือใช้ `npm run dev` |
 | Login ไม่ได้ทุกบัญชี | บัญชีใน seed ไม่มีรหัสผ่านที่ใช้ได้ | `node scripts/create-admin.js ...` |
+| จอ LED บนเครื่องอื่นไม่อัปเดต / ปุ่มเต็มจอไม่ทำงานบนมือถือ | (แก้แล้ว 2026-09-26) โหมดพัฒนาเคยปฏิเสธไฟล์ JavaScript และเรียก API ผิดเครื่อง | อัปเดตโค้ด แล้ว restart `npm run dev` · ถ้าจอแสดงป้ายแดง "ขาดการเชื่อมต่อ" ตรวจ Wi-Fi/เครื่อง server |
+| login ขึ้น "ใส่รหัสผ่านผิดหลายครั้งเกินไป" | ผิด 10 ครั้งใน 15 นาที | รอ 15 นาที หรือ restart server (ตัวนับอยู่ในหน่วยความจำ) |
+| ผู้เข้าร่วมค้นตั๋วไม่เจอ | ต้องใช้รหัสตั๋ว + เบอร์โทร 4 ตัวท้าย (หรืออีเมล) ที่ลงทะเบียน · ผิด 5 ครั้งพัก 15 นาที | เจ้าหน้าที่ login แล้วค้นด้วยชื่อ/เบอร์ที่หน้า `/ticket` ได้ |
 | ลืมรหัสผ่าน | รหัสเก็บแบบเข้ารหัส (bcrypt) ย้อนดูไม่ได้ | `cd server && node scripts/create-admin.js <username เดิม> '<รหัสใหม่>' Admin "<ชื่อ>"` = ตั้งรหัสใหม่ · ดูรายชื่อบัญชี: `docker exec event_postgres_db psql -U "$DB_USER" -d booth_register_db -c "SELECT username, role, active_status FROM users"` |
 | `npm run dev` ฝั่งเว็บ: พอร์ต 3000 ถูกใช้ | โปรแกรม/โปรเจกต์อื่นเปิดพอร์ต 3000 อยู่ | `npm run dev -- -p 3100` แล้วเปิด `http://localhost:3100` (login ใหม่ เพราะเบราว์เซอร์แยกการ login ตามพอร์ต) |
 | ตัวเลขบนจอ LED/Scanner เป็น 0 | API ไม่ตอบ หรือ `NEXT_PUBLIC_API_URL` ผิด | เปิด `http://<api>/api/v1/events/1/stats` ต้องได้ตัวเลข; ป้ายมุมขวาบนต้องเป็น LIVE |
@@ -88,6 +91,7 @@ cd client && npm run dev             # เว็บ :3000 (พอร์ตไม
 | หน้า `/register` ไม่มีตัวเลือกประเภทองค์กร / ลงทะเบียนไม่ได้ `ORGANIZATION_TYPE_REQUIRED` | server ยังไม่ได้ restart หลังอัปเดต (ตารางยังไม่ถูกสร้าง) หรือปิด "แสดงในหน้าลงทะเบียน" ทุกประเภท | restart server แล้วตรวจ `/settings?tab=organizations` |
 | รายงาน A4 ขอบ/เลขหน้าเพี้ยน หรือมีหัวกระดาษ URL | ตั้งค่าในหน้าต่างพิมพ์ | Scale 100%, ปิด Headers and footers, ขอบ Default |
 | จอ LED เป็นภาษา/ธีมไม่ตรง | เครื่องนั้นจำค่าเดิมใน cookie | เปิด URL พร้อม `&lang=th` / `&theme=dark` หนึ่งครั้ง |
+| กด "เต็มจอ" บน iPhone แล้วยังเห็นแถบที่อยู่ | iPhone ไม่อนุญาตให้หน้าเว็บเต็มจอ (ระบบคลุมหน้าเบราว์เซอร์แทน) | ใช้คอมพิวเตอร์/แท็บเล็ต/สมาร์ททีวีเป็นเครื่องเปิดจอ LED |
 | CI บน GitHub แดง | เทสต์ server 9/19 ข้อยังคาดพฤติกรรมเก่า (ดู [qa.md](qa.md)) | ไม่ใช่ปัญหาการติดตั้ง |
 
 ดู log: server แสดงใน terminal ที่รัน `npm run dev` · DB: `docker logs event_postgres_db`
@@ -113,4 +117,12 @@ docker compose down -v && docker compose up -d
 
 ## 7. ทดสอบ
 
-ดู [qa.md](qa.md) — คำสั่งหลัก: `cd client && npx tsc --noEmit && node --test tests/*.test.mjs` และ `cd server && npm test`
+ดู [qa.md](qa.md) — คำสั่งหลัก:
+
+```bash
+cd client && npx tsc --noEmit && TZ=Asia/Bangkok node --test tests/*.test.mjs   # unit
+cd server && npm test                                                          # API + ความปลอดภัย + ข้อมูลสด (ทีละไฟล์)
+cd client && npx playwright test                                               # เปิดเบราว์เซอร์จริงทดสอบทุกหน้า (~3 นาที)
+```
+
+Playwright ต้องมีบัญชีทดสอบและไฟล์ `client/.env.e2e.local` ครั้งแรก — ดู [client/e2e/README.md](../client/e2e/README.md) · ทุกชุดทดสอบลบข้อมูลที่สร้างเอง
