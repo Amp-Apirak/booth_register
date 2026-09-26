@@ -1,55 +1,54 @@
 const nodemailer = require('nodemailer');
+const settingsRepository = require('../repositories/settingsRepository');
+
+/** Text from attendees or settings goes into the e-mail as text, never as HTML */
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Settings store wall-clock times ("2026-09-21T08:00", Thai time): format them without any time-zone shift
+const parseWallClock = (value) => {
+  const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])) : null;
+};
+const thaiDate = (d) => new Intl.DateTimeFormat('th-TH', { dateStyle: 'full', timeZone: 'UTC' }).format(d);
+const thaiTime = (d) => new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }).format(d);
+
+/** "วันจันทร์ที่ 21 กันยายน พ.ศ. 2569 เวลา 08:00 - 17:00 น." (two dates when the event spans days) */
+function formatEventWhen(start, end) {
+  const from = parseWallClock(start);
+  const to = parseWallClock(end);
+  if (!from) return '';
+  if (!to) return `${thaiDate(from)} เวลา ${thaiTime(from)} น.`;
+  if (from.toISOString().slice(0, 10) === to.toISOString().slice(0, 10)) {
+    return `${thaiDate(from)} เวลา ${thaiTime(from)} - ${thaiTime(to)} น.`;
+  }
+  return `${thaiDate(from)} ${thaiTime(from)} น. - ${thaiDate(to)} ${thaiTime(to)} น.`;
+}
+
+const formatVenue = (s) => [s.event_venue, s.event_building, s.event_floor, s.event_address]
+  .map((v) => String(v || '').trim()).filter(Boolean).join(', ');
 
 /**
- * Sends a digital ticket email to the registered participant.
- * Resolves SMTP coordinates from environment variables.
+ * The ticket e-mail for one attendee, filled from the event settings (Settings page).
+ * Pure function (unit-tested); every value is escaped.
  */
-async function sendTicketEmail(participant, ticketCode) {
-  if (process.env.NODE_ENV === 'test') {
-    return { success: true, message: 'Test email bypassed' };
-  }
+function buildTicketEmail(participant, ticketCode, settings = {}) {
+  const eventName = String(settings.event_name || '').trim() || 'Smart Event Registration';
+  const when = formatEventWhen(settings.event_start, settings.event_end);
+  const venue = formatVenue(settings);
+  const contact = [settings.organizer_name, settings.contact_phone, settings.contact_email]
+    .map((v) => String(v || '').trim()).filter(Boolean);
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=090d16&data=${encodeURIComponent(ticketCode)}`;
+  const row = (label, value, style = '') => (value
+    ? `<tr><td class="details-label">${label}</td><td class="details-value"${style}>${escapeHtml(value)}</td></tr>`
+    : '');
 
-  let transporter;
-  let isTestAccount = false;
-
-  if (process.env.SMTP_HOST) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  } else {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      isTestAccount = true;
-    } catch (err) {
-      console.error("Failed to create Nodemailer test account, skipping email send:", err.message);
-      return;
-    }
-  }
-
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=090d16&data=${ticketCode}`;
-
-  const htmlContent = `
+  const html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Your Digital Pass - Tech Innovation Summit 2026</title>
+      <title>Your Digital Pass - ${escapeHtml(eventName)}</title>
       <style>
         body {
           font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -169,54 +168,93 @@ async function sendTicketEmail(participant, ticketCode) {
     <body>
       <div class="container">
         <div class="header">
-          <h1>TECH INNOVATION SUMMIT 2026</h1>
+          <h1>${escapeHtml(eventName)}</h1>
           <p>SCAN • CHECK-IN • SHOW</p>
         </div>
         <div class="content">
           <div class="greeting">ขอขอบคุณสำหรับการลงทะเบียนเข้าร่วมงาน!</div>
           <p style="font-size: 14px; line-height: 1.5; color: #9ca3af;">
-            กรุณาเก็บบัตรผ่านประตูดิจิทัลนี้ไว้แสดงต่อเจ้าหน้าที่หน้าประตูทางเข้า (Fast Check-in Counter) เพื่อทำการยิงสแกนเช็คอินเข้าร่วมสัมมนา
+            กรุณาเก็บบัตรผ่านประตูดิจิทัลนี้ไว้แสดงต่อเจ้าหน้าที่หน้าประตูทางเข้า (Fast Check-in Counter) เพื่อทำการยิงสแกนเช็คอินเข้าร่วมงาน
           </p>
-          
+
           <div class="ticket-box">
             <div class="qr-code">
-              <img src="${qrUrl}" alt="QR Ticket Code">
+              <img src="${escapeHtml(qrUrl)}" alt="QR Ticket Code">
             </div>
-            <div class="ticket-name">${participant.name}</div>
-            <div class="ticket-company">${participant.company}</div>
-            <div class="ticket-position">${participant.position || 'PARTICIPANT'}</div>
+            <div class="ticket-name">${escapeHtml(participant.name)}</div>
+            <div class="ticket-company">${escapeHtml(participant.company)}</div>
+            <div class="ticket-position">${escapeHtml(participant.position || 'PARTICIPANT')}</div>
           </div>
-          
+
           <table class="details-grid">
-            <tr>
-              <td class="details-label">วันเวลาจัดงาน</td>
-              <td class="details-value">วันอาทิตย์ที่ 30 สิงหาคม 2026 เวลา 09:00 - 17:00 น.</td>
-            </tr>
-            <tr>
-              <td class="details-label">สถานที่จัดงาน</td>
-              <td class="details-value">Grand Ballroom, Central Plaza Hotel, Bangkok</td>
-            </tr>
-            <tr>
-              <td class="details-label">รหัสผ่านตั๋ว</td>
-              <td class="details-value" style="font-family: monospace; font-size: 12px;">${ticketCode}</td>
-            </tr>
+            ${row('วันเวลาจัดงาน', when)}
+            ${row('สถานที่จัดงาน', venue)}
+            ${row('รหัสตั๋ว', ticketCode, ' style="font-family: monospace; font-size: 12px;"')}
           </table>
         </div>
         <div class="footer">
-          <p>ระบบบริหารจัดการลงทะเบียนอัจฉริยะ Smart Event Registration</p>
-          <p>หากมีข้อสงสัยโปรดติดต่อ <a href="mailto:support@techsummit.com">support@techsummit.com</a></p>
+          <p>${escapeHtml(eventName)} · ระบบลงทะเบียนและเช็คอิน</p>
+          ${contact.length ? `<p>หากมีข้อสงสัยโปรดติดต่อ ${contact.map(escapeHtml).join(' · ')}</p>` : ''}
         </div>
       </div>
     </body>
     </html>
   `;
 
+  return { subject: `🎫 ยืนยันการลงทะเบียน: ตั๋วเข้างาน ${eventName}`, fromName: eventName, html };
+}
+
+/**
+ * Sends a digital ticket email to the registered participant.
+ * Resolves SMTP coordinates from environment variables; event details come from Settings.
+ */
+async function sendTicketEmail(participant, ticketCode) {
+  if (process.env.NODE_ENV === 'test') {
+    return { success: true, message: 'Test email bypassed' };
+  }
+
+  let transporter;
+  let isTestAccount = false;
+
+  if (process.env.SMTP_HOST) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  } else {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+      isTestAccount = true;
+    } catch (err) {
+      console.error("Failed to create Nodemailer test account, skipping email send:", err.message);
+      return;
+    }
+  }
+
   try {
+    const settings = await settingsRepository.getSettings().catch(() => ({}));
+    const email = buildTicketEmail(participant, ticketCode, settings);
+    // SMTP_FROM: the sender address your mail server accepts (defaults to the SMTP login)
+    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || 'no-reply@example.com';
     const info = await transporter.sendMail({
-      from: '"Tech Summit Team" <no-reply@techsummit.com>',
+      from: { name: email.fromName, address: fromAddress },
       to: participant.email,
-      subject: '🎫 ยืนยันการลงทะเบียน: ตั๋วเข้างาน Tech Innovation Summit 2026',
-      html: htmlContent,
+      subject: email.subject,
+      html: email.html,
     });
 
     if (isTestAccount) {
@@ -233,4 +271,4 @@ async function sendTicketEmail(participant, ticketCode) {
   }
 }
 
-module.exports = { sendTicketEmail };
+module.exports = { sendTicketEmail, buildTicketEmail, escapeHtml, formatEventWhen };
