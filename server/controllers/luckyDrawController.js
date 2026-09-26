@@ -1,5 +1,12 @@
 const luckyDrawService = require('../services/luckyDrawService');
-const { sendTicketEmail } = require('../utils/email_sender');
+
+const SPIN_MESSAGES = {
+  PRIZE_NAME_REQUIRED: 'กรุณาระบุชื่อรางวัลที่จะจับสลาก',
+  PRIZE_NOT_FOUND: 'ไม่พบของรางวัลนี้ในระบบ',
+  PRIZE_INACTIVE: 'ของรางวัลนี้ปิดการสุ่มอยู่',
+  PRIZE_SOLD_OUT: 'ของรางวัลนี้แจกครบจำนวนแล้ว',
+  NO_ELIGIBLE_PARTICIPANTS: 'ไม่มีผู้มีสิทธิ์เหลือในกองสุ่มรางวัล'
+};
 
 /**
  * Express Controller for Lucky Draw Operations (REQ-06)
@@ -40,15 +47,11 @@ class LuckyDrawController {
         data: winner
       });
     } catch (err) {
+      if (SPIN_MESSAGES[err.message]) {
+        return res.status(400).json({ success: false, error: err.message, message: SPIN_MESSAGES[err.message] });
+      }
       console.error('LuckyDraw spin error:', err.message);
-      const statusCode = err.message === 'NO_ELIGIBLE_PARTICIPANTS' ? 400 : 500;
-      return res.status(statusCode).json({
-        success: false,
-        error: err.message,
-        message: err.message === 'NO_ELIGIBLE_PARTICIPANTS'
-          ? 'ไม่มีผู้มีสิทธิ์เหลือในกองสุ่มรางวัล'
-          : err.message
-      });
+      return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: 'เกิดข้อผิดพลาดภายในระบบ' });
     }
   }
 

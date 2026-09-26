@@ -1,5 +1,8 @@
+const crypto = require('crypto');
 const participantRepository = require('../repositories/participantRepository');
+const { AttemptLimiter } = require('../utils/attemptLimiter');
 const checkinService = require('../services/checkinService');
+const { broadcastParticipants } = require('../utils/realtime');
 const { sendTicketEmail } = require('../utils/email_sender');
 const organizationTypeRepository = require('../repositories/organizationTypeRepository');
 const { resolveOrganizationType } = require('./organizationTypeController');
@@ -7,15 +10,66 @@ const { resolveOrganizationType } = require('./organizationTypeController');
 const IMPORT_MAX_ROWS = 5000;
 
 /**
- * Helper to generate ticket code in format: SER20260920XXXX
+ * Ticket code SERYYYYMMDD + 6 random digits (900,000 codes a day; older tickets have 4 digits)
  */
 function generateTicketCode() {
   const date = new Date();
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
-  const random4 = Math.floor(1000 + Math.random() * 9000);
-  return `SER${yyyy}${mm}${dd}${random4}`;
+  return `SER${yyyy}${mm}${dd}${crypto.randomInt(100000, 1000000)}`;
+}
+
+/** Creates the attendee; if the drawn ticket code is already taken, draws another one */
+async function createWithTicketCode(data) {
+  for (let attempt = 1; ; attempt++) {
+    const ticketCode = generateTicketCode();
+    try {
+      return { participant: await participantRepository.create({ ...data, ticket_code: ticketCode }), ticketCode };
+    } catch (err) {
+      if (err.code === '23505' && String(err.constraint || '').includes('ticket_code') && attempt < 5) continue;
+      throw err;
+    }
+  }
+}
+
+// Public sign-up limits (match the database column sizes)
+const PUBLIC_LIMITS = { fullname: 150, company: 150, position: 100, email: 255, phone: 50 };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHOTO_RE = /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_PHOTO_CHARS = 3_000_000; // ≈ 2.2 MB image; the sign-up page sends a cropped photo of a few dozen KB
+
+function validatePublicSignUp(body) {
+  for (const [field, max] of Object.entries(PUBLIC_LIMITS)) {
+    if (String(body[field] ?? '').length > max) {
+      return { error: 'FIELD_TOO_LONG', field, message: `ข้อมูลช่อง ${field} ยาวเกิน ${max} ตัวอักษร` };
+    }
+  }
+  if (body.email && !EMAIL_RE.test(String(body.email).trim())) {
+    return { error: 'INVALID_EMAIL', message: 'รูปแบบอีเมลไม่ถูกต้อง' };
+  }
+  if (body.phone && !/^[0-9+\-\s().]{6,50}$/.test(String(body.phone).trim())) {
+    return { error: 'INVALID_PHONE', message: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง' };
+  }
+  if (body.profile_picture) {
+    const photo = String(body.profile_picture);
+    if (!PHOTO_RE.test(photo)) return { error: 'INVALID_PHOTO', message: 'รูปภาพต้องเป็นไฟล์ PNG, JPG หรือ WebP' };
+    if (photo.length > MAX_PHOTO_CHARS) return { error: 'PHOTO_TOO_LARGE', message: 'รูปภาพมีขนาดใหญ่เกินไป' };
+  }
+  return null;
+}
+
+// Public ticket lookup: 5 wrong answers per ticket code, 30 per visitor address, then wait 15 minutes
+const lookupByTicket = new AttemptLimiter({ max: 5, windowMs: 15 * 60 * 1000 });
+const lookupByClient = new AttemptLimiter({ max: 30, windowMs: 15 * 60 * 1000 });
+
+/** The attendee proves the ticket is theirs: last 4 digits of the phone, or the email they registered with */
+function ownsTicket(participant, answer) {
+  const value = String(answer || '').trim();
+  if (value.includes('@')) return !!participant.email && participant.email.trim().toLowerCase() === value.toLowerCase();
+  const digits = value.replace(/\D/g, '');
+  const phone = String(participant.phone || '').replace(/\D/g, '');
+  return digits.length === 4 && phone.length >= 4 && phone.endsWith(digits);
 }
 
 /**
@@ -27,7 +81,7 @@ class ParticipantController {
    */
   async register(req, res) {
     try {
-      const { fullname, company, position, email, phone, pdpa_consent, profile_picture, attendee_type } = req.body;
+      const { fullname, company, position, email, phone, pdpa_consent, profile_picture } = req.body;
 
       // 1. Quality Validation: Check required fields and PDPA Consent box
       if (!fullname || !company || !phone) {
@@ -44,32 +98,32 @@ class ParticipantController {
           message: 'กรุณากดยอมรับเงื่อนไขการประมวลผลข้อมูลส่วนบุคคล (PDPA)' 
         });
       }
+      const invalid = validatePublicSignUp(req.body);
+      if (invalid) {
+        return res.status(400).json({ success: false, ...invalid });
+      }
       const organization = await resolveOrganizationType(1, req.body, { required: true, activeOnly: true });
       if (organization.error) {
         return res.status(400).json({ success: false, error: organization.error, message: organization.message });
       }
 
-      // 2. Generate secure ticket code
-      const ticketCode = generateTicketCode();
-
-      const newParticipant = await participantRepository.create({
-        name: fullname,
-        company: company,
+      // 2. Create the attendee with a unique ticket code
+      const { participant: newParticipant, ticketCode } = await createWithTicketCode({
+        name: String(fullname).trim(),
+        company: String(company).trim(),
         position: position || '',
-        email: email || '',
-        phone: phone || '',
+        email: email ? String(email).trim() : '',
+        phone: String(phone).trim(),
         profile_picture: profile_picture || null,
-        attendee_type: attendee_type || 'General',
-        ticket_code: ticketCode,
+        attendee_type: 'General', // public sign-ups are never VIP: staff set VIP in the dashboard
         ...organization
       });
 
       // 3. Trigger Real-time broadcasts to Staff Dashboard (Socket.io)
       const io = req.app.get('io');
       if (io) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'register', data: allParticipants });
         io.emit('overview:update', await getStatsSummary());
+        await broadcastParticipants(io, 'register');
       }
 
       // 4. Asynchronously send the HTML email ticket
@@ -114,9 +168,7 @@ class ParticipantController {
         return res.status(400).json({ success: false, error: organization.error, message: organization.message });
       }
 
-      const ticketCode = generateTicketCode();
-
-      const newParticipant = await participantRepository.create({
+      const { participant: newParticipant } = await createWithTicketCode({
         name: participantName,
         company: company,
         position: position || '',
@@ -124,15 +176,13 @@ class ParticipantController {
         phone: phone || '',
         profile_picture: profile_picture || null,
         attendee_type: attendee_type || 'General',
-        ticket_code: ticketCode,
         ...organization
       });
 
       const io = req.app.get('io');
       if (io) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'add', data: allParticipants });
         io.emit('overview:update', await getStatsSummary());
+        await broadcastParticipants(io, 'add');
       }
 
       return res.status(201).json({
@@ -211,9 +261,8 @@ class ParticipantController {
 
       const io = req.app.get('io');
       if (io && result.imported.length > 0) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'import', data: allParticipants });
         io.emit('overview:update', await getStatsSummary());
+        await broadcastParticipants(io, 'import');
       }
 
       return res.status(201).json({
@@ -246,6 +295,45 @@ class ParticipantController {
   /**
    * Handles retrieving single participant by Ticket Code
    */
+  async lookupTicket(req, res) {
+    try {
+      const ticketCode = String(req.body?.ticket_code || '').trim();
+      const answer = String(req.body?.verifier || '').trim();
+      if (!ticketCode || !answer) {
+        return res.status(400).json({ success: false, error: 'LOOKUP_FIELDS_REQUIRED', message: 'กรุณากรอกรหัสตั๋วและเบอร์โทร 4 ตัวท้าย (หรืออีเมล)' });
+      }
+      const retryAfter = Math.max(lookupByTicket.retryAfterSeconds(ticketCode.toUpperCase()), lookupByClient.retryAfterSeconds(req.ip));
+      if (retryAfter) {
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ success: false, error: 'TOO_MANY_ATTEMPTS', retry_after: retryAfter, message: `ลองผิดหลายครั้งเกินไป กรุณารอ ${Math.ceil(retryAfter / 60)} นาที` });
+      }
+      const participant = await participantRepository.getByTicketCode(ticketCode);
+      if (!participant || !ownsTicket(participant, answer)) {
+        lookupByTicket.fail(ticketCode.toUpperCase());
+        lookupByClient.fail(req.ip);
+        // same answer whether the code or the phone digits were wrong
+        return res.status(404).json({ success: false, error: 'TICKET_NOT_FOUND', message: 'ไม่พบตั๋ว หรือข้อมูลยืนยันไม่ตรงกัน' });
+      }
+      lookupByTicket.reset(ticketCode.toUpperCase());
+      // only what is printed on the ticket
+      return res.json({
+        success: true,
+        data: {
+          name: participant.name,
+          company: participant.company,
+          position: participant.position,
+          ticket_code: participant.ticket_code,
+          attendee_type: participant.attendee_type,
+          status: participant.status,
+          checked_in_at: participant.checked_in_at,
+        },
+      });
+    } catch (err) {
+      console.error('Ticket lookup failed:', err.message);
+      return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: 'เกิดข้อผิดพลาดภายในระบบ' });
+    }
+  }
+
   async getByTicketCode(req, res) {
     try {
       const { ticket_code } = req.params;
@@ -285,11 +373,7 @@ class ParticipantController {
         return res.status(404).json({ success: false, error: 'PARTICIPANT_NOT_FOUND', message: 'ไม่พบผู้เข้าร่วมงานนี้' });
       }
 
-      const io = req.app.get('io');
-      if (io) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'update', data: allParticipants });
-      }
+      await broadcastParticipants(req.app.get('io'), 'update');
 
       return res.json({ success: true, data: updated });
     } catch (err) {
@@ -310,9 +394,8 @@ class ParticipantController {
 
       const io = req.app.get('io');
       if (io) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'delete', data: allParticipants });
         io.emit('overview:update', await getStatsSummary());
+        await broadcastParticipants(io, 'delete');
       }
 
       return res.json({ success: true, message: 'ลบข้อมูลสำเร็จ' });
@@ -346,24 +429,23 @@ class ParticipantController {
         });
       }
 
-      // Execute transaction checkin
-      const checkedInUser = await checkinService.checkIn(ticket_code);
+      // Execute transaction checkin (scanned_by records which staff login scanned the ticket)
+      const checkedInUser = await checkinService.checkIn(ticket_code, req.user?.user_id);
 
-      // Trigger WebSockets updates
+      // Live updates: the LED screens first (small, time-critical), then the staff attendee list
       const io = req.app.get('io');
       if (io) {
-        const allParticipants = await participantRepository.getAll();
-        io.emit('participants:update', { action: 'checkin', data: allParticipants });
-        io.emit('overview:update', await getStatsSummary());
-        
-        // Emits name to TV Welcome LED Signage (REQ-05)
+        // Welcome LED (REQ-05): only what the big screen shows — never email or phone
         io.emit('welcome:new_checkin', {
           name: checkedInUser.name,
           company: checkedInUser.company,
           position: checkedInUser.position,
           profile_picture: checkedInUser.profile_picture,
-          attendee_type: checkedInUser.attendee_type
+          attendee_type: checkedInUser.attendee_type,
+          timestamp: checkedInUser.checked_in_at
         });
+        io.emit('overview:update', await getStatsSummary());
+        await broadcastParticipants(io, 'checkin');
       }
 
       return res.json({
@@ -372,15 +454,19 @@ class ParticipantController {
         data: checkedInUser
       });
     } catch (err) {
-      console.error("CheckIn controller failed:", err.message);
-      let statusCode = 500;
-      let errorMsg = err.message;
-
-      if (err.message === 'TICKET_NOT_FOUND' || err.message === 'ALREADY_CHECKED_IN') {
-        statusCode = 400;
+      if (err.message === 'TICKET_NOT_FOUND') {
+        return res.status(400).json({ success: false, error: 'TICKET_NOT_FOUND', message: 'ไม่พบรหัสตั๋วนี้ในระบบ' });
       }
-
-      return res.status(statusCode).json({ success: false, error: err.message, message: errorMsg });
+      if (err.message === 'ALREADY_CHECKED_IN') {
+        // the gate sees who it was and when they came in
+        const p = await participantRepository.getByTicketCode(req.body.ticket_code).catch(() => null);
+        return res.status(400).json({
+          success: false, error: 'ALREADY_CHECKED_IN', message: 'ผู้ร่วมงานคนนี้เช็คอินไปแล้ว',
+          participant: p ? { name: p.name, company: p.company, checked_in_at: p.checked_in_at } : null,
+        });
+      }
+      console.error("CheckIn controller failed:", err.message);
+      return res.status(500).json({ success: false, error: 'SERVER_ERROR', message: 'เกิดข้อผิดพลาดภายในระบบ' });
     }
   }
 }
@@ -390,9 +476,7 @@ class ParticipantController {
  * `overview:update` socket event (client type: Stats in client/src/lib/api.ts).
  */
 async function getStatsSummary() {
-  const all = await participantRepository.getAll();
-  const total = all.length;
-  const checkedIn = all.filter(p => p.status === 'Checked-in').length;
+  const { registered: total, checked_in: checkedIn } = await participantRepository.countSummary();
   return {
     registered: total,
     checked_in: checkedIn,

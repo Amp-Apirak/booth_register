@@ -6,6 +6,7 @@ const settingsRepository = require('./repositories/settingsRepository');
 const agendaRepository = require('./repositories/agendaRepository');
 const prizeRepository = require('./repositories/prizeRepository');
 const organizationTypeRepository = require('./repositories/organizationTypeRepository');
+const { attachRealtime } = require('./utils/realtime');
 
 const PORT = process.env.PORT || 3000;
 
@@ -23,14 +24,8 @@ const io = socketIo(server, {
 // Share Socket.io instance with Express app (for Controllers to broadcast events)
 app.set('io', io);
 
-// WebSocket Connection Handlers
-io.on('connection', (socket) => {
-  console.log(`🔌 New client connected (Socket ID: ${socket.id})`);
-
-  socket.on('disconnect', () => {
-    console.log(`🔌 Client disconnected (Socket ID: ${socket.id})`);
-  });
-});
+// WebSocket: public screens get public events, logged-in staff screens also get the attendee list
+attachRealtime(io);
 
 // Boot sequence: verify DB connection, then start listening
 (async () => {

@@ -6,6 +6,12 @@ const apiRoutes = require('./routes/api');
 
 const app = express();
 
+// Behind Caddy / the k3s gateway set TRUST_PROXY=1 so req.ip is the visitor, not the proxy
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set('trust proxy', Number.isInteger(hops) ? hops : process.env.TRUST_PROXY);
+}
+
 // ── Security & Utility Middlewares ──
 app.use(helmet());
 // CORS_ORIGIN: comma-separated allowed origins (e.g. https://event-bbk.com); unset = allow all (dev)

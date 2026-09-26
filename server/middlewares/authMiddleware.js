@@ -39,7 +39,21 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+/**
+ * Role check after verifyToken. Admin: everything. Staff (gate/event-day staff): check-in,
+ * attendee list/add/edit, ticket lookup, reports, lucky draw — not settings, deletes or bulk import.
+ */
+const requireRole = (...roles) => (req, res, next) => {
+  if (roles.includes(req.user?.role)) return next();
+  return res.status(403).json({
+    success: false,
+    error: 'FORBIDDEN',
+    message: 'บัญชีนี้ไม่มีสิทธิ์ทำรายการนี้ (สำหรับผู้ดูแลระบบเท่านั้น)'
+  });
+};
+
 module.exports = {
   JWT_SECRET,
-  verifyToken
+  verifyToken,
+  requireRole
 };

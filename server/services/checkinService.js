@@ -6,9 +6,10 @@ class CheckinService {
    * Performs check-in validation and records database transaction.
    * 
    * @param {string} ticketCode - The scanned ticket QR code string
+   * @param {number} [scannedBy] - user_id of the staff login that scanned (audit)
    * @returns {Object} Updated participant profile
    */
-  async checkIn(ticketCode) {
+  async checkIn(ticketCode, scannedBy = null) {
     if (!ticketCode) {
       throw new Error('TICKET_CODE_REQUIRED');
     }
@@ -30,14 +31,16 @@ class CheckinService {
       await client.query('BEGIN');
 
       // Insert log entry into checkins table (automatically resolves status as Checked-in)
+      // scanned_by stays NULL when the staff account no longer exists (its token may still be valid)
       const insertLogQuery = `
-        INSERT INTO checkins (participant_id, event_id, checked_in_at) 
-        VALUES ($1, $2, NOW())
+        INSERT INTO checkins (participant_id, event_id, checked_in_at, scanned_by)
+        VALUES ($1, $2, NOW(), (SELECT user_id FROM users WHERE user_id = $3))
         RETURNING checkin_id, checked_in_at;
       `;
       const logResult = await client.query(insertLogQuery, [
         participant.id,
-        participant.event_id || 1
+        participant.event_id || 1,
+        Number.isInteger(scannedBy) ? scannedBy : null
       ]);
 
       await client.query('COMMIT');
@@ -52,6 +55,8 @@ class CheckinService {
       };
     } catch (error) {
       await client.query('ROLLBACK');
+      // two gates scanned the same ticket at the same moment: the database kept the first one
+      if (error.code === '23505') throw new Error('ALREADY_CHECKED_IN');
       console.error('❌ Failed check-in transaction, rolling back changes:', error.message);
       throw error;
     } finally {

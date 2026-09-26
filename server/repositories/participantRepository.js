@@ -18,6 +18,19 @@ class ParticipantRepository {
   }
 
   /**
+   * Registered / checked-in counts for the live numbers (without loading attendee records).
+   */
+  async countSummary() {
+    const result = await db.query(`
+      SELECT COUNT(DISTINCT p.participant_id)::int AS registered,
+             COUNT(DISTINCT c.participant_id)::int AS checked_in
+      FROM participants p
+      LEFT JOIN checkins c ON p.participant_id = c.participant_id;
+    `);
+    return result.rows[0];
+  }
+
+  /**
    * Finds a participant by their unique ID with computed check-in status.
    */
   async getById(id) {
@@ -61,7 +74,7 @@ class ParticipantRepository {
                 organization_type_id, organization_type_other;
     `;
     const values = [
-      data.event_id || 1, // Default to Tech Innovation Summit 2026
+      data.event_id || 1, // single-event system: event 1
       data.ticket_code,
       data.name,
       data.company,

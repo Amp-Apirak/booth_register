@@ -32,6 +32,9 @@ spec:
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef: { name: booth-server-env }
+          env:
+            # behind the Istio gateway: req.ip = the visitor (login / ticket-lookup attempt limits)
+            - { name: TRUST_PROXY, value: "1" }
           ports:
             - containerPort: 3005
           readinessProbe:

@@ -3,6 +3,10 @@ const bcrypt = require('bcryptjs');
 const db = require('../config/db');
 
 const { JWT_SECRET } = require('../middlewares/authMiddleware');
+const { AttemptLimiter } = require('../utils/attemptLimiter');
+
+// 10 wrong passwords for the same username from the same address → wait 15 minutes
+const loginLimiter = new AttemptLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
 
 const login = async (req, res) => {
   try {
@@ -16,9 +20,22 @@ const login = async (req, res) => {
       });
     }
 
+    const attemptKey = `${req.ip}|${String(username).toLowerCase()}`;
+    const retryAfter = loginLimiter.retryAfterSeconds(attemptKey);
+    if (retryAfter) {
+      res.set('Retry-After', String(retryAfter));
+      return res.status(429).json({
+        success: false,
+        error: 'TOO_MANY_ATTEMPTS',
+        retry_after: retryAfter,
+        message: `ใส่รหัสผ่านผิดหลายครั้งเกินไป กรุณารอ ${Math.ceil(retryAfter / 60)} นาทีแล้วลองใหม่`
+      });
+    }
+
     const { rows } = await db.query('SELECT * FROM users WHERE username = $1', [username]);
     
     if (rows.length === 0) {
+      loginLimiter.fail(attemptKey);
       return res.status(401).json({
         success: false,
         error: 'INVALID_CREDENTIALS',
@@ -30,6 +47,7 @@ const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (!isMatch) {
+      loginLimiter.fail(attemptKey);
       return res.status(401).json({
         success: false,
         error: 'INVALID_CREDENTIALS',
@@ -44,6 +62,8 @@ const login = async (req, res) => {
         message: 'บัญชีนี้ถูกระงับการใช้งาน'
       });
     }
+
+    loginLimiter.reset(attemptKey);
 
     // Generate JWT Token
     const token = jwt.sign(
