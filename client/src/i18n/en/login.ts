@@ -11,5 +11,6 @@ export const login: typeof Th = {
     INVALID_CREDENTIALS: 'Incorrect username or password.',
     ACCOUNT_DISABLED: 'This account has been disabled.',
     SERVER_ERROR: 'Something went wrong on the server. Please try again.',
+    TOO_MANY_ATTEMPTS: 'Too many wrong passwords. Please wait about 15 minutes and try again.',
   },
 };

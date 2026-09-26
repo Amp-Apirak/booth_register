@@ -2,8 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api, { SystemSettings, DEFAULT_SETTINGS } from '@/lib/api';
-import useWebSocket from '@/lib/useWebSocket';
-import { io } from 'socket.io-client';
+import { acquireSocket, releaseSocket } from '@/lib/socket';
 
 interface SettingsContextType {
   settings: SystemSettings;
@@ -40,16 +39,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   // Listen for real-time setting updates via WebSocket
   useEffect(() => {
-    const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005', {
-      transports: ['websocket', 'polling'],
-    });
-
-    socket.on('settings:update', (data: Partial<SystemSettings>) => {
-      setSettings(prev => ({ ...prev, ...data }));
-    });
-
+    const socket = acquireSocket();
+    const onSettings = (data: Partial<SystemSettings>) => setSettings(prev => ({ ...prev, ...data }));
+    socket.on('settings:update', onSettings);
     return () => {
-      socket.disconnect();
+      socket.off('settings:update', onSettings);
+      releaseSocket();
     };
   }, []);
 

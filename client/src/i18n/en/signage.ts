@@ -2,8 +2,20 @@ import type { signage as Th } from '../th/signage';
 
 export const signage: typeof Th = {
   controls: {
+    title: 'LED signage mode',
+    subtitle: 'Pick what this display shows, then go full screen',
+    tabs: {
+      welcome: 'Welcome',
+      overview: 'Live overview',
+      agenda: 'Agenda',
+      lucky: 'Lucky draw',
+    },
     fullscreen: 'Full screen',
-    fullscreenHint: 'Enter full screen (press ESC to exit)',
+    fullscreenHint: 'Show this screen full screen (exit with the top-right button or ESC)',
+    exitFullscreen: 'Exit full screen',
+    live: 'Live',
+    offline: 'Offline',
+    reconnecting: 'Connection lost — reconnecting',
   },
   welcome: {
     waiting: 'Waiting for attendees to scan in at the entrance...',

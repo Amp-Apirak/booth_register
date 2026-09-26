@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Swal from 'sweetalert2';
 import api, { Participant, LuckyDrawWinner, Prize } from '@/lib/api';
-import useWebSocket from '@/lib/useWebSocket';
 import { useT } from '@/contexts/PreferencesContext';
+import StaffGate from '@/components/StaffGate';
 import { 
   Sparkles, 
   Trophy, 
@@ -17,10 +18,25 @@ import {
   Clock
 } from 'lucide-react';
 
+type DrawData = { eligible: Participant[]; prizeItems: Prize[]; past: Awaited<ReturnType<typeof api.getLuckyDrawWinners>> };
+const fetchDrawData = async (): Promise<DrawData> => {
+  const [eligible, prizeItems, past] = await Promise.all([api.getEligibleLuckyDraw(), api.getPrizes(true), api.getLuckyDrawWinners()]);
+  return { eligible, prizeItems, past };
+};
+
 // Placeholder while no prize is active; its name/description come from the dictionary (t.luckyDraw.prizes)
 const FALLBACK_PRIZE: Prize = { name: '', code: '', description: '', image: '', quantity: 1, is_active: true, sort_order: 0 };
 
+// Staff only (any role): the gate shows a login button that returns here
 export default function LuckyDrawPage() {
+  return (
+    <StaffGate>
+      <LuckyDrawPageContent />
+    </StaffGate>
+  );
+}
+
+function LuckyDrawPageContent() {
   const t = useT();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [spinning, setSpinning] = useState(false);
@@ -31,18 +47,28 @@ export default function LuckyDrawPage() {
   const [selectedPrizeId, setSelectedPrizeId] = useState<number | undefined>();
   const [winners, setWinners] = useState<LuckyDrawWinner[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  useWebSocket();
+
+  // eligible people, prizes with units left, and everyone who already won (newest first)
+  const applyDrawData = useCallback(({ eligible, prizeItems, past }: DrawData) => {
+    const availablePrizes = prizeItems.filter(p => (p.remaining_count ?? p.quantity) > 0);
+    setParticipants(eligible);
+    setPrizes(availablePrizes);
+    setSelectedPrizeId(current => (availablePrizes.some(p => p.prize_id === current) ? current : availablePrizes[0]?.prize_id));
+    setWinners(past.slice().reverse().map((w, index) => ({
+      winner_id: (w as { winner_id?: number }).winner_id ?? -index,
+      fullname: w.name,
+      company: w.company,
+      prize_name: w.prize_name,
+      drawn_at: w.drawn_at || '',
+    })));
+  }, []);
+  const loadDrawData = useCallback(() => fetchDrawData().then(applyDrawData), [applyDrawData]);
 
   useEffect(() => {
-    const fetchEligible = async () => {
-      const [eligible, prizeItems] = await Promise.all([api.getEligibleLuckyDraw(), api.getPrizes(true)]);
-      const availablePrizes = prizeItems.filter(p => (p.remaining_count ?? p.quantity) > 0);
-      setParticipants(eligible);
-      setPrizes(availablePrizes);
-      setSelectedPrizeId(availablePrizes[0]?.prize_id);
-    };
-    fetchEligible();
-  }, []);
+    let active = true;
+    fetchDrawData().then((data) => { if (active) applyDrawData(data); });
+    return () => { active = false; };
+  }, [applyDrawData]);
 
   const selectedPrize = prizes.find(p => p.prize_id === selectedPrizeId) || prizes[0] || { ...FALLBACK_PRIZE, name: t.luckyDraw.prizes.fallbackName, description: t.luckyDraw.prizes.fallbackDescription };
 
@@ -101,17 +127,21 @@ export default function LuckyDrawPage() {
       } else {
         // Finalize with backend API
         api.luckyDrawSpin(selectedPrize.name).then((result) => {
-          if (result) {
-            setWinner(result);
-            setCurrentName(result.fullname);
-            setCurrentCompany(result.company);
-            setWinners(prev => [result, ...prev]);
-            setPrizes(prev => prev.map(prize => prize.prize_id === selectedPrize.prize_id ? { ...prize, awarded_count: (prize.awarded_count || 0) + 1, remaining_count: Math.max(0, (prize.remaining_count ?? prize.quantity) - 1) } : prize));
-            playSound('fanfare');
-          }
+          setWinner(result);
+          setCurrentName(result.fullname);
+          setCurrentCompany(result.company);
+          setWinners(prev => [result, ...prev]);
+          setParticipants(prev => prev.filter(p => !(p.name === result.fullname && p.company === result.company)));
+          setPrizes(prev => prev.map(prize => prize.prize_id === selectedPrize.prize_id ? { ...prize, awarded_count: (prize.awarded_count || 0) + 1, remaining_count: Math.max(0, (prize.remaining_count ?? prize.quantity) - 1) } : prize));
+          playSound('fanfare');
           setSpinning(false);
-        }).catch(() => {
+        }).catch((err: Error & { code?: string }) => {
           setSpinning(false);
+          setCurrentName('');
+          setCurrentCompany('');
+          const errors = t.luckyDraw.errors;
+          Swal.fire({ icon: 'warning', title: errors.title, text: (err.code && errors[err.code]) || errors.generic });
+          loadDrawData(); // the prize list or pool may have changed
         });
       }
     };
@@ -200,7 +230,7 @@ export default function LuckyDrawPage() {
               <span className="text-xs font-mono font-bold tracking-widest text-amber-400 uppercase bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                 LUCKY WINNER ANNOUNCED!
               </span>
-              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight pt-2">
+              <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight break-words pt-2">
                 {winner.fullname}
               </h2>
               <p className="text-lg sm:text-xl text-indigo-200 font-light flex items-center justify-center gap-2 pt-1">
@@ -230,13 +260,13 @@ export default function LuckyDrawPage() {
               
               {currentName ? (
                 <div className="space-y-1 animate-pulse">
-                  <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+                  <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight break-words">
                     {currentName}
                   </h2>
                   <p className="text-sm text-cyan-300 font-mono">{currentCompany}</p>
                 </div>
               ) : (
-                <div><h2 className="text-3xl sm:text-5xl font-black text-white lucky-prize-title">{selectedPrize.name}</h2>{selectedPrize.description && <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mt-3">{selectedPrize.description}</p>}<div className="mt-3 inline-flex px-4 py-1.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-300/20 text-xs font-mono">{t.luckyDraw.stage.readyRemaining(selectedPrize.remaining_count ?? selectedPrize.quantity)}</div></div>
+                <div><h2 className="text-3xl sm:text-5xl font-black text-white lucky-prize-title break-words">{selectedPrize.name}</h2>{selectedPrize.description && <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mt-3">{selectedPrize.description}</p>}<div className="mt-3 inline-flex px-4 py-1.5 rounded-full bg-cyan-400/10 text-cyan-200 border border-cyan-300/20 text-xs font-mono">{t.luckyDraw.stage.readyRemaining(selectedPrize.remaining_count ?? selectedPrize.quantity)}</div></div>
               )}
             </div>
           </div>

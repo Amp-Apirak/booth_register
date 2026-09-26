@@ -30,7 +30,9 @@ export const scanner = {
   // Check-in result banners
   result: {
     errorTitle: 'ไม่สามารถดำเนินการได้',
-    notFound: 'ไม่พบรหัสตั๋วนี้ในระบบ หรือผู้ร่วมงานได้ทำการเช็คอินไปแล้ว',
+    notFound: 'ไม่พบรหัสตั๋วนี้ในระบบ',
+    alreadyCheckedIn: (name: string, time: string) => `${name} เช็คอินไปแล้ว${time ? ` เมื่อ ${time} น.` : ''}`,
+    alreadyCheckedInUnknown: 'ตั๋วนี้เช็คอินไปแล้ว',
     connectionError: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเกตเวย์เซิร์ฟเวอร์',
   },
 };

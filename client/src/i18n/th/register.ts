@@ -4,8 +4,19 @@ export const register = {
   // Shown when the organizer has not written their own intro in settings
   introFallback: 'กรอกข้อมูลเพื่อรับตั๋วผ่านประตูดิจิทัล (Digital Pass) สำหรับใช้สแกนเช็คอินหน้างาน',
   // Shown on the pass when the event has no start/end date yet
-  fallbackDateTime: '30 สิงหาคม 2026 | 09:00 - 17:00 น.',
   heroAlt: (eventName: string) => `ภาพประชาสัมพันธ์ ${eventName}`,
+  // Server refused the sign-up (codes from POST /events/:id/register)
+  errors: {
+    INVALID_EMAIL: 'รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง',
+    INVALID_PHONE: 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง (ใช้ตัวเลข เช่น 0812345678)',
+    FIELD_TOO_LONG: 'ข้อมูลบางช่องยาวเกินไป กรุณาย่อให้สั้นลง',
+    INVALID_PHOTO: 'รูปภาพต้องเป็นไฟล์ JPG, PNG หรือ WebP',
+    PHOTO_TOO_LARGE: 'รูปภาพมีขนาดใหญ่เกินไป กรุณาเลือกรูปที่เล็กลง',
+    MISSING_REQUIRED_FIELDS: 'กรุณากรอกชื่อ-นามสกุล บริษัท และเบอร์โทรศัพท์',
+    PDPA_CONSENT_REQUIRED: 'กรุณายินยอมเงื่อนไขการประมวลผลข้อมูลส่วนบุคคล (PDPA)',
+    ORGANIZATION_TYPE_REQUIRED: 'กรุณาเลือกประเภทองค์กร',
+    INVALID_ORGANIZATION_TYPE: 'ประเภทองค์กรที่เลือกถูกปิดไปแล้ว กรุณารีเฟรชหน้าแล้วเลือกใหม่',
+  } as Record<string, string>,
   alerts: {
     ok: 'ตกลง',
     incompleteTitle: 'ข้อมูลไม่ครบถ้วน',
@@ -30,7 +41,7 @@ export const register = {
     printOrPdf: 'พิมพ์บัตร / บันทึก PDF',
     share: 'แชร์ตั๋วเข้างาน',
     openTicketPage: 'เปิดดูในหน้ารหัสตั๋ว',
-    shareTitle: 'บัตรเข้างาน Tech Innovation Summit 2026',
+    shareTitle: (eventName: string) => `บัตรเข้างาน ${eventName}`,
     shareText: (code: string) => `ตั๋วเข้างานของฉัน รหัสตั๋ว: ${code}`,
   },
   form: {

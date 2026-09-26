@@ -19,6 +19,14 @@ export const luckyDraw: typeof Th = {
     spin: 'SPIN • Draw a winner',
     spinning: 'Drawing a name...',
   },
+  errors: {
+    title: 'The draw did not run',
+    PRIZE_SOLD_OUT: 'This prize has all been given out. Please choose another prize.',
+    PRIZE_INACTIVE: 'This prize is switched off for the draw (turn it on in Settings › Prizes).',
+    PRIZE_NOT_FOUND: 'This prize no longer exists. Please refresh the page.',
+    NO_ELIGIBLE_PARTICIPANTS: 'Nobody is left to draw (people must be checked in and not have won yet).',
+    generic: 'Cannot reach the server. Please try again.',
+  },
   winners: {
     title: 'Prize winners',
     noCompany: 'Company not specified',

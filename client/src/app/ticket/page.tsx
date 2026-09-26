@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import * as htmlToImage from 'html-to-image';
-import api, { Participant, formatEventDateRange, formatEventTimeRange } from '@/lib/api';
+import api, { TicketInfo, formatEventDateRange, formatEventTimeRange } from '@/lib/api';
+import { useStaffSession } from '@/lib/staffSession';
 import { useSettings } from '@/contexts/SettingsContext';
 import { usePreferences, useT } from '@/contexts/PreferencesContext';
 import {
@@ -27,7 +28,10 @@ export default function TicketPage() {
   const t = useT();
   const { theme } = usePreferences();
   const [ticketCode, setTicketCode] = useState('');
-  const [participant, setParticipant] = useState<Participant | null>(null);
+  const [verifier, setVerifier] = useState('');
+  const [participant, setParticipant] = useState<TicketInfo | null>(null);
+  // Staff search by code, name or phone; attendees prove the ticket is theirs (code + phone digits or email)
+  const isStaff = useStaffSession().status === 'signed-in';
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState('');
@@ -39,6 +43,24 @@ export default function TicketPage() {
 
     setLoading(true);
     setError('');
+
+    if (!isStaff) {
+      try {
+        setParticipant(await api.lookupTicket(raw, verifier.trim()));
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        setParticipant(null);
+        setError(
+          code === 'TICKET_NOT_FOUND' ? t.ticket.search.notFoundPublic
+            : code === 'TOO_MANY_ATTEMPTS' ? t.ticket.search.tooManyAttempts
+              : code === 'LOOKUP_FIELDS_REQUIRED' ? t.ticket.search.fieldsRequired
+                : t.ticket.search.connectionError
+        );
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       let found = await api.getParticipantByTicket(raw);
@@ -119,10 +141,11 @@ export default function TicketPage() {
     window.print();
   };
 
-  const eventDate = formatEventDateRange(settings.event_start, settings.event_end, t.common.locale) || t.ticket.pass.fallbackDate;
-  const eventTime = formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale) || t.ticket.pass.fallbackTime;
-  const eventVenue = settings.event_venue || 'Grand Ballroom';
-  const eventPlace = [settings.event_building, settings.event_floor, settings.event_address].filter(Boolean).join(', ') || 'Central Plaza Hotel, Bangkok';
+  // only what the organizer set in Settings (no sample values)
+  const eventDate = formatEventDateRange(settings.event_start, settings.event_end, t.common.locale);
+  const eventTime = formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale);
+  const eventVenue = settings.event_venue || '';
+  const eventPlace = [settings.event_building, settings.event_floor, settings.event_address].filter(Boolean).join(', ');
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-12">
@@ -141,6 +164,7 @@ export default function TicketPage() {
       </div>
 
       {/* Ticket Search Form */}
+      {isStaff ? (
       <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="glass-panel rounded-2xl p-2.5 sm:p-3 border border-white/10 flex gap-2 shadow-xl">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -152,6 +176,7 @@ export default function TicketPage() {
             onChange={(e) => setTicketCode(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none"
             placeholder={t.ticket.search.placeholder}
+            aria-label={t.ticket.search.placeholder}
           />
         </div>
         <button
@@ -162,6 +187,45 @@ export default function TicketPage() {
           {loading ? t.ticket.search.searching : t.ticket.search.submit}
         </button>
       </form>
+      ) : (
+      <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/10 shadow-xl space-y-3">
+        <p className="text-sm text-slate-400">{t.ticket.search.publicHint}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-slate-300">{t.ticket.search.codeLabel}</span>
+            <input
+              type="text"
+              value={ticketCode}
+              onChange={(e) => setTicketCode(e.target.value)}
+              required
+              autoComplete="off"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="SER20260921123456"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-slate-300">{t.ticket.search.verifierLabel}</span>
+            <input
+              type="text"
+              value={verifier}
+              onChange={(e) => setVerifier(e.target.value)}
+              required
+              autoComplete="off"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder={t.ticket.search.verifierPlaceholder}
+            />
+          </label>
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all disabled:opacity-50 inline-flex items-center justify-center gap-2"
+        >
+          <Search className="w-4 h-4" />
+          {loading ? t.ticket.search.searching : t.ticket.search.submit}
+        </button>
+      </form>
+      )}
 
       {error && (
         <div className="glass-panel rounded-2xl p-4 border border-rose-500/30 flex items-center gap-3 text-rose-300 animate-fade-in">
@@ -178,8 +242,8 @@ export default function TicketPage() {
             <div className="bg-gradient-to-r from-indigo-900/90 via-purple-900/90 to-slate-900/90 p-6 border-b border-white/10 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
               
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-cyan-400">
                     <Zap className="w-4 h-4" />
                   </div>
@@ -189,7 +253,7 @@ export default function TicketPage() {
                   </div>
                 </div>
                 
-                <span className={`px-3 py-1 rounded-full text-sm font-bold font-mono border flex items-center gap-1.5 ${
+                <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold font-mono border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   participant.status === 'Checked-in'
                     ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
                     : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
@@ -263,23 +327,23 @@ export default function TicketPage() {
 
               {/* Event Coordinates */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-left text-sm text-slate-300">
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
+                {(eventDate || eventTime) && <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 text-indigo-400 font-semibold">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>{t.ticket.pass.dateTime}</span>
                   </div>
                   <p className="text-slate-200">{eventDate}</p>
                   <p className="text-slate-400 text-xs">{eventTime}</p>
-                </div>
+                </div>}
 
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
+                {(eventVenue || eventPlace) && <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 text-cyan-400 font-semibold">
                     <MapPin className="w-3.5 h-3.5" />
                     <span>{t.ticket.pass.venue}</span>
                   </div>
                   <p className="text-slate-200">{eventVenue}</p>
                   <p className="text-slate-400 text-xs">{eventPlace}</p>
-                </div>
+                </div>}
               </div>
             </div>
           </div>

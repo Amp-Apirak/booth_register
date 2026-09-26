@@ -31,6 +31,13 @@ export const dashboard = {
     delete: 'ลบข้อมูล',
   },
   confirmDelete: 'คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลผู้ร่วมงานรายนี้?',
+  // "สแกนเข้า" button failed
+  checkinFailed: {
+    title: 'เช็คอินไม่สำเร็จ',
+    already: 'ผู้ร่วมงานคนนี้เช็คอินไปแล้ว',
+    notFound: 'ไม่พบรหัสตั๋วนี้ในระบบ',
+    connection: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่',
+  },
   pagination: {
     show: 'แสดงผล',
     perPage: 'รายการ / หน้า',

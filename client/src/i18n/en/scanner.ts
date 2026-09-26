@@ -26,7 +26,9 @@ export const scanner: typeof Th = {
   },
   result: {
     errorTitle: 'Unable to proceed',
-    notFound: 'Ticket code not found, or this attendee has already checked in.',
+    notFound: 'Ticket code not found.',
+    alreadyCheckedIn: (name: string, time: string) => `${name} has already checked in${time ? ` at ${time}` : ''}.`,
+    alreadyCheckedInUnknown: 'This ticket has already been checked in.',
     connectionError: 'Could not connect to the gateway server.',
   },
 };

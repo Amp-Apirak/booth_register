@@ -76,8 +76,9 @@ function RegisterPageContent() {
 
   const eventDate = formatEventDateRange(settings.event_start, settings.event_end, t.common.locale);
   const eventTime = formatEventTimeRange(settings.event_start, settings.event_end, t.common.locale);
-  const eventDateTime = [eventDate, eventTime].filter(Boolean).join(' | ') || t.register.fallbackDateTime;
-  const eventLocation = formatEventLocation(settings) || 'Grand Ballroom, Central Plaza Hotel, Bangkok';
+  // only what the organizer set in Settings (no sample values)
+  const eventDateTime = [eventDate, eventTime].filter(Boolean).join(' | ');
+  const eventLocation = formatEventLocation(settings);
 
   const [publicUrl, setPublicUrl] = useState('');
 
@@ -196,17 +197,19 @@ function RegisterPageContent() {
         
       } else {
         Swal.fire({
-          title: t.common.error,
-          text: t.register.alerts.failedText,
+          title: t.register.alerts.connectionTitle,
+          text: t.register.alerts.connectionText,
           icon: 'error',
           confirmButtonText: t.register.alerts.ok,
           confirmButtonColor: '#f43f5e'
         });
       }
-    } catch {
+    } catch (err) {
+      // refused by the server (e.g. invalid e-mail, photo too large): say why
+      const code = (err as { code?: string }).code || '';
       Swal.fire({
-        title: t.register.alerts.connectionTitle,
-        text: t.register.alerts.connectionText,
+        title: t.common.error,
+        text: t.register.errors[code] || t.register.alerts.failedText,
         icon: 'error',
         confirmButtonText: t.register.alerts.ok,
         confirmButtonColor: '#f43f5e'
@@ -284,7 +287,7 @@ function RegisterPageContent() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: t.register.success.shareTitle,
+          title: t.register.success.shareTitle(settings.event_name),
           text: t.register.success.shareText(result.ticket_code),
           url: `${window.location.origin}/ticket`,
         });
@@ -310,7 +313,7 @@ function RegisterPageContent() {
       <div className="text-center space-y-2 max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-semibold text-indigo-300">
           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Tech Innovation Summit 2026</span>
+          <span>{settings.event_name}</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
           {t.register.title}
@@ -368,17 +371,17 @@ function RegisterPageContent() {
               {copied && <p className="text-[11px] text-emerald-400 font-medium">{t.register.success.codeCopied}</p>}
             </div>
 
-            {/* Event Time & Place */}
-            <div className="text-left text-xs sm:text-sm text-slate-400 bg-white/[0.03] p-4 rounded-xl border border-white/5 space-y-2">
-              <div className="flex items-center gap-1.5 text-slate-200">
-                <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+            {/* Event Time & Place (hidden until set in Settings) */}
+            {(eventDateTime || eventLocation) && <div className="text-left text-xs sm:text-sm text-slate-400 bg-white/[0.03] p-4 rounded-xl border border-white/5 space-y-2">
+              {eventDateTime && <div className="flex items-center gap-1.5 text-slate-200">
+                <Calendar className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                 <span>{eventDateTime}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-slate-200">
-                <MapPin className="w-3.5 h-3.5 text-pink-400" />
+              </div>}
+              {eventLocation && <div className="flex items-center gap-1.5 text-slate-200">
+                <MapPin className="w-3.5 h-3.5 text-pink-400 shrink-0" />
                 <span>{eventLocation}</span>
-              </div>
-            </div>
+              </div>}
+            </div>}
           </div>
 
           {/* Action Buttons: Save Image, Print, Share */}
@@ -481,6 +484,7 @@ function RegisterPageContent() {
                 type="text"
                 required
                 value={form.fullname}
+                maxLength={150}
                 onChange={(e) => setForm({ ...form, fullname: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition-all"
                 placeholder={t.register.form.fullNamePlaceholder}
@@ -501,6 +505,7 @@ function RegisterPageContent() {
                 type="text"
                 required
                 value={form.company}
+                maxLength={150}
                 onChange={(e) => setForm({ ...form, company: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition-all"
                 placeholder={t.register.form.companyPlaceholder}
@@ -520,6 +525,7 @@ function RegisterPageContent() {
               <input
                 type="text"
                 value={form.position}
+                maxLength={100}
                 onChange={(e) => setForm({ ...form, position: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition-all"
                 placeholder={t.register.form.positionPlaceholder}
@@ -554,6 +560,7 @@ function RegisterPageContent() {
                 <input
                   type="email"
                   value={form.email}
+                maxLength={255}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition-all"
                   placeholder="contact@company.com"
@@ -573,6 +580,7 @@ function RegisterPageContent() {
                   type="tel"
                   required
                   value={form.phone}
+                maxLength={50}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/10 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white placeholder-slate-500 text-sm transition-all"
                   placeholder="08x-xxx-xxxx"

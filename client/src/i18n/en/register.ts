@@ -3,8 +3,18 @@ import type { register as Th } from '../th/register';
 export const register: typeof Th = {
   title: 'Register for the event',
   introFallback: 'Fill in your details to get your Digital Pass, which you scan to check in at the event.',
-  fallbackDateTime: '30 August 2026 | 09:00 - 17:00',
   heroAlt: (eventName: string) => `Promotional image for ${eventName}`,
+  errors: {
+    INVALID_EMAIL: 'The e-mail address is not valid. Please check it.',
+    INVALID_PHONE: 'The phone number is not valid (digits only, e.g. 0812345678).',
+    FIELD_TOO_LONG: 'Some fields are too long. Please shorten them.',
+    INVALID_PHOTO: 'The photo must be a JPG, PNG or WebP file.',
+    PHOTO_TOO_LARGE: 'The photo is too large. Please choose a smaller one.',
+    MISSING_REQUIRED_FIELDS: 'Please fill in your full name, company and phone number.',
+    PDPA_CONSENT_REQUIRED: 'Please accept the personal data (PDPA) terms.',
+    ORGANIZATION_TYPE_REQUIRED: 'Please choose an organization type.',
+    INVALID_ORGANIZATION_TYPE: 'The organization type you chose was switched off. Please refresh and choose again.',
+  },
   alerts: {
     ok: 'OK',
     incompleteTitle: 'Missing information',
@@ -29,7 +39,7 @@ export const register: typeof Th = {
     printOrPdf: 'Print ticket / Save PDF',
     share: 'Share ticket',
     openTicketPage: 'View on the ticket page',
-    shareTitle: 'Tech Innovation Summit 2026 event pass',
+    shareTitle: (eventName: string) => `${eventName} event pass`,
     shareText: (code: string) => `My event ticket. Ticket code: ${code}`,
   },
   form: {

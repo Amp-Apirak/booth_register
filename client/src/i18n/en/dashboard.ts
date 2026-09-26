@@ -30,6 +30,12 @@ export const dashboard: typeof Th = {
     edit: 'Edit',
     delete: 'Delete',
   },
+  checkinFailed: {
+    title: 'Check-in failed',
+    already: 'This attendee has already checked in.',
+    notFound: 'Ticket code not found.',
+    connection: 'Cannot reach the server. Please try again.',
+  },
   confirmDelete: 'Are you sure you want to delete this attendee?',
   pagination: {
     show: 'Show',

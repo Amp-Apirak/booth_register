@@ -12,5 +12,6 @@ export const login = {
     INVALID_CREDENTIALS: 'Username หรือ Password ไม่ถูกต้อง',
     ACCOUNT_DISABLED: 'บัญชีนี้ถูกระงับการใช้งาน',
     SERVER_ERROR: 'เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง',
+    TOO_MANY_ATTEMPTS: 'ใส่รหัสผ่านผิดหลายครั้งเกินไป กรุณารอประมาณ 15 นาทีแล้วลองใหม่',
   } as Record<string, string>,
 };

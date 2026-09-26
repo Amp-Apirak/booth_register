@@ -23,11 +23,16 @@ import {
   ShieldCheck, 
   Building,
   CheckCircle2,
-  Crown
+  Crown,
+  Minimize2
 } from 'lucide-react';
 
 type ScreenType = 'welcome' | 'overview' | 'agenda' | 'lucky';
 const SCREENS: ScreenType[] = ['welcome', 'overview', 'agenda', 'lucky'];
+
+// Safari (older iPad) only has the prefixed Fullscreen API
+type WebkitDocument = Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => void };
+type WebkitElement = HTMLDivElement & { webkitRequestFullscreen?: () => void };
 
 // The selected screen lives in the URL (/signage?screen=overview) so each
 // physical display can be pointed at its own link and never switches by itself.
@@ -60,6 +65,10 @@ function SignageDisplay() {
   const shownWinner = latestWinner ?? lastKnownWinner;
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // iPhone Safari has no element fullscreen: the screen then covers the page instead
+  const [pseudoFullscreen, setPseudoFullscreen] = useState(false);
+  const [exitVisible, setExitVisible] = useState(true);
+  const fullscreenMode = isFullscreen || pseudoFullscreen;
   const containerRef = useRef<HTMLDivElement>(null);
   const agendaScrollRef = useRef<HTMLDivElement>(null);
   const agendaFocusRef = useRef<HTMLDivElement>(null);
@@ -89,18 +98,68 @@ function SignageDisplay() {
   }, []);
 
   useEffect(() => {
+    const doc = document as WebkitDocument;
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(!!(document.fullscreenElement || doc.webkitFullscreenElement));
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
   }, []);
 
   const enterFullscreen = () => {
-    if (!document.fullscreenElement && containerRef.current) {
-      containerRef.current.requestFullscreen().catch(err => console.error(err));
+    const el = containerRef.current as WebkitElement | null;
+    const doc = document as WebkitDocument;
+    if (!el || document.fullscreenElement || doc.webkitFullscreenElement) return;
+    setExitVisible(true);
+    const request = el.requestFullscreen ? () => el.requestFullscreen() : el.webkitRequestFullscreen ? () => el.webkitRequestFullscreen?.() : null;
+    if (!request || !(document.fullscreenEnabled || doc.webkitFullscreenEnabled)) {
+      setPseudoFullscreen(true);
+      return;
     }
+    Promise.resolve(request()).catch(() => setPseudoFullscreen(true));
   };
+
+  const exitFullscreen = () => {
+    const doc = document as WebkitDocument;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (doc.webkitFullscreenElement) doc.webkitExitFullscreen?.();
+    setPseudoFullscreen(false);
+  };
+
+  // Covering the page: lock page scroll, ESC leaves
+  useEffect(() => {
+    if (!pseudoFullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPseudoFullscreen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pseudoFullscreen]);
+
+  // The exit button shows on touch/mouse movement and fades after 3 s so it never sits on the LED picture
+  useEffect(() => {
+    if (!fullscreenMode) return;
+    let timer = window.setTimeout(() => setExitVisible(false), 3000);
+    const wake = () => {
+      setExitVisible(true);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setExitVisible(false), 3000);
+    };
+    window.addEventListener('pointermove', wake);
+    window.addEventListener('pointerdown', wake);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('pointermove', wake);
+      window.removeEventListener('pointerdown', wake);
+    };
+  }, [fullscreenMode]);
 
   // Add to welcome queue on new incoming check-in from WebSocket
   useEffect(() => {
@@ -204,10 +263,17 @@ function SignageDisplay() {
       window.cancelAnimationFrame(renderFrame);
       window.cancelAnimationFrame(layoutFrame);
     };
-  }, [screen, agendaFocusKey, isFullscreen]);
+  }, [screen, agendaFocusKey, fullscreenMode]);
 
   return (
-    <div ref={containerRef} className={`h-screen w-full flex flex-col justify-between relative ${isFullscreen ? 'bg-surface-2 p-8' : 'p-6'}`}>
+    // Phones/tablets: the screen grows with its content (page scrolls). Large displays: exactly one screen high.
+    <div ref={containerRef} data-signage-covering={pseudoFullscreen ? 'true' : undefined} className={`w-full flex flex-col justify-between ${
+      pseudoFullscreen
+        ? 'fixed inset-0 z-[70] h-[100dvh] overflow-y-auto bg-surface-2 p-3 sm:p-6'
+        : isFullscreen
+          ? 'relative h-screen overflow-y-auto bg-surface-2 p-4 sm:p-8'
+          : 'relative min-h-[100dvh] lg:h-screen lg:min-h-[720px] p-3 sm:p-6'
+    }`}>
 
       {/* Confetti canvas (child of container so it renders in fullscreen too) */}
       <canvas
@@ -215,26 +281,46 @@ function SignageDisplay() {
         className="absolute inset-0 w-full h-full pointer-events-none z-[100]"
       />
 
+      {fullscreenMode && (
+        <button
+          type="button"
+          onClick={exitFullscreen}
+          aria-label={t.signage.controls.exitFullscreen}
+          className={`fixed top-3 right-3 z-[110] inline-flex items-center gap-2 rounded-full bg-black/55 hover:bg-black/75 border border-white/15 px-3.5 py-2 text-xs font-semibold text-white backdrop-blur transition-opacity duration-500 ${exitVisible ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
+        >
+          <Minimize2 className="w-4 h-4" />
+          <span>{t.signage.controls.exitFullscreen}</span>
+        </button>
+      )}
+
+      {/* In full screen the control bar is hidden: warn on the screen itself when live updates stop */}
+      {fullscreenMode && !connected && (
+        <div role="status" data-live-status="offline" className="fixed top-3 left-3 z-[110] inline-flex items-center gap-2 rounded-full bg-rose-600/90 border border-rose-300/40 px-3.5 py-2 text-xs sm:text-sm font-bold text-white shadow-lg">
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          {t.signage.controls.reconnecting}
+        </div>
+      )}
+
       {/* ── Screen Controller Bar ── */}
-      {!isFullscreen && (
-        <div className="flex flex-wrap items-center justify-between gap-5 glass-panel rounded-2xl px-4 py-3.5 lg:px-5 lg:py-4 border border-white/10 mb-8 shadow-2xl z-30">
-        <div className="flex items-center gap-3">
+      {!fullscreenMode && (
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-5 glass-panel rounded-2xl p-3 sm:px-4 sm:py-3.5 lg:px-5 lg:py-4 border border-white/10 mb-4 sm:mb-8 shadow-2xl z-30">
+        <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 lg:w-11 lg:h-11 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_18px_rgba(34,211,238,.12)]">
             <Tv className="w-5 h-5 lg:w-5.5 lg:h-5.5" />
           </div>
           <div>
-            <h2 className="text-sm lg:text-base font-extrabold text-white uppercase tracking-wider leading-tight">LED Signage Mode</h2>
-            <p className="text-xs lg:text-sm text-slate-400 font-mono mt-0.5">Main Hall Grand Display</p>
+            <h2 className="text-sm lg:text-base font-extrabold text-white tracking-wide leading-tight">{t.signage.controls.title}</h2>
+            <p className="hidden sm:block text-xs lg:text-sm text-slate-400 mt-0.5">{t.signage.controls.subtitle}</p>
           </div>
         </div>
 
-        {/* Screen Selector Pills */}
-        <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/5">
+        {/* Screen Selector Pills — 2×2 on phones, one row from lg */}
+        <div className="order-last lg:order-none w-full lg:w-auto grid grid-cols-2 sm:grid-cols-4 lg:flex lg:items-center gap-1.5 bg-black/40 p-1.5 rounded-xl border border-white/5">
           {([
-            { id: 'welcome', label: 'Welcome Screen', icon: Sparkles },
-            { id: 'overview', label: 'Live Overview', icon: Users },
-            { id: 'agenda', label: 'Event Agenda', icon: Calendar },
-            { id: 'lucky', label: 'Lucky Standby', icon: Trophy },
+            { id: 'welcome', icon: Sparkles },
+            { id: 'overview', icon: Users },
+            { id: 'agenda', icon: Calendar },
+            { id: 'lucky', icon: Trophy },
           ] as const).map((s) => {
             const Icon = s.icon;
             const isActive = screen === s.id;
@@ -242,24 +328,25 @@ function SignageDisplay() {
               <button
                 key={s.id}
                 onClick={() => setScreen(s.id)}
-                className={`flex items-center gap-2 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                aria-pressed={isActive}
+                className={`flex items-center justify-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                <span>{s.label}</span>
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{t.signage.controls.tabs[s.id]}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Fullscreen Toggle */}
           <button
             onClick={enterFullscreen}
-            className="flex items-center gap-2 px-3.5 lg:px-4 py-2 lg:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-slate-300 transition-all"
+            className="flex items-center gap-2 px-3 lg:px-4 py-2 lg:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-semibold text-slate-300 whitespace-nowrap transition-all"
             title={t.signage.controls.fullscreenHint}
           >
             <Tv className="w-4 h-4" />
@@ -267,13 +354,13 @@ function SignageDisplay() {
           </button>
 
           {/* Live Broadcast Badge */}
-          <div className={`flex items-center gap-2.5 px-4 py-2 lg:py-2.5 rounded-full text-sm font-mono font-bold border ${
+          <div data-live-status={connected ? 'connected' : 'offline'} title={connected ? t.signage.controls.live : t.signage.controls.offline} className={`flex items-center gap-2 px-3 sm:px-4 py-2 lg:py-2.5 rounded-full text-sm font-mono font-bold border whitespace-nowrap ${
           connected 
             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
             : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
         }`}>
           <span className={`w-2.5 h-2.5 rounded-full ${connected ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />
-          <span>{connected ? 'LIVE BROADCAST' : 'OFFLINE'}</span>
+          <span className="hidden sm:inline">{connected ? t.signage.controls.live : t.signage.controls.offline}</span>
         </div>
         </div>
         </div>
@@ -281,7 +368,7 @@ function SignageDisplay() {
 
       {/* ── Screen 1: Grand Welcome Display (REQ-05) ── */}
       {screen === 'welcome' && (
-        <div className="welcome-stage flex-1 flex flex-col items-center justify-center text-center p-8 sm:p-16 glass-panel-glow rounded-3xl border border-indigo-500/30 relative overflow-hidden shadow-2xl animate-fade-in my-auto">
+        <div className="welcome-stage flex-[1_0_auto] lg:flex-1 flex flex-col items-center justify-center text-center p-6 sm:p-16 glass-panel-glow rounded-3xl border border-indigo-500/30 relative overflow-hidden shadow-2xl animate-fade-in my-auto">
           {/* Ambient Lighting Orbs */}
           <div className="welcome-spotlight absolute top-1/4 -left-20 w-80 h-80 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
           <div className="welcome-spotlight absolute bottom-1/4 -right-20 w-80 h-80 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none [animation-delay:-4.5s]" />
@@ -296,7 +383,7 @@ function SignageDisplay() {
           </div>
 
           <div className={`space-y-4 mx-auto ${isFullscreen ? 'max-w-6xl' : 'max-w-4xl'}`}>
-            <h1 className={`welcome-title font-extrabold tracking-tight holo-text ${isFullscreen ? 'text-7xl sm:text-8xl lg:text-9xl' : 'text-4xl sm:text-6xl lg:text-7xl'}`}>
+            <h1 className={`welcome-title font-extrabold tracking-tight holo-text ${isFullscreen ? 'text-5xl sm:text-8xl lg:text-9xl' : 'text-4xl sm:text-6xl lg:text-7xl'}`}>
               WELCOME
             </h1>
 
@@ -310,7 +397,7 @@ function SignageDisplay() {
                         <img
                           src={activePerson.profile_picture}
                           alt="Profile"
-                          className={`rounded-lg object-cover ${isFullscreen ? 'w-56 h-56 lg:w-64 lg:h-64' : 'w-36 h-36 sm:w-48 sm:h-48'}`}
+                          className={`rounded-lg object-cover ${isFullscreen ? 'w-40 h-40 sm:w-56 sm:h-56 lg:w-64 lg:h-64' : 'w-32 h-32 sm:w-48 sm:h-48'}`}
                         />
                       </div>
                     </div>
@@ -334,11 +421,11 @@ function SignageDisplay() {
                   <span>{activePerson.attendee_type === 'VIP' ? 'VIP GUEST CHECKED IN' : 'JUST CHECKED IN'}</span>
                 </div>
 
-                <h2 className={`font-extrabold tracking-tight ${isFullscreen ? 'text-6xl sm:text-7xl lg:text-8xl' : 'text-3xl sm:text-5xl lg:text-6xl'} ${activePerson.attendee_type === 'VIP' ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500' : 'text-white'}`}>
+                <h2 className={`font-extrabold tracking-tight break-words ${isFullscreen ? 'text-4xl sm:text-7xl lg:text-8xl' : 'text-3xl sm:text-5xl lg:text-6xl'} ${activePerson.attendee_type === 'VIP' ? 'text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500' : 'text-white'}`}>
                   {activePerson.fullname}
                 </h2>
-                <p className={`text-indigo-200 font-light flex items-center justify-center gap-2 mt-2 ${isFullscreen ? 'text-3xl sm:text-4xl' : 'text-lg sm:text-2xl'}`}>
-                  <Building className={`text-cyan-400 inline ${isFullscreen ? 'w-8 h-8' : 'w-5 h-5'}`} />
+                <p className={`text-indigo-200 font-light flex items-center justify-center gap-2 mt-2 ${isFullscreen ? 'text-xl sm:text-4xl' : 'text-lg sm:text-2xl'}`}>
+                  <Building className={`text-cyan-400 inline shrink-0 ${isFullscreen ? 'w-6 h-6 sm:w-8 sm:h-8' : 'w-5 h-5'}`} />
                   <span>{activePerson.company}</span>
                 </p>
                 {activePerson.position && (
@@ -354,7 +441,7 @@ function SignageDisplay() {
             )}
           </div>
 
-          <div className="mt-16 text-xs font-mono text-slate-500 uppercase tracking-widest">
+          <div className="mt-10 sm:mt-16 text-xs font-mono text-slate-500 uppercase tracking-widest">
             SCAN • CHECK-IN • SHOW • REAL-TIME DIGITAL SIGNAGE
           </div>
         </div>
@@ -362,7 +449,7 @@ function SignageDisplay() {
 
       {/* ── Screen 2: Live Overview Display ── */}
       {screen === 'overview' && (
-        <div className={`overview-stage flex-1 relative overflow-hidden glass-panel rounded-3xl border border-indigo-400/20 shadow-[0_30px_100px_rgba(0,0,0,0.55)] animate-fade-in my-auto ${isFullscreen ? 'p-10 lg:p-14' : 'p-7 lg:p-10'}`}>
+        <div className={`overview-stage flex-[1_0_auto] lg:flex-1 relative overflow-hidden glass-panel rounded-3xl border border-indigo-400/20 shadow-[0_30px_100px_rgba(0,0,0,0.55)] animate-fade-in my-auto ${isFullscreen ? 'p-5 sm:p-10 lg:p-14' : 'p-5 sm:p-7 lg:p-10'}`}>
           <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(99,102,241,.16) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.12) 1px, transparent 1px)', backgroundSize: '54px 54px', maskImage: 'linear-gradient(to bottom, black, transparent 85%)' }} />
           <div className="absolute -top-40 -left-32 w-[34rem] h-[34rem] rounded-full bg-indigo-600/20 blur-[110px] pointer-events-none animate-pulse" />
           <div className="absolute -bottom-44 right-0 w-[38rem] h-[38rem] rounded-full bg-cyan-500/15 blur-[120px] pointer-events-none" />
@@ -378,7 +465,7 @@ function SignageDisplay() {
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 text-emerald-300 text-xs font-mono tracking-[0.18em] uppercase mb-3">
                   <Radio className="w-3.5 h-3.5 animate-pulse" /> Live Gate Intelligence
                 </div>
-                <h2 className={`${isFullscreen ? 'text-5xl lg:text-7xl' : 'text-4xl lg:text-6xl'} font-black text-white tracking-tight leading-none`}>
+                <h2 className={`${isFullscreen ? 'text-4xl sm:text-5xl lg:text-7xl' : 'text-3xl sm:text-4xl lg:text-6xl'} font-black text-white tracking-tight leading-none`}>
                   Attendance <span className="holo-text">Overview</span>
                 </h2>
                 <p className={`${isFullscreen ? 'text-xl' : 'text-base'} text-slate-400 mt-3`}>{t.signage.overview.subtitle} · {settings.event_name || 'Smart Event Registration'}</p>
@@ -391,16 +478,16 @@ function SignageDisplay() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 perspective-1000">
               {[
-                { label: 'REGISTERED', caption: t.signage.overview.registered, value: stats.registered, Icon: Users, gradient: 'from-indigo-500/25 via-indigo-500/10 to-transparent', text: 'text-indigo-300', border: 'border-indigo-400/35', glow: 'shadow-indigo-500/15', orb: 'bg-indigo-400/10', iconBg: 'bg-indigo-400/15' },
-                { label: 'CHECKED-IN', caption: t.signage.overview.checkedIn, value: stats.checked_in, Icon: UserCheck, gradient: 'from-emerald-500/25 via-emerald-500/10 to-transparent', text: 'text-emerald-300', border: 'border-emerald-400/40', glow: 'shadow-emerald-500/20', orb: 'bg-emerald-400/10', iconBg: 'bg-emerald-400/15' },
-                { label: 'PENDING', caption: t.signage.overview.pending, value: stats.pending, Icon: Clock, gradient: 'from-amber-500/25 via-amber-500/10 to-transparent', text: 'text-amber-300', border: 'border-amber-400/35', glow: 'shadow-amber-500/15', orb: 'bg-amber-400/10', iconBg: 'bg-amber-400/15' },
-              ].map(({ label, caption, value, Icon, gradient, text, border, glow, orb, iconBg }, cardIndex) => (
+                { stat: 'registered', label: 'REGISTERED', caption: t.signage.overview.registered, value: stats.registered, Icon: Users, gradient: 'from-indigo-500/25 via-indigo-500/10 to-transparent', text: 'text-indigo-300', border: 'border-indigo-400/35', glow: 'shadow-indigo-500/15', orb: 'bg-indigo-400/10', iconBg: 'bg-indigo-400/15' },
+                { stat: 'checked_in', label: 'CHECKED-IN', caption: t.signage.overview.checkedIn, value: stats.checked_in, Icon: UserCheck, gradient: 'from-emerald-500/25 via-emerald-500/10 to-transparent', text: 'text-emerald-300', border: 'border-emerald-400/40', glow: 'shadow-emerald-500/20', orb: 'bg-emerald-400/10', iconBg: 'bg-emerald-400/15' },
+                { stat: 'pending', label: 'PENDING', caption: t.signage.overview.pending, value: stats.pending, Icon: Clock, gradient: 'from-amber-500/25 via-amber-500/10 to-transparent', text: 'text-amber-300', border: 'border-amber-400/35', glow: 'shadow-amber-500/15', orb: 'bg-amber-400/10', iconBg: 'bg-amber-400/15' },
+              ].map(({ stat, label, caption, value, Icon, gradient, text, border, glow, orb, iconBg }, cardIndex) => (
                 <div key={label} className={`overview-stat-card group relative overflow-hidden rounded-[1.75rem] border ${border} bg-gradient-to-br ${gradient} p-5 lg:p-7 shadow-2xl ${glow} card-3d`} style={{ '--card-delay': `${cardIndex * -1.15}s` } as CSSProperties}>
                   <div className={`absolute -right-12 -top-12 w-40 h-40 rounded-full ${orb} blur-2xl group-hover:scale-125 transition-transform duration-700`} />
                   <div className="relative flex items-start justify-between gap-4">
                     <div>
                       <div className="text-[11px] lg:text-xs font-mono font-bold tracking-[0.22em] text-slate-400">{label}</div>
-                      <div key={`${label}-${value}`} className={`overview-number-pop ${isFullscreen ? 'text-7xl lg:text-8xl' : 'text-6xl lg:text-7xl'} font-black font-heading ${text} leading-none mt-4 drop-shadow-[0_0_22px_currentColor]`}>{value.toLocaleString(t.common.locale)}</div>
+                      <div key={`${label}-${value}`} data-stat={stat} className={`overview-number-pop ${isFullscreen ? 'text-6xl sm:text-7xl lg:text-8xl' : 'text-5xl sm:text-6xl lg:text-7xl'} font-black font-heading ${text} leading-none mt-4 drop-shadow-[0_0_22px_currentColor]`}>{value.toLocaleString(t.common.locale)}</div>
                       <div className="text-base lg:text-lg font-semibold text-white mt-3">{caption}</div>
                     </div>
                     <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-2xl ${iconBg} border ${border} flex items-center justify-center ${text} shadow-lg`}><Icon className="w-6 h-6 lg:w-7 lg:h-7" /></div>
@@ -444,14 +531,14 @@ function SignageDisplay() {
 
       {/* ── Screen 3: Agenda Display ── */}
       {screen === 'agenda' && (
-        <div className={`agenda-stage flex-1 relative glass-panel rounded-3xl border border-white/10 shadow-2xl animate-fade-in my-auto flex flex-col overflow-hidden ${isFullscreen ? 'p-10 lg:p-14' : 'p-7 lg:p-10'}`}>
+        <div className={`agenda-stage flex-[1_0_auto] lg:flex-1 relative glass-panel rounded-3xl border border-white/10 shadow-2xl animate-fade-in my-auto flex flex-col overflow-hidden ${isFullscreen ? 'p-5 sm:p-10 lg:p-14' : 'p-5 sm:p-7 lg:p-10'}`}>
           <div className="absolute -top-40 -right-32 w-[32rem] h-[32rem] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none animate-pulse" />
           <div className="absolute -bottom-52 left-1/4 w-[38rem] h-[30rem] rounded-full bg-purple-600/10 blur-[130px] pointer-events-none animate-float" />
           <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(99,102,241,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.24) 1px, transparent 1px)', backgroundSize: '64px 64px', maskImage: 'linear-gradient(to bottom, black, transparent 72%)' }} />
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-7">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 text-cyan-300 font-mono text-sm uppercase tracking-[0.2em]"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />Live Event Programme</div>
-              <h2 className={`${isFullscreen ? 'text-5xl lg:text-6xl' : 'text-3xl lg:text-5xl'} font-extrabold text-white tracking-tight`}>Event Agenda</h2>
+              <h2 className={`${isFullscreen ? 'text-3xl sm:text-5xl lg:text-6xl' : 'text-3xl lg:text-5xl'} font-extrabold text-white tracking-tight`}>Event Agenda</h2>
               <p className={`${isFullscreen ? 'text-xl' : 'text-base'} text-slate-300`}>{settings.event_name || 'Smart Event Registration'}</p>
             </div>
             <div className="md:text-right">
@@ -495,12 +582,12 @@ function SignageDisplay() {
                 }`}
               >
                 {isActive && <><div className="absolute -right-16 -top-20 w-64 h-64 rounded-full bg-cyan-300/10 blur-3xl" /><div className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-emerald-300 via-cyan-300 to-indigo-400 animate-pulse" /></>}
-                {item.speaker_image && <div className={`${isActive ? 'w-40 sm:w-52' : 'w-28 sm:w-36'} shrink-0 bg-slate-900`}>
+                {item.speaker_image && <div className={`${isActive ? 'w-24 sm:w-52' : 'w-20 sm:w-36'} shrink-0 bg-slate-900`}>
                   {/* Data URLs come from staff uploads and cannot use the Next image optimizer. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={item.speaker_image} alt={item.speaker || item.title} className="w-full h-full object-cover" />
                 </div>}
-                <div className={`${isFullscreen ? 'px-7 py-6 lg:px-8 lg:py-7' : 'p-5'} flex-1 min-w-0 flex flex-col justify-center`}>
+                <div className={`${isFullscreen ? 'px-5 py-5 sm:px-7 sm:py-6 lg:px-8 lg:py-7' : 'p-4 sm:p-5'} flex-1 min-w-0 flex flex-col justify-center`}>
                   <div className={`flex flex-wrap items-center justify-between gap-2 ${isFullscreen ? 'mb-3' : 'mb-2'}`}>
                     <span className={`${isFullscreen ? 'text-xl' : 'text-base'} font-mono font-bold ${isActive ? 'text-cyan-200' : 'text-cyan-400'}`}>
                       {start.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })}
@@ -518,7 +605,8 @@ function SignageDisplay() {
                 </div>
               </div>
             )})}
-            {agendaFocusKey && pastAgendaCount > 0 && <div aria-hidden="true" className="xl:col-span-2 h-[45vh] min-h-64 pointer-events-none" />}
+            {/* room to scroll the current session to the top on large displays (phones scroll the page instead) */}
+            {agendaFocusKey && pastAgendaCount > 0 && <div aria-hidden="true" className="hidden lg:block xl:col-span-2 h-[45vh] min-h-64 pointer-events-none" />}
           </div>
           )}
         </div>
@@ -526,7 +614,7 @@ function SignageDisplay() {
 
       {/* ── Screen 4: Lucky Standby ── */}
       {screen === 'lucky' && (
-        <div className={`lucky-stage flex-1 relative flex flex-col items-center justify-center text-center overflow-hidden glass-panel-glow rounded-3xl border border-purple-400/30 shadow-[0_25px_90px_rgba(88,28,135,.28)] animate-fade-in my-auto ${shownWinner ? (isFullscreen ? 'p-10' : 'p-6 sm:p-8') : (isFullscreen ? 'p-16' : 'p-10 sm:p-12')}`}>
+        <div className={`lucky-stage flex-[1_0_auto] lg:flex-1 relative flex flex-col items-center justify-center text-center overflow-hidden glass-panel-glow rounded-3xl border border-purple-400/30 shadow-[0_25px_90px_rgba(88,28,135,.28)] animate-fade-in my-auto ${shownWinner ? (isFullscreen ? 'p-5 sm:p-10' : 'p-4 sm:p-8') : (isFullscreen ? 'p-8 sm:p-16' : 'p-6 sm:p-12')}`}>
           <div className="absolute inset-0 opacity-[0.12] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, rgba(216,180,254,.7) 1px, transparent 1.5px)', backgroundSize: '44px 44px', maskImage: 'radial-gradient(circle at center, black, transparent 72%)' }} />
           <div className="absolute -top-48 left-[8%] w-[34rem] h-[34rem] rounded-full bg-purple-600/20 blur-[120px] animate-pulse pointer-events-none" />
           <div className="absolute -bottom-52 right-[5%] w-[38rem] h-[38rem] rounded-full bg-cyan-500/14 blur-[130px] animate-float pointer-events-none" />
@@ -560,9 +648,9 @@ function SignageDisplay() {
               </div>
             </div>
 
-            <h1 className={`lucky-title font-black tracking-[-0.04em] leading-none ${isFullscreen ? 'text-7xl lg:text-9xl' : 'text-5xl sm:text-7xl lg:text-8xl'}`}>LUCKY DRAW</h1>
+            <h1 className={`lucky-title font-black tracking-[-0.04em] leading-none ${isFullscreen ? 'text-5xl sm:text-7xl lg:text-9xl' : 'text-4xl sm:text-7xl lg:text-8xl'}`}>LUCKY DRAW</h1>
             <div className={`${isFullscreen ? 'text-3xl lg:text-4xl mt-4' : 'text-xl lg:text-2xl mt-3'} font-bold text-purple-200 tracking-[0.3em] uppercase`}>Stage</div>
-            <p className={`${isFullscreen ? 'text-2xl max-w-3xl mt-8 mb-10' : 'text-lg lg:text-xl max-w-2xl mt-6 mb-8'} text-slate-300 font-light leading-relaxed`}>
+            <p className={`${isFullscreen ? 'text-lg sm:text-2xl max-w-3xl mt-6 sm:mt-8 mb-8 sm:mb-10' : 'text-base sm:text-lg lg:text-xl max-w-2xl mt-5 sm:mt-6 mb-6 sm:mb-8'} text-slate-300 font-light leading-relaxed`}>
               {t.signage.lucky.getReady}<br className="hidden sm:block" /> {t.signage.lucky.goodLuck}
             </p>
 

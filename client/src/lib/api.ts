@@ -1,5 +1,6 @@
 // API Configuration for Smart Event Registration
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
+import { API_BASE } from './apiBase';
+import { clearStaffSession } from './staffSession';
 
 export interface Participant {
   id: number;
@@ -123,6 +124,9 @@ export const formatEventLocation = (s: {
 };
 
 // Winner as shown on the LED signage (socket event and public winners list)
+/** What a ticket shows (the public lookup returns only this) */
+export type TicketInfo = Pick<Participant, 'name' | 'company' | 'position' | 'ticket_code' | 'status' | 'attendee_type'>;
+
 export interface LuckyWinnerData {
   participant_id?: number;
   name: string;
@@ -185,12 +189,21 @@ const getAuthHeaders = (): HeadersInit => {
 };
 
 // Interceptor helper to handle 401 Unauthorized
+export class CheckInError extends Error {
+  constructor(
+    public code: string,
+    public participant?: { name: string; company: string; checked_in_at?: string | null } | null,
+  ) {
+    super(code);
+  }
+}
+
 const handleResponse = async (res: Response) => {
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('staff_token');
-      localStorage.removeItem('staff_user');
-      window.location.href = '/login';
+      clearStaffSession();
+      const here = window.location.pathname + window.location.search;
+      window.location.href = here.startsWith('/login') ? '/login' : `/login?next=${encodeURIComponent(here)}`;
     }
     throw new Error('Unauthorized');
   }
@@ -242,27 +255,52 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) return null;
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || !result.success) {
+        throw Object.assign(new Error(result.message || 'REGISTER_FAILED'), { code: result.error || 'SERVER_ERROR' });
+      }
       return result.data || null;
-    } catch {
-      return null;
+    } catch (err) {
+      if ((err as { code?: string }).code) throw err; // refused by the server: the page shows why
+      return null; // could not reach the server
     }
   },
 
   // Check-in participant
-  async checkIn(ticketCode: string): Promise<Participant | null> {
+  // Public: an attendee finds their own ticket with the ticket code + last 4 phone digits (or email).
+  // Throws Error with `code`: TICKET_NOT_FOUND | TOO_MANY_ATTEMPTS | LOOKUP_FIELDS_REQUIRED | NETWORK_ERROR
+  async lookupTicket(ticketCode: string, verifier: string): Promise<TicketInfo> {
+    let res: Response;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/checkin`, {
+      res = await fetch(`${API_BASE}/api/v1/tickets/lookup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket_code: ticketCode, verifier }),
+      });
+    } catch {
+      throw Object.assign(new Error('NETWORK_ERROR'), { code: 'NETWORK_ERROR' });
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || 'LOOKUP_FAILED'), { code: data.error || 'SERVER_ERROR' });
+    return data.data;
+  },
+
+  // Throws CheckInError: code TICKET_NOT_FOUND | ALREADY_CHECKED_IN (with who/when) | NETWORK_ERROR | SERVER_ERROR
+  async checkIn(ticketCode: string): Promise<Participant> {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/api/v1/checkin`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ ticket_code: ticketCode }),
       });
-      const data = await handleResponse(res);
-      return data.data || null;
     } catch {
-      return null;
+      throw new CheckInError('NETWORK_ERROR');
     }
+    if (res.status === 401) await handleResponse(res); // login expired → login page
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success || !data.data) throw new CheckInError(data.error || 'SERVER_ERROR', data.participant);
+    return data.data;
   },
 
   // Get event stats
@@ -330,7 +368,7 @@ export const api = {
   // Get eligible participants for lucky draw (Public)
   async getEligibleLuckyDraw(): Promise<Participant[]> {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/eligible`);
+      const res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/eligible`, { headers: getAuthHeaders() });
       const data = await handleResponse(res);
       return data.data || [];
     } catch {
@@ -339,18 +377,22 @@ export const api = {
   },
 
   // Lucky Draw Spin
-  async luckyDrawSpin(prizeName: string): Promise<LuckyDrawWinner | null> {
+  // Staff only. Throws Error with `code`: PRIZE_SOLD_OUT, PRIZE_INACTIVE, PRIZE_NOT_FOUND, NO_ELIGIBLE_PARTICIPANTS, NETWORK_ERROR…
+  async luckyDrawSpin(prizeName: string): Promise<LuckyDrawWinner> {
+    let res: Response;
     try {
-      const res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/spin`, {
+      res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/spin`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ prize_name: prizeName }),
       });
-      const data = await handleResponse(res);
-      return data.data || null;
     } catch {
-      return null;
+      throw Object.assign(new Error('NETWORK_ERROR'), { code: 'NETWORK_ERROR' });
     }
+    if (res.status === 401) await handleResponse(res);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw Object.assign(new Error(data.message || 'SPIN_FAILED'), { code: data.error || 'SERVER_ERROR' });
+    return data.data;
   },
 
   // Public: past winners (newest last), used by the LED signage

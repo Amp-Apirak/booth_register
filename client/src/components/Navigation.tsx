@@ -17,21 +17,23 @@ import {
   LogIn,
   Settings
 } from 'lucide-react';
-import { useState, Suspense, useEffect } from 'react';
-import useWebSocket from '@/lib/useWebSocket';
+import { useState, Suspense } from 'react';
+import { useSocketStatus } from '@/lib/socket';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useT } from '@/contexts/PreferencesContext';
 import PreferenceToggles from '@/components/PreferenceToggles';
+import { clearStaffSession, useStaffSession } from '@/lib/staffSession';
 
+// who sees each menu item: everyone · any staff login · Admin only (the pages check the same rules)
 const navItems = [
-  { href: '/', key: 'home', icon: Home, staffOnly: false },
-  { href: '/register', key: 'register', icon: UserPlus, staffOnly: false },
-  { href: '/ticket', key: 'ticket', icon: QrCode, staffOnly: false },
-  { href: '/scanner', key: 'scanner', icon: ScanLine, staffOnly: true },
-  { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard, staffOnly: true },
-  { href: '/settings', key: 'settings', icon: Settings, staffOnly: true },
-  { href: '/signage', key: 'signage', icon: Tv, staffOnly: false },
-  { href: '/lucky-draw', key: 'luckyDraw', icon: Sparkles, staffOnly: false },
+  { href: '/', key: 'home', icon: Home, access: 'public' },
+  { href: '/register', key: 'register', icon: UserPlus, access: 'public' },
+  { href: '/ticket', key: 'ticket', icon: QrCode, access: 'public' },
+  { href: '/scanner', key: 'scanner', icon: ScanLine, access: 'staff' },
+  { href: '/dashboard', key: 'dashboard', icon: LayoutDashboard, access: 'staff' },
+  { href: '/settings', key: 'settings', icon: Settings, access: 'admin' },
+  { href: '/signage', key: 'signage', icon: Tv, access: 'public' },
+  { href: '/lucky-draw', key: 'luckyDraw', icon: Sparkles, access: 'staff' },
 ] as const;
 
 function NavigationContent() {
@@ -39,23 +41,18 @@ function NavigationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { connected } = useWebSocket();
+  const connected = useSocketStatus();
   const { settings } = useSettings();
   const t = useT();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsLoggedIn(!!localStorage.getItem('staff_token'));
-  }, [pathname]);
+  const session = useStaffSession();
+  const isLoggedIn = session.status === 'signed-in';
 
   const handleLogout = () => {
-    localStorage.removeItem('staff_token');
-    localStorage.removeItem('staff_user');
-    setIsLoggedIn(false);
+    clearStaffSession();
     router.push('/login');
   };
 
-  const visibleNavItems = navItems.filter(item => !item.staffOnly || isLoggedIn);
+  const visibleNavItems = navItems.filter(item => item.access === 'public' || (isLoggedIn && (item.access === 'staff' || session.isAdmin)));
   // Staff see 8 items, the public 5. So every item fits on one row in TH and EN, the desktop bar starts at xl
   // (menu button below) and staff get a compact bar without icons or the year badge.
   const compact = isLoggedIn;
@@ -82,7 +79,7 @@ function NavigationContent() {
             )}
             <div>
               <span className="font-extrabold text-base sm:text-lg tracking-tight text-white max-w-[200px] sm:max-w-xs truncate block drop-shadow-md group-hover:text-cyan-300 transition-colors">
-                {settings.event_name || 'TECH INNOVATION SUMMIT 2026'}
+                {settings.event_name || 'SMART EVENT'}
               </span>
               <p className="text-[10px] sm:text-xs text-indigo-300 font-mono tracking-widest uppercase mt-0.5">
                 {t.nav.attendeePortal}
@@ -164,7 +161,7 @@ function NavigationContent() {
           
           {/* Right Status & Auth (Inside the card) */}
         <div className="flex items-center gap-3 shrink-0">
-          <div title={connected ? t.nav.liveSync : t.nav.disconnected} className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-medium border whitespace-nowrap shrink-0 transition-all ${
+          <div data-live-status={connected ? 'connected' : 'offline'} title={connected ? t.nav.liveSync : t.nav.disconnected} className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-mono font-medium border whitespace-nowrap shrink-0 transition-all ${
             connected 
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/10' 
               : 'bg-rose-500/10 text-rose-400 border-rose-500/20'

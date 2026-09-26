@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import jsQR from 'jsqr';
-import api, { Participant } from '@/lib/api';
+import api, { CheckInError, Participant } from '@/lib/api';
 import useWebSocket from '@/lib/useWebSocket';
 import { useT } from '@/contexts/PreferencesContext';
+import StaffGate from '@/components/StaffGate';
 import {
   ScanLine,
   CheckCircle2,
@@ -24,7 +25,16 @@ const SAME_CODE_COOLDOWN_MS = 3000;
 // Decode a few times per second — plenty for a gate, and keeps CPU low
 const SCAN_INTERVAL_MS = 150;
 
+// Staff only (any role): the gate shows a login button that returns here
 export default function ScannerPage() {
+  return (
+    <StaffGate>
+      <ScannerPageContent />
+    </StaffGate>
+  );
+}
+
+function ScannerPageContent() {
   const t = useT();
   const [ticketCode, setTicketCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -100,17 +110,22 @@ export default function ScannerPage() {
 
     try {
       const result = await api.checkIn(code);
-      if (result) {
-        setLastCheckin(result);
-        setSuccess(true);
-        setTicketCode('');
-        playBeep(false);
-      } else {
+      setLastCheckin(result);
+      setSuccess(true);
+      setTicketCode('');
+      playBeep(false);
+    } catch (err) {
+      const failure = err instanceof CheckInError ? err : null;
+      if (failure?.code === 'ALREADY_CHECKED_IN') {
+        const when = failure.participant?.checked_in_at
+          ? new Date(failure.participant.checked_in_at).toLocaleTimeString(t.common.locale, { hour: '2-digit', minute: '2-digit' })
+          : '';
+        setError(failure.participant ? t.scanner.result.alreadyCheckedIn(failure.participant.name, when) : t.scanner.result.alreadyCheckedInUnknown);
+      } else if (failure?.code === 'TICKET_NOT_FOUND') {
         setError(t.scanner.result.notFound);
-        playBeep(true);
+      } else {
+        setError(t.scanner.result.connectionError);
       }
-    } catch {
-      setError(t.scanner.result.connectionError);
       playBeep(true);
     } finally {
       busyRef.current = false;

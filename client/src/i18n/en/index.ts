@@ -19,6 +19,7 @@ import { luckyDraw } from './luckyDraw';
 import { orgTypes } from './orgTypes';
 import { analytics } from './analytics';
 import { report } from './report';
+import { staffGate } from './staffGate';
 
 export const en = {
   common,
@@ -41,4 +42,5 @@ export const en = {
   orgTypes,
   analytics,
   report,
+  staffGate,
 };

@@ -11,6 +11,7 @@ import AgendaManager from '@/components/AgendaManager';
 import PrizeManager from '@/components/PrizeManager';
 import RegistrationPageManager from '@/components/RegistrationPageManager';
 import OrganizationTypeManager from '@/components/OrganizationTypeManager';
+import StaffGate from '@/components/StaffGate';
 
 const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<string> => {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -53,11 +54,14 @@ type SettingsTab = 'general' | 'registration' | 'organizations' | 'agenda' | 'pr
 const SETTINGS_TABS: SettingsTab[] = ['general', 'registration', 'organizations', 'agenda', 'prizes'];
 
 // The active tab lives in the URL (/settings?tab=agenda) so it survives a refresh
+// Event configuration is for administrators (server: ADR-0015)
 export default function SettingsPage() {
   return (
-    <Suspense>
-      <SettingsContent />
-    </Suspense>
+    <StaffGate roles={['Admin']}>
+      <Suspense>
+        <SettingsContent />
+      </Suspense>
+    </StaffGate>
   );
 }
 
@@ -90,10 +94,6 @@ function SettingsContent() {
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   useEffect(() => {
-    if (!localStorage.getItem('staff_token')) {
-      router.push('/login');
-      return;
-    }
     setEventName(settings.event_name);
     setEventLogo(settings.event_logo);
     setEventVenue(settings.event_venue || '');
@@ -178,33 +178,33 @@ function SettingsContent() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-12 px-4 sm:px-6">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-fade-in pb-12 sm:px-6">
+      <div className="flex items-center gap-3 mb-6 sm:mb-8">
         <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shadow-inner">
           <Settings className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">{t.settings.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{t.settings.title}</h1>
           <p className="text-sm text-slate-400 mt-1">
             {t.settings.subtitle}
           </p>
         </div>
       </div>
 
-      <div className="inline-flex flex-wrap p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
-        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+      <div className="grid grid-cols-2 sm:inline-flex sm:flex-wrap w-full sm:w-auto p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
+        <button type="button" onClick={() => setActiveTab('general')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'general' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Settings className="w-4 h-4" />{t.settings.tabs.general}
         </button>
-        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('agenda')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'agenda' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <CalendarRange className="w-4 h-4" />{t.settings.tabs.agenda}
         </button>
-        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('registration')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'registration' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <PanelsTopLeft className="w-4 h-4" />{t.settings.tabs.registration}
         </button>
-        <button type="button" onClick={() => setActiveTab('organizations')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'organizations' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('organizations')} className={`inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'organizations' ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Building2 className="w-4 h-4" />{t.orgTypes.tab}
         </button>
-        <button type="button" onClick={() => setActiveTab('prizes')} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+        <button type="button" onClick={() => setActiveTab('prizes')} className={`col-span-2 sm:col-span-1 inline-flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === 'prizes' ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
           <Gift className="w-4 h-4" />{t.settings.tabs.prizes}
         </button>
       </div>
@@ -212,7 +212,7 @@ function SettingsContent() {
       {activeTab === 'general' ? (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
-          <form onSubmit={handleSave} className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
+          <form onSubmit={handleSave} className="glass-panel p-5 sm:p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             
             <div className="space-y-6 relative z-10">

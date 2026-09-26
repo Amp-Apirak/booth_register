@@ -1,14 +1,25 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, User, Loader2, Zap } from 'lucide-react';
-import api from '@/lib/api';
+import { API_BASE } from '@/lib/apiBase';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useT } from '@/contexts/PreferencesContext';
+import { safeNextPath, saveStaffSession } from '@/lib/staffSession';
 
+// ?next=/scanner returns there after login (a staff page sent the user here)
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get('next'));
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +33,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
       const res = await fetch(`${API_BASE}/api/v1/login`, {
         method: 'POST',
         headers: {
@@ -34,13 +44,12 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (data.success) {
-        localStorage.setItem('staff_token', data.data.token);
-        localStorage.setItem('staff_user', JSON.stringify(data.data.user));
-        router.push('/dashboard');
+        saveStaffSession(data.data.token, data.data.user);
+        router.push(next || '/dashboard');
       } else {
         setError(t.login.errors[data.error] || t.login.wrongPassword);
       }
-    } catch (err) {
+    } catch {
       setError(t.login.connectionError);
     } finally {
       setIsLoading(false);

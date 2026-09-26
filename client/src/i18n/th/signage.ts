@@ -3,8 +3,20 @@
 export const signage = {
   // Controller bar above the screens (hidden in fullscreen)
   controls: {
+    title: 'โหมดจอ LED',
+    subtitle: 'เลือกหน้าที่จอนี้จะแสดง แล้วกดเต็มจอ',
+    tabs: {
+      welcome: 'หน้าต้อนรับ',
+      overview: 'ภาพรวมสด',
+      agenda: 'กำหนดการ',
+      lucky: 'ลุ้นรางวัล',
+    },
     fullscreen: 'เต็มจอ',
-    fullscreenHint: 'เข้าสู่โหมดเต็มจอ (กด ESC เพื่อออก)',
+    fullscreenHint: 'แสดงหน้านี้เต็มจอ (ออกด้วยปุ่มมุมขวาบน หรือกด ESC)',
+    exitFullscreen: 'ออกจากเต็มจอ',
+    live: 'ถ่ายทอดสด',
+    offline: 'ออฟไลน์',
+    reconnecting: 'ขาดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่',
   },
   // Screen 1: Welcome
   welcome: {

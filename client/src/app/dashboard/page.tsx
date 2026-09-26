@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as htmlToImage from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 import * as XLSX from 'xlsx';
-import api, { OrganizationType, Participant, formatEventDateRange, formatEventTimeRange, formatEventLocation } from '@/lib/api';
+import Swal from 'sweetalert2';
+import api, { CheckInError, OrganizationType, Participant, formatEventDateRange, formatEventTimeRange, formatEventLocation } from '@/lib/api';
 import { orgKeyColor, orgTypeName, participantOrgKey, participantOrgLabel } from '@/lib/orgTypes';
 import OrganizationTypeField, { OrgChoice, orgChoiceOf } from '@/components/OrganizationTypeField';
 import AnalyticsPanel from '@/components/analytics/AnalyticsPanel';
@@ -16,6 +17,8 @@ import Cropper from 'react-easy-crop';
 import getCroppedImg from '@/lib/cropImage';
 import { columnHeader } from '@/lib/participantImport';
 import ParticipantImportModal from '@/components/ParticipantImportModal';
+import StaffGate from '@/components/StaffGate';
+import { useStaffSession } from '@/lib/staffSession';
 import { 
   LayoutDashboard, 
   Users, 
@@ -59,9 +62,11 @@ function SortIcon({ active, direction }: { active: boolean; direction: 'asc' | '
 // The tab lives in the URL (/dashboard?tab=analytics) so refresh and links keep it
 export default function DashboardPage() {
   return (
-    <Suspense>
-      <DashboardContent />
-    </Suspense>
+    <StaffGate>
+      <Suspense>
+        <DashboardContent />
+      </Suspense>
+    </StaffGate>
   );
 }
 
@@ -102,7 +107,9 @@ function DashboardContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAttendee, setEditingAttendee] = useState<Participant | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const { stats, connected, participants: liveParticipants } = useWebSocket();
+  const { stats, connected, participants: liveParticipants } = useWebSocket({ staff: true });
+  // Staff role: event-day work only (no deleting, no bulk import) — the server enforces the same
+  const { isAdmin } = useStaffSession();
   // after the first `participants:update` the live list (check-ins at the gate, other staff) is the source
   const list = liveParticipants ?? participants;
 
@@ -221,11 +228,14 @@ function DashboardContent() {
     if (!ticketCode) return;
     try {
       const updated = await api.checkIn(ticketCode);
-      if (updated) {
-        setParticipants(prev => prev.map(p => p.id === updated.id ? updated : p));
-      }
-    } catch {
-      // Handled
+      setParticipants(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+    } catch (err) {
+      const code = err instanceof CheckInError ? err.code : 'NETWORK_ERROR';
+      Swal.fire({
+        icon: 'error',
+        title: t.dashboard.checkinFailed.title,
+        text: code === 'ALREADY_CHECKED_IN' ? t.dashboard.checkinFailed.already : code === 'TICKET_NOT_FOUND' ? t.dashboard.checkinFailed.notFound : t.dashboard.checkinFailed.connection,
+      });
     }
   };
 
@@ -352,8 +362,111 @@ function DashboardContent() {
     XLSX.writeFile(workbook, `event_attendees_${Date.now()}.xlsx`);
   };
 
+  // ── Pieces shared by the table (≥1024px) and the card list (phones/tablets) ──
+  const renderAvatar = (p: Participant, isChecked: boolean) => p.profile_picture ? (
+    <img
+      src={p.profile_picture}
+      alt={p.name}
+      onClick={() => setLightboxImage(p.profile_picture!)}
+      className={`w-12 h-12 shrink-0 rounded-xl object-cover shadow-sm border cursor-pointer hover:scale-110 transition-transform ${isChecked ? 'border-emerald-500/30 hover:border-emerald-400' : 'border-indigo-500/30 hover:border-indigo-400'}`}
+    />
+  ) : (
+    <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-bold text-sm uppercase shadow-sm ${
+      isChecked
+        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+        : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+    }`}>
+      {p.name.substring(0, 2)}
+    </div>
+  );
+
+  const renderVip = (p: Participant) => p.attendee_type === 'VIP' && (
+    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
+      <Crown className="w-3 h-3" /> VIP
+    </span>
+  );
+
+  // Organization type — staff can choose on the attendee's behalf
+  const renderOrgSelect = (p: Participant, selectClass: string) => (
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: orgKeyColor(participantOrgKey(p), orgTypes, theme) }} aria-hidden="true" />
+      <select
+        value={typeof participantOrgKey(p) === 'number' ? String(p.organization_type_id) : participantOrgKey(p) === 'other' ? 'other' : ''}
+        onChange={(e) => quickSetOrg(p, e.target.value)}
+        title={t.orgTypes.changeTitle}
+        aria-label={`${t.orgTypes.changeTitle}: ${p.name}`}
+        className={`${selectClass} truncate bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+      >
+        <option value="" className="bg-slate-900">{t.orgTypes.none}</option>
+        {orgTypes.map((type) => <option key={type.id} value={type.id} className="bg-slate-900">{orgTypeName(type, lang)}</option>)}
+        <option value="other" className="bg-slate-900">{p.organization_type_other ? `${t.orgTypes.other}: ${p.organization_type_other}` : t.orgTypes.otherOption}</option>
+      </select>
+    </div>
+  );
+
+  const renderStatus = (isChecked: boolean, compact = false) => (
+    <span className={`inline-flex items-center gap-1.5 rounded-full font-mono font-semibold border whitespace-nowrap ${compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'} ${
+      isChecked
+        ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+        : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+    }`}>
+      <span className={`w-2 h-2 rounded-full ${isChecked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+      <span>{isChecked ? t.common.status.checkedIn : t.common.status.pending}</span>
+    </span>
+  );
+
+  const renderTicketCode = (p: Participant) => p.ticket_code ? (
+    <span className="bg-white/[0.04] px-2 py-0.5 rounded border border-white/5 text-cyan-300 select-all text-xs font-mono break-all">
+      {p.ticket_code}
+    </span>
+  ) : (
+    <span className="text-slate-600">-</span>
+  );
+
+  const renderActions = (p: Participant, isChecked: boolean) => (
+    <div className="flex items-center justify-end gap-2">
+      {!isChecked && (
+        <button
+          onClick={() => handleQuickCheckin(p.ticket_code)}
+          className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-on-accent border border-emerald-500/30 text-sm font-semibold whitespace-nowrap transition-all"
+          title={t.dashboard.rowActions.checkInNow}
+        >
+          {t.dashboard.rowActions.checkIn}
+        </button>
+      )}
+      {p.ticket_code && (
+        <button
+          onClick={() => setQrModalParticipant(p)}
+          className="p-2 rounded-lg text-indigo-400 hover:text-white hover:bg-indigo-500/20 transition-colors"
+          title={t.dashboard.rowActions.viewQr}
+          aria-label={t.dashboard.rowActions.viewQr}
+        >
+          <QrCode className="w-5 h-5" />
+        </button>
+      )}
+      <button
+        onClick={() => openEdit(p)}
+        className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+        title={t.dashboard.rowActions.edit}
+        aria-label={t.dashboard.rowActions.edit}
+      >
+        <Edit3 className="w-5 h-5" />
+      </button>
+      {isAdmin && (
+        <button
+          onClick={() => handleDelete(p.id)}
+          className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+          title={t.dashboard.rowActions.delete}
+          aria-label={t.dashboard.rowActions.delete}
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 sm:space-y-8 pb-12">
       {/* ── Executive Header ── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
@@ -369,7 +482,7 @@ function DashboardContent() {
           </p>
         </div>
 
-        {tab === 'participants' && <div className="flex items-center gap-3">
+        {tab === 'participants' && <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={fetchParticipants}
             className="p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 transition-colors"
@@ -380,23 +493,23 @@ function DashboardContent() {
 
           <button
             onClick={exportExcel}
-            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <Download className="w-4 h-4 text-cyan-400" />
             <span>{t.dashboard.actions.exportExcel}</span>
           </button>
 
-          <button
+          {isAdmin && <button
             onClick={() => setIsImportModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2"
+            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-semibold border border-white/10 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <Upload className="w-4 h-4 text-cyan-400" />
             <span>{t.dashboard.actions.importExcel}</span>
-          </button>
+          </button>}
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2"
+            className="w-full sm:w-auto justify-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-on-accent text-xs font-bold shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>{t.dashboard.actions.addAttendee}</span>
@@ -405,13 +518,13 @@ function DashboardContent() {
       </div>
 
       {/* ── Tabs: attendee list | reports & charts ── */}
-      <div role="tablist" className="inline-flex p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
+      <div role="tablist" className="flex sm:inline-flex w-full sm:w-auto p-1.5 rounded-2xl bg-black/30 border border-white/10 gap-1">
         {([
           ['participants', t.analytics.tabParticipants, List],
           ['analytics', t.analytics.tabAnalytics, BarChart3],
         ] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === id ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${tab === id ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
             <Icon className="w-4 h-4" />{label}
           </button>
         ))}
@@ -422,40 +535,40 @@ function DashboardContent() {
       ) : (<>
 
       {/* ── 4 Executive 3D Metrics Cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 perspective-1000">
-        <div className="glass-panel rounded-2xl p-5 border border-indigo-500/20 card-3d">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 perspective-1000">
+        <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-indigo-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400">{t.dashboard.stats.registered}</span>
             <Users className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-3xl font-extrabold text-white font-heading">{totalRegistered}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-white font-heading">{totalRegistered}</div>
           <div className="text-[11px] text-indigo-400/80 mt-1 font-mono">100% Total Quota</div>
         </div>
 
-        <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 card-3d">
+        <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-emerald-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400">{t.common.status.checkedIn}</span>
             <UserCheck className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-3xl font-extrabold text-emerald-400 font-heading">{totalCheckedIn}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-heading">{totalCheckedIn}</div>
           <div className="text-[11px] text-emerald-400/80 mt-1 font-mono">{showUpRate}% of Target</div>
         </div>
 
-        <div className="glass-panel rounded-2xl p-5 border border-amber-500/20 card-3d">
+        <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-amber-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400">{t.dashboard.stats.pending}</span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-3xl font-extrabold text-amber-400 font-heading">{totalPending}</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-heading">{totalPending}</div>
           <div className="text-[11px] text-amber-400/80 mt-1 font-mono">{100 - showUpRate}% In Transit</div>
         </div>
 
-        <div className="glass-panel rounded-2xl p-5 border border-purple-500/20 card-3d">
+        <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-purple-500/20 card-3d">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-slate-400">Show-up Rate</span>
             <TrendingUp className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="text-3xl font-extrabold text-purple-300 font-heading">{showUpRate}%</div>
+          <div className="text-2xl sm:text-3xl font-extrabold text-purple-300 font-heading">{showUpRate}%</div>
           <div className="w-full bg-white/[0.08] h-1 rounded-full overflow-hidden mt-2">
             <div className="h-full bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full" style={{ width: `${showUpRate}%` }} />
           </div>
@@ -463,8 +576,8 @@ function DashboardContent() {
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="glass-panel rounded-2xl p-3 sm:p-4 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-        <div className="relative w-full sm:w-80">
+      <div className="glass-panel rounded-2xl p-3 sm:p-4 border border-white/10 flex flex-col lg:flex-row items-center justify-between gap-3 shadow-lg">
+        <div className="relative w-full lg:w-80">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
             <Search className="w-4 h-4" />
           </div>
@@ -477,12 +590,12 @@ function DashboardContent() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-1.5 w-full lg:w-auto">
           <select
             value={orgFilter}
             onChange={(e) => setOrgFilter(e.target.value)}
             aria-label={t.orgTypes.column}
-            className="mr-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.04] text-slate-200 border border-white/10 max-w-[14rem]"
+            className="w-full sm:w-auto sm:max-w-[14rem] sm:mr-1 px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold bg-white/[0.04] text-slate-200 border border-white/10"
           >
             <option value="all" className="bg-slate-900">{t.orgTypes.filterAll}</option>
             {orgTypes.map((type) => <option key={type.id} value={type.id} className="bg-slate-900">{orgTypeName(type, lang)}</option>)}
@@ -493,7 +606,7 @@ function DashboardContent() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
                 filter === f
                   ? 'bg-indigo-600 text-on-accent shadow-md shadow-indigo-600/30'
                   : 'bg-white/[0.04] text-slate-400 hover:text-white hover:bg-white/[0.08] border border-white/5'
@@ -507,7 +620,47 @@ function DashboardContent() {
 
       {/* ── High-Tech Attendees Table ── */}
       <div className="glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-        <div className="overflow-x-auto">
+        {/* Phones & tablets: one card per attendee (the table needs ≥1024px); 2 per row on tablets */}
+        <div className="lg:hidden divide-y divide-white/[0.06] md:divide-y-0 md:grid md:grid-cols-2 md:gap-3 md:p-3">
+          {loading ? (
+            <div className="md:col-span-2 px-4 py-12 text-center text-slate-500">
+              <span className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin inline-block mr-2 align-middle" />
+              {t.dashboard.table.loading}
+            </div>
+          ) : paginatedParticipants.length === 0 ? (
+            <div className="md:col-span-2 px-4 py-12 text-center text-slate-500">{t.dashboard.table.empty}</div>
+          ) : paginatedParticipants.map((p) => {
+            const isChecked = p.status === 'Checked-in';
+            return (
+              <div key={p.id} className="p-4 space-y-3 md:rounded-2xl md:border md:border-white/10 md:bg-white/[0.02]">
+                <div className="flex items-start gap-3">
+                  {renderAvatar(p, isChecked)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white text-base leading-snug break-words">{p.name}</span>
+                      {renderVip(p)}
+                    </div>
+                    {p.email && <div className="text-slate-400 text-xs font-mono truncate mt-0.5">{p.email}</div>}
+                    {p.phone && <div className="text-slate-500 text-xs font-mono">{p.phone}</div>}
+                  </div>
+                  {renderStatus(isChecked, true)}
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold text-slate-200 break-words">{p.company}</span>
+                  {p.position && <span className="text-indigo-400 font-mono text-xs uppercase tracking-wider block mt-0.5">{p.position}</span>}
+                </div>
+                {renderOrgSelect(p, 'flex-1 min-w-0')}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                  <span>{p.registered_at ? new Date(p.registered_at).toLocaleString(t.common.locale) : '-'}</span>
+                  {renderTicketCode(p)}
+                </div>
+                {renderActions(p, isChecked)}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-white/[0.02] border-b border-white/10 text-slate-400 font-mono uppercase tracking-wider text-xs">
               <tr>
@@ -551,32 +704,13 @@ function DashboardContent() {
                       {/* Name & Avatar */}
                       <td className="py-4 px-4 relative">
                         <div className="flex items-center gap-4 group/item relative z-10">
-                          {p.profile_picture ? (
-                            <img 
-                              src={p.profile_picture} 
-                              alt={p.name} 
-                              onClick={() => setLightboxImage(p.profile_picture!)}
-                              className={`w-12 h-12 rounded-xl object-cover shadow-sm border cursor-pointer hover:scale-110 transition-transform ${isChecked ? 'border-emerald-500/30 hover:border-emerald-400' : 'border-indigo-500/30 hover:border-indigo-400'}`} 
-                            />
-                          ) : (
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm uppercase shadow-sm ${
-                              isChecked
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                            }`}>
-                              {p.name.substring(0, 2)}
-                            </div>
-                          )}
+                          {renderAvatar(p, isChecked)}
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-white block text-lg group-hover:text-cyan-300 transition-colors">
                                 {p.name}
                               </span>
-                              {p.attendee_type === 'VIP' && (
-                                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                                  <Crown className="w-3 h-3" /> VIP
-                                </span>
-                              )}
+                              {renderVip(p)}
                             </div>
                             {p.email && <span className="text-slate-400 text-sm font-mono">{p.email}</span>}
                             {p.phone && <span className="text-slate-500 text-xs font-mono block mt-0.5">{p.phone}</span>}
@@ -596,32 +730,12 @@ function DashboardContent() {
 
                       {/* Organization type — staff can choose on the attendee's behalf */}
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: orgKeyColor(participantOrgKey(p), orgTypes, theme) }} aria-hidden="true" />
-                          <select
-                            value={typeof participantOrgKey(p) === 'number' ? String(p.organization_type_id) : participantOrgKey(p) === 'other' ? 'other' : ''}
-                            onChange={(e) => quickSetOrg(p, e.target.value)}
-                            title={t.orgTypes.changeTitle}
-                            aria-label={`${t.orgTypes.changeTitle}: ${p.name}`}
-                            className="w-40 truncate bg-white/[0.03] hover:bg-white/[0.07] border border-white/10 rounded-lg px-2 py-1 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value="" className="bg-slate-900">{t.orgTypes.none}</option>
-                            {orgTypes.map((type) => <option key={type.id} value={type.id} className="bg-slate-900">{orgTypeName(type, lang)}</option>)}
-                            <option value="other" className="bg-slate-900">{p.organization_type_other ? `${t.orgTypes.other}: ${p.organization_type_other}` : t.orgTypes.otherOption}</option>
-                          </select>
-                        </div>
+                        {renderOrgSelect(p, 'w-40')}
                       </td>
 
                       {/* Status Tag */}
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-mono font-semibold border ${
-                          isChecked
-                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                            : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                        }`}>
-                          <span className={`w-2 h-2 rounded-full ${isChecked ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                          <span>{isChecked ? t.common.status.checkedIn : t.common.status.pending}</span>
-                        </span>
+                        {renderStatus(isChecked)}
                       </td>
 
                       {/* Registered At & Ticket Code */}
@@ -629,51 +743,12 @@ function DashboardContent() {
                         <div className="text-slate-300 text-sm mb-1">
                           {p.registered_at ? new Date(p.registered_at).toLocaleString(t.common.locale) : '-'}
                         </div>
-                        {p.ticket_code ? (
-                          <span className="bg-white/[0.04] px-2 py-0.5 rounded border border-white/5 text-cyan-300 select-all text-xs font-mono">
-                            {p.ticket_code}
-                          </span>
-                        ) : (
-                          <span className="text-slate-600">-</span>
-                        )}
+                        {renderTicketCode(p)}
                       </td>
 
                       {/* Quick Actions */}
                       <td className="px-4 py-4 text-right whitespace-nowrap sticky-actions">
-                        <div className="flex items-center justify-end gap-2">
-                          {!isChecked && (
-                            <button
-                              onClick={() => handleQuickCheckin(p.ticket_code)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-on-accent border border-emerald-500/30 text-sm font-semibold transition-all"
-                              title={t.dashboard.rowActions.checkInNow}
-                            >
-                              {t.dashboard.rowActions.checkIn}
-                            </button>
-                          )}
-                          {p.ticket_code && (
-                            <button
-                              onClick={() => setQrModalParticipant(p)}
-                              className="p-2 rounded-lg text-indigo-400 hover:text-white hover:bg-indigo-500/20 transition-colors"
-                              title={t.dashboard.rowActions.viewQr}
-                            >
-                              <QrCode className="w-5 h-5" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title={t.dashboard.rowActions.edit}
-                          >
-                            <Edit3 className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p.id)}
-                            className="p-2 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                            title={t.dashboard.rowActions.delete}
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
+                        {renderActions(p, isChecked)}
                       </td>
                     </tr>
                   );
@@ -684,7 +759,7 @@ function DashboardContent() {
         </div>
         
         {/* Pagination Controls */}
-        <div className="px-6 py-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
+        <div className="px-4 sm:px-6 py-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.01]">
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-400">{t.dashboard.pagination.show}</span>
             <select
@@ -735,7 +810,7 @@ function DashboardContent() {
 
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+          <div className="glass-panel-glow rounded-3xl p-5 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
@@ -803,8 +878,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
+                <label htmlFor="add-name" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
                 <input
+                  id="add-name"
                   type="text"
                   required
                   value={newAttendee.name}
@@ -815,8 +891,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
+                <label htmlFor="add-company" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
                 <input
+                  id="add-company"
                   type="text"
                   required
                   value={newAttendee.company}
@@ -827,8 +904,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
+                <label htmlFor="add-position" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
                 <input
+                  id="add-position"
                   type="text"
                   value={newAttendee.position}
                   onChange={(e) => setNewAttendee({ ...newAttendee, position: e.target.value })}
@@ -845,10 +923,11 @@ function DashboardContent() {
                 onChange={(choice, other) => setNewOrg({ choice, other })}
               />
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.email}</label>
+                  <label htmlFor="add-email" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.email}</label>
                   <input
+                  id="add-email"
                     type="email"
                     value={newAttendee.email}
                     onChange={(e) => setNewAttendee({ ...newAttendee, email: e.target.value })}
@@ -857,8 +936,9 @@ function DashboardContent() {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.phone}</label>
+                  <label htmlFor="add-phone" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.phone}</label>
                   <input
+                  id="add-phone"
                     type="tel"
                     value={newAttendee.phone}
                     onChange={(e) => setNewAttendee({ ...newAttendee, phone: e.target.value })}
@@ -891,7 +971,7 @@ function DashboardContent() {
       {/* ── Edit Attendee Modal ── */}
       {isEditModalOpen && editingAttendee && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+          <div className="glass-panel-glow rounded-3xl p-5 sm:p-8 max-w-2xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">
@@ -959,8 +1039,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
+                <label htmlFor="edit-name" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.name} *</label>
                 <input
+                  id="edit-name"
                   type="text"
                   required
                   value={editingAttendee.name}
@@ -970,8 +1051,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
+                <label htmlFor="edit-company" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.company} *</label>
                 <input
+                  id="edit-company"
                   type="text"
                   required
                   value={editingAttendee.company}
@@ -981,8 +1063,9 @@ function DashboardContent() {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
+                <label htmlFor="edit-position" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.position}</label>
                 <input
+                  id="edit-position"
                   type="text"
                   value={editingAttendee.position}
                   onChange={(e) => setEditingAttendee({ ...editingAttendee, position: e.target.value })}
@@ -997,6 +1080,31 @@ function DashboardContent() {
                 other={editOrg.other}
                 onChange={(choice, other) => setEditOrg({ choice, other })}
               />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="edit-email" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.email}</label>
+                  <input
+                    id="edit-email"
+                    type="email"
+                    value={editingAttendee.email || ''}
+                    onChange={(e) => setEditingAttendee({ ...editingAttendee, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
+                    placeholder="mail@corp.com"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-phone" className="block font-semibold text-slate-300 mb-1">{t.dashboard.form.phone}</label>
+                  <input
+                    id="edit-phone"
+                    type="tel"
+                    value={editingAttendee.phone || ''}
+                    onChange={(e) => setEditingAttendee({ ...editingAttendee, phone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-indigo-500"
+                    placeholder="08x-xxx-xxxx"
+                  />
+                </div>
+              </div>
 
               <div className="pt-4 flex gap-3">
                 <button
