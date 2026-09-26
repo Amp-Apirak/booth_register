@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
 import api, { OrganizationType, Participant, formatEventDateRange, formatEventLocation, formatEventTimeRange } from '@/lib/api';
@@ -18,6 +18,18 @@ import styles from './AnalyticsReport.module.css';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const CHART_WIDTH = 600; // ≈ 160 mm printable width at 96 dpi
+const SHEET_WIDTH = 794; // 210 mm at 96 dpi
+
+// On screens narrower than A4 the sheet is shown zoomed out (like a PDF viewer) instead of reflowing,
+// so what you see is what prints. Printing resets the zoom (AnalyticsReport.module.css).
+const subscribeResize = (onChange: () => void) => {
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+};
+const useSheetZoom = () => {
+  const viewport = useSyncExternalStore(subscribeResize, () => document.documentElement.clientWidth, () => SHEET_WIDTH + 48);
+  return Math.min(1, (viewport - 24) / SHEET_WIDTH);
+};
 const light = CHART_THEMES.light;
 
 /** Printable A4 summary of the analytics for the given filters (always light, paper-like). */
@@ -27,6 +39,7 @@ export default function AnalyticsReport({ filters }: { filters: AnalyticsFilters
   const ta = t.analytics;
   const locale = t.common.locale;
   const { settings } = useSettings();
+  const sheetZoom = useSheetZoom();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [types, setTypes] = useState<OrganizationType[]>([]);
   const [winnerIds, setWinnerIds] = useState<Set<number>>(new Set());
@@ -87,7 +100,7 @@ export default function AnalyticsReport({ filters }: { filters: AnalyticsFilters
   const pageLabel = tr.pageOf.replace(/"/g, '');
 
   return (
-    <div className="theme-print">
+    <div>
       {/* A4 portrait, Thai official-document margins; page number bottom-right (Chrome 131+) */}
       <style>{`@page { size: A4 portrait; margin: 25mm 20mm 20mm 30mm; background: #ffffff; @bottom-right { content: "${pageLabel} " counter(page) " / " counter(pages); font-family: Sarabun, sans-serif; font-size: 9pt; color: #6b7280; } }`}</style>
 
@@ -96,13 +109,15 @@ export default function AnalyticsReport({ filters }: { filters: AnalyticsFilters
           <h1 className="text-xl font-extrabold text-white">{tr.previewTitle}</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">{tr.previewHint}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard?tab=analytics" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-sm font-semibold"><ArrowLeft className="w-4 h-4" />{tr.back}</Link>
-          <button type="button" onClick={() => window.print()} disabled={loading} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent text-sm font-bold disabled:opacity-50"><Printer className="w-4 h-4" />{tr.print}</button>
+        <div className="grid grid-cols-2 sm:flex gap-2 w-full sm:w-auto">
+          <Link href="/dashboard?tab=analytics" className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-200 text-sm font-semibold whitespace-nowrap"><ArrowLeft className="w-4 h-4 shrink-0" />{tr.back}</Link>
+          <button type="button" onClick={() => window.print()} disabled={loading} className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-on-accent text-sm font-bold whitespace-nowrap disabled:opacity-50"><Printer className="w-4 h-4 shrink-0" /><span className="sm:hidden">{tr.printShort}</span><span className="hidden sm:inline">{tr.print}</span></button>
         </div>
       </div>
 
-      <article className={styles.sheet} aria-busy={loading}>
+      {/* only the paper uses the light palette; the toolbar above follows the site theme */}
+      <div className="theme-print">
+      <article className={styles.sheet} aria-busy={loading} style={{ zoom: sheetZoom }}>
         {/* not a <header>: the ticket print CSS hides every header element */}
         <div className={styles.header}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -261,6 +276,7 @@ export default function AnalyticsReport({ filters }: { filters: AnalyticsFilters
           </>
         )}
       </article>
+      </div>
     </div>
   );
 }

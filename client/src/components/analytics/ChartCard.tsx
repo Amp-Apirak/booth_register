@@ -25,9 +25,9 @@ export default function ChartCard({
     <figure className={`analytics-card glass-panel rounded-3xl border border-white/10 p-5 sm:p-6 flex flex-col min-w-0 ${className}`}>
       <figcaption className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 leading-snug">
             {icon}
-            <span className="truncate">{title}</span>
+            <span className="min-w-0">{title}</span>
             {badge}
           </h3>
           {subtitle && <p className="text-xs sm:text-sm text-slate-400 mt-1">{subtitle}</p>}

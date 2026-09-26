@@ -5,6 +5,7 @@ export const report: typeof Th = {
   previewTitle: 'Report preview',
   previewHint: 'A4 portrait · margins top 2.5 cm, bottom 2 cm, left 3 cm, right 2 cm · in the print dialog choose scale 100% and turn off "Headers and footers"',
   print: 'Print / Save as PDF',
+  printShort: 'Print / PDF',
   back: 'Back to dashboard',
   loading: 'Preparing the report...',
   eventLabel: 'Event',

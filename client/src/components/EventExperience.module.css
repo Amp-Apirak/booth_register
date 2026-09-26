@@ -30,7 +30,7 @@
 .brandIcon img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
 .brand > span { font-family: var(--font-mono); font-size: 13px; letter-spacing: .17em; font-weight: 600; }
 .brand small { display: block; margin-top: 6px; font-size: 10px; color: #8394ae; letter-spacing: .2em; }
-.motionButton { display: flex; align-items: center; gap: 8px; color: #aebace; border: 1px solid #ffffff1a; border-radius: 30px; padding: 9px 13px; font-size: 13px; background: #ffffff03; cursor: pointer; }
+.motionButton { display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0; color: #aebace; border: 1px solid #ffffff1a; border-radius: 30px; padding: 9px 13px; font-size: 13px; background: #ffffff03; cursor: pointer; }
 .motionButton:hover { color: white; border-color: #818cf870; }
 .experience button:focus-visible, .experience a:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
 .hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 10px; width: 100%; flex: 1; padding: 68px 0 76px; }
@@ -150,6 +150,13 @@
 @media (min-width: 381px) and (max-width: 450px) {
   .sculpture, .compact .sculpture { scale: .64; }
   .scene, .compact .scene { height: 340px; }
+}
+/* phones: keep the top bar on one line (icon-only motion button, tighter brand text) */
+@media (max-width: 450px) {
+  .brand > span { font-size: 11px; letter-spacing: .12em; }
+  .brand small { letter-spacing: .14em; }
+  .motionButton { padding: 9px 11px; }
+  .motionButton span { display: none; }
 }
 @media (max-width: 380px) {
   .entrance { padding-inline: 18px; }

@@ -371,7 +371,14 @@ export default function AgendaManager() {
           <p className="text-slate-300 font-semibold">{t.agenda.empty.noMatch}</p>
           <button type="button" onClick={resetFilters} className="mt-3 text-sm text-cyan-300 hover:text-cyan-200">{t.agenda.empty.clearAll}</button>
         </div>
-      ) : visibleItems.map(({ item, index }) => (
+      ) : visibleItems.map(({ item, index }) => {
+        const cardActions = (
+          <>
+            {item.speaker_image && <button type="button" title={t.agenda.card.removePhoto} aria-label={t.agenda.card.removePhoto} onClick={() => updateItem(index, 'speaker_image', '')} className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><X className="w-4 h-4" /></button>}
+            <button type="button" title={t.agenda.card.removeItem} aria-label={t.agenda.card.removeItem} onClick={() => setItems(current => current.filter((_, itemIndex) => itemIndex !== index))} className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><Trash2 className="w-4 h-4" /></button>
+          </>
+        );
+        return (
         <div key={item.id ?? `new-${index}`} className={`glass-panel rounded-3xl p-5 sm:p-6 border relative overflow-hidden ${item.isNew ? 'border-emerald-400/50 shadow-[0_0_30px_rgba(52,211,153,.12)]' : 'border-white/10'}`}>
           <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${item.isNew ? 'from-emerald-400 to-cyan-400' : 'from-indigo-500 to-cyan-400'}`} />
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -380,7 +387,9 @@ export default function AgendaManager() {
             {item.isNew && <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-400/30">{t.agenda.card.newUnsaved}</span>}
             <span className="ml-auto text-xs font-mono text-cyan-300/80">{formatCardTime(item.start_at, item.end_at, t)}</span>
           </div>
-          <div className="flex items-start gap-4">
+          {/* phones: photo + delete on one row, fields full width below */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex items-start justify-between gap-3 sm:block shrink-0">
             <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center">
               {item.speaker_image ? (
                 // Data URLs come from staff uploads and cannot use the Next image optimizer.
@@ -392,7 +401,9 @@ export default function AgendaManager() {
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event => handleImage(index, event.target.files?.[0])} />
               </label>
             </div>
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="flex gap-2 sm:hidden">{cardActions}</div>
+            </div>
+            <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-2 gap-3">
               <input id={`agenda-${index}-title`} value={item.title} onChange={event => updateItem(index, 'title', event.target.value)} placeholder={t.agenda.card.titlePlaceholder} className="md:col-span-2 bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white font-semibold" />
               <textarea value={item.description} onChange={event => updateItem(index, 'description', event.target.value)} placeholder={t.agenda.card.descriptionPlaceholder} rows={2} className="md:col-span-2 bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white resize-none" />
               <input value={item.speaker} onChange={event => updateItem(index, 'speaker', event.target.value)} placeholder={t.agenda.card.speakerPlaceholder} className="bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white" />
@@ -400,24 +411,22 @@ export default function AgendaManager() {
               <label className="space-y-1"><span className="text-xs text-slate-400">{t.agenda.card.start}</span><input id={`agenda-${index}-start_at`} type="datetime-local" value={item.start_at} onChange={event => updateItem(index, 'start_at', event.target.value)} className="w-full bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
               <label className="space-y-1"><span className="text-xs text-slate-400">{t.agenda.card.end}</span><input id={`agenda-${index}-end_at`} type="datetime-local" min={item.start_at || undefined} value={item.end_at} onChange={event => updateItem(index, 'end_at', event.target.value)} className="w-full bg-surface/60 border border-white/10 rounded-xl px-4 py-3 text-white scheme-dark" /></label>
             </div>
-            <div className="flex flex-col gap-2">
-              {item.speaker_image && <button type="button" title={t.agenda.card.removePhoto} onClick={() => updateItem(index, 'speaker_image', '')} className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><X className="w-4 h-4" /></button>}
-              <button type="button" title={t.agenda.card.removeItem} onClick={() => setItems(current => current.filter((_, itemIndex) => itemIndex !== index))} className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><Trash2 className="w-4 h-4" /></button>
-            </div>
+            <div className="hidden sm:flex flex-col gap-2">{cardActions}</div>
           </div>
           <label className="mt-4 inline-flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
             <input type="checkbox" checked={item.is_highlight} onChange={event => updateItem(index, 'is_highlight', event.target.checked)} className="w-4 h-4 accent-purple-500" /> {t.agenda.card.highlight}
           </label>
         </div>
-      ))}
+        );
+      })}
 
       {filteredItems.length > 0 && (
         <div className="glass-panel rounded-2xl px-4 py-3 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-sm text-slate-400">{t.common.page} <b className="text-white">{currentPage}</b> {t.common.of} {totalPages} · {t.common.items} {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredItems.length)}</span>
-          <div className="flex items-center gap-2">
-            <button type="button" disabled={currentPage === 1} onClick={() => setPage(value => Math.max(1, value - 1))} className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30"><ChevronLeft className="w-4 h-4" />{t.common.previous}</button>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+            <button type="button" disabled={currentPage === 1} onClick={() => setPage(value => Math.max(1, value - 1))} aria-label={t.common.previous} className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline">{t.common.previous}</span></button>
             {Array.from({ length: totalPages }, (_, index) => index + 1).filter(number => totalPages <= 7 || number === 1 || number === totalPages || Math.abs(number - currentPage) <= 1).map((number, index, pages) => <span key={number} className="contents">{index > 0 && number - pages[index - 1] > 1 && <span className="text-slate-500">…</span>}<button type="button" onClick={() => setPage(number)} className={`w-9 h-9 rounded-xl text-sm font-bold border ${currentPage === number ? 'bg-indigo-600 border-indigo-400 text-on-accent' : 'bg-white/5 border-white/10 text-slate-300'}`}>{number}</button></span>)}
-            <button type="button" disabled={currentPage === totalPages} onClick={() => setPage(value => Math.min(totalPages, value + 1))} className="inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30">{t.common.next}<ChevronRight className="w-4 h-4" /></button>
+            <button type="button" disabled={currentPage === totalPages} onClick={() => setPage(value => Math.min(totalPages, value + 1))} aria-label={t.common.next} className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-300 disabled:opacity-30"><span className="hidden sm:inline">{t.common.next}</span><ChevronRight className="w-4 h-4" /></button>
           </div>
         </div>
       )}

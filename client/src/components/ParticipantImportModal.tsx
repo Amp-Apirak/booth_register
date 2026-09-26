@@ -123,7 +123,7 @@ export default function ParticipantImportModal({ onClose, onImported }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="glass-panel-glow rounded-3xl p-6 sm:p-8 max-w-4xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+      <div className="glass-panel-glow rounded-3xl p-5 sm:p-8 max-w-4xl w-full border border-indigo-500/30 shadow-2xl space-y-6 relative max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between sticky top-0 bg-surface-2/90 backdrop-blur pb-4 z-10 border-b border-white/5 -mt-2 pt-2">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-cyan-400">

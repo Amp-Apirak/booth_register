@@ -118,8 +118,8 @@ export default function OrganizationTypeManager() {
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mt-3">
-          <div className="flex items-center gap-2" role="radiogroup" aria-label={tt.color}>
-            <span className="text-xs text-slate-400 mr-1">{tt.color}</span>
+          <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={tt.color}>
+            <span className="w-full sm:w-auto text-xs text-slate-400 sm:mr-1">{tt.color}</span>
             {ORG_COLOR_SLOTS.map((slot) => (
               <button
                 key={slot}

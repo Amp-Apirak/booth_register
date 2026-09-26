@@ -34,6 +34,8 @@ export default function HourColumns({
   const yMax = ticks[ticks.length - 1] || 1;
   const band = innerW / points.length;
   const barW = Math.min(24, band * 0.6);
+  // "09:00" needs ~36px: on narrow screens label every 2nd/3rd hour so the axis stays readable
+  const labelEvery = Math.max(1, Math.ceil(36 / band));
   const y = (v: number) => PAD.top + innerH - (v / yMax) * innerH;
   const hasSelection = selectedHour !== null && selectedHour !== undefined;
 
@@ -85,7 +87,7 @@ export default function HourColumns({
               {p.count > 0 && (
                 <text x={cx + DEPTH / 2} y={top - DEPTH - 5} textAnchor="middle" fontSize={11} fontWeight={700} fill={theme.ink} style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt(p.count)}</text>
               )}
-              <text x={cx} y={H - 10} textAnchor="middle" fontSize={11} fill={theme.muted}>{hourLabel(p.hour)}</text>
+              {i % labelEvery === 0 && <text x={cx} y={H - 10} textAnchor="middle" fontSize={11} fill={theme.muted}>{hourLabel(p.hour)}</text>}
             </g>
           );
         })}

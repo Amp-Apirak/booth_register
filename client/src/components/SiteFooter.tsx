@@ -27,7 +27,7 @@ export default function SiteFooter() {
   if (STAFF_PAGES.some((p) => pathname.startsWith(p))) {
     return (
       <footer className="border-t border-white/5 mt-8">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 sm:pr-48 lg:pr-48 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 sm:pr-48 lg:pr-48 pt-4 pb-20 sm:pb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500 text-center sm:text-left">
           <span>{copyright} · {t.footer.staffSystem}</span>
           <span>
             {t.footer.platformSupport}{' '}
@@ -135,7 +135,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="border-t border-white/5">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 sm:pr-48 lg:pr-48 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 sm:pr-48 lg:pr-48 pt-4 pb-20 sm:pb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-slate-500 text-center sm:text-left">
           <span>{copyright} · {t.footer.rightsReserved}</span>
           <Link href="/privacy" className="inline-flex items-center gap-1.5 hover:text-slate-300"><ShieldCheck className="w-4 h-4" />{t.footer.privacy}</Link>
         </div>

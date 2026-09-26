@@ -202,14 +202,10 @@
   line-height: 2;
 }
 
-@media screen and (max-width: 900px) {
+/* narrow screens: the sheet keeps its A4 layout and is zoomed out to fit (see useSheetZoom) */
+@media screen and (max-width: 840px) {
   .sheet {
-    width: 100%;
-    min-height: 0;
-    padding: 24px 18px;
-  }
-  .kpis {
-    grid-template-columns: repeat(2, 1fr);
+    box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -223,5 +219,6 @@
     padding: 0;
     margin: 0;
     box-shadow: none;
+    zoom: 1 !important; /* the screen preview may be zoomed out; paper never is */
   }
 }
