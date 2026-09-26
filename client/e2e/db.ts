@@ -37,6 +37,11 @@ export async function sql<T = Record<string, unknown>>(text: string, params: unk
   return (await connection().query(text, params)).rows as T[];
 }
 
+/** Several statements in one round trip (no parameters), e.g. BEGIN; …; COMMIT; */
+export async function sqlScript(text: string): Promise<void> {
+  await connection().query(text, []);
+}
+
 export async function closeDb() {
   const open = pool;
   pool = null;
