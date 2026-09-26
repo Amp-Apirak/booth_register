@@ -105,6 +105,8 @@ docker exec event_postgres_db pg_dump -U "$DB_USER" -Fc booth_register_db > back
 docker exec -i event_postgres_db pg_restore -U "$DB_USER" -d booth_register_db --clean --if-exists < backup_XXXX.dump
 ```
 
+**เมื่อจบงาน (ก่อนใช้กับงานถัดไป):** ผู้ดูแล (Admin) ส่งออก Excel ที่ `/settings?tab=backup` → **ส่งออกทั้งหมด** แล้วจึง **รีเซ็ตทั้งระบบ** ([user_manual.md](user_manual.md) §2.6) · ไฟล์ Excel ไม่มีรูปภาพ และรีเซ็ตแล้วกู้คืนจากหน้าเว็บไม่ได้ จึงควรสำรองฐานข้อมูลด้วยคำสั่งข้างบนก่อนกดรีเซ็ตทุกครั้ง (บน production ใช้ชื่อ container/namespace ตาม [deploy/README.md](../deploy/README.md))
+
 ## 6. งานดูแลอื่น ๆ
 
 ```bash
@@ -122,7 +124,7 @@ docker compose down -v && docker compose up -d
 ```bash
 cd client && npx tsc --noEmit && TZ=Asia/Bangkok node --test tests/*.test.mjs   # unit
 cd server && npm test                                                          # API + ความปลอดภัย + ข้อมูลสด (ทีละไฟล์)
-cd client && npx playwright test                                               # เปิดเบราว์เซอร์จริงทดสอบทุกหน้า (~3 นาที)
+cd client && npx playwright test                                               # เปิดเบราว์เซอร์จริงทดสอบทุกหน้า (~4 นาที)
 ```
 
-Playwright ต้องมีบัญชีทดสอบและไฟล์ `client/.env.e2e.local` ครั้งแรก — ดู [client/e2e/README.md](../client/e2e/README.md) · ทุกชุดทดสอบลบข้อมูลที่สร้างเอง
+Playwright ต้องมีบัญชีทดสอบและไฟล์ `client/.env.e2e.local` ครั้งแรก — ดู [client/e2e/README.md](../client/e2e/README.md) · ทุกชุดทดสอบลบข้อมูลที่สร้างเอง · `e2e/backup-reset.spec.ts` กดรีเซ็ตจริงบนฐานข้อมูลของเครื่อง โดยคัดลอกข้อมูลไว้ใน schema `e2e_snapshot` ก่อนแล้วคืนให้ครบ (ห้ามชี้ `E2E_API_URL` ไปที่ production)

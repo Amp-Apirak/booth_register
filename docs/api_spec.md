@@ -18,7 +18,7 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 |---|---|
 | สาธารณะ | `POST /login` · `POST /events/:id/register` · `POST /tickets/lookup` · `GET /events/:id/stats` · `GET /settings` · `GET /events/:id/agenda` · `GET /events/:id/prizes` · `GET /events/:id/organization-types` · `GET /events/:id/lucky-draw/winners` · `GET /ping` |
 | เจ้าหน้าที่ (Staff หรือ Admin) | `GET/POST /participants` · `GET /participants/:ticket_code` · `PUT /participants/:id` · `POST /checkin` · `POST /events/:id/lucky-draw/spin` · `GET /events/:id/lucky-draw/eligible` |
-| Admin เท่านั้น | `POST /participants/import` · `DELETE /participants/:id` · `PUT /settings` · `PUT /events/:id/agenda` · ของรางวัลทั้งหมดที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder/import) · ประเภทองค์กรที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder) |
+| Admin เท่านั้น | `POST /participants/import` · `DELETE /participants/:id` · `PUT /settings` · `PUT /events/:id/agenda` · ของรางวัลทั้งหมดที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder/import) · ประเภทองค์กรที่เปลี่ยนข้อมูล (POST/PUT/DELETE/reorder) · `GET /events/:id/reset-summary` · `POST /events/:id/reset` |
 
 - ไม่มี token / token ผิด / หมดอายุ → **401** (`UNAUTHORIZED` / `INVALID_TOKEN` / `TOKEN_EXPIRED`) · role ไม่พอ → **403** `FORBIDDEN`
 - `POST /login` ผิด 10 ครั้งต่อ username + เครื่อง ภายใน 15 นาที → **429** `TOO_MANY_ATTEMPTS` (มี `retry_after` วินาที และ header `Retry-After`)
@@ -336,7 +336,7 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 ### 2.7 จัดการกำหนดการ Event Agenda
 
 *   **ดึงกำหนดการสำหรับจอ LED (Public)**: `GET /api/v1/events/:event_id/agenda`
-*   **แทนที่กำหนดการทั้งหมด (Staff JWT)**: `PUT /api/v1/events/:event_id/agenda`
+*   **แทนที่กำหนดการทั้งหมด (Admin JWT)**: `PUT /api/v1/events/:event_id/agenda`
 *   **Request Body**:
     ```json
     {
@@ -355,6 +355,51 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
     }
     ```
 *   `start_at` และ `end_at` ต้องมีวันที่พร้อมเขตเวลา และเวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม ระบบบันทึกทั้งชุดใน transaction เดียวและส่ง WebSocket `agenda:update` เมื่อสำเร็จ
+
+---
+
+### 2.8 สำรองและรีเซ็ต (Backup & reset) — Admin ([ADR-0017](adr/0017-backup-and-reset.md))
+
+*   **จำนวนข้อมูลที่จะถูกลบ (แสดงในหน้าต่างยืนยัน)**: `GET /api/v1/events/:event_id/reset-summary`
+    ```json
+    {
+      "success": true,
+      "data": {
+        "organization_types": 6, "participants_with_organization_type": 40,
+        "agenda_items": 24, "prizes": 6,
+        "participants": 48, "checkins": 30, "winners": 10,
+        "general_changed": 7, "registration_changed": 4, "default_organization_types": 6
+      }
+    }
+    ```
+    `general_changed` / `registration_changed` = จำนวนช่องที่ไม่ใช่ค่าเริ่มต้น
+*   **รีเซ็ตกลับเป็นค่าเริ่มต้น**: `POST /api/v1/events/:event_id/reset`
+    ```json
+    { "sections": ["general", "registration", "organizations", "agenda", "prizes", "attendees"] }
+    ```
+    เลือกได้ตั้งแต่ 1 หมวด · ทำใน transaction เดียว (สำเร็จทั้งหมดหรือไม่เปลี่ยนเลย) · บัญชีผู้ใช้ไม่ถูกลบ
+    | หมวด | ผล |
+    |---|---|
+    | `general` | การตั้งค่าแท็บข้อมูลทั่วไปเป็นค่าเริ่มต้น (`event_name` = `SMART EVENT REGISTRATION`, ที่เหลือว่าง) |
+    | `registration` | การตั้งค่าหน้าลงทะเบียนว่างทั้งหมด |
+    | `organizations` | ลบประเภทองค์กรของงาน แล้วใส่ 6 รายการเริ่มต้น (ผู้เข้าร่วมที่ยังอยู่ → `organization_type_id = null`) |
+    | `agenda` | ลบกำหนดการทั้งหมด |
+    | `prizes` | ลบของรางวัลทั้งหมด (ผู้ได้รางวัลยังอยู่) |
+    | `attendees` | ลบผู้เข้าร่วม การเช็คอิน และผู้ได้รางวัล |
+*   **Response (200)**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "sections": ["agenda", "attendees"],
+        "removed": { "participants": 48, "checkins": 30, "winners": 10, "agenda_items": 24 },
+        "settings": {}
+      }
+    }
+    ```
+    `settings` = ค่าเริ่มต้นที่ใช้แล้ว (เมื่อมี `general` / `registration`)
+*   **Errors**: `sections` ว่างหรือมีชื่อที่ไม่รู้จัก → **400** `INVALID_SECTIONS` · ไม่พบงาน → **404** `EVENT_NOT_FOUND` · ไม่ login → 401 · Staff → 403 `FORBIDDEN`
+*   **WebSocket หลังรีเซ็ต**: `settings:update` (ค่าเริ่มต้น), `agenda:update` (`items: []`), `prizes:update`, `organization-types:update`, `overview:update`, `participants:update` (เฉพาะหน้าจอเจ้าหน้าที่) และ `data:reset` (ข้อ 3.2.8)
 
 ---
 
@@ -448,18 +493,23 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 #### 3.2.7 `organization-types:update` (ประเภทองค์กรเปลี่ยน)
 *   **ทริกเกอร์จาก**: เพิ่ม/แก้ไข/ลบ/เรียงลำดับประเภทองค์กร
 *   **Payload**: `{ "event_id": 1 }` — ผู้รับโหลด `GET /events/:event_id/organization-types` ใหม่
+
+#### 3.2.8 `data:reset` (รีเซ็ตกลับเป็นค่าเริ่มต้น)
+*   **ทริกเกอร์จาก**: `POST /api/v1/events/:event_id/reset` สำเร็จ (ส่งหลัง event เฉพาะของแต่ละหมวด)
+*   **Payload**: `{ "event_id": 1, "sections": ["attendees", "prizes"] }`
+*   **การใช้งาน**: เมื่อมี `attendees` จอ LED ล้างชื่อแขกคนล่าสุดและผู้ได้รางวัลล่าสุด · หน้าสุ่มรางวัลโหลดรายชื่อผู้มีสิทธิ์ ของรางวัล และผู้ได้รางวัลใหม่เมื่อมี `attendees` หรือ `prizes`
 # Lucky Draw Prizes
 
 - `GET /api/v1/events/:event_id/prizes` — รายการของรางวัล (`?active=true` สำหรับรายการเปิดใช้งาน)
-- `POST /api/v1/events/:event_id/prizes` — เพิ่มของรางวัล (Staff JWT)
-- `PUT /api/v1/events/:event_id/prizes/:prize_id` — แก้ไขของรางวัล (Staff JWT)
-- `DELETE /api/v1/events/:event_id/prizes/:prize_id` — ลบของรางวัล (Staff JWT)
+- `POST /api/v1/events/:event_id/prizes` — เพิ่มของรางวัล (Admin JWT)
+- `PUT /api/v1/events/:event_id/prizes/:prize_id` — แก้ไขของรางวัล (Admin JWT)
+- `DELETE /api/v1/events/:event_id/prizes/:prize_id` — ลบของรางวัล (Admin JWT)
 
 ข้อมูลรองรับ `name`, `code`, `description`, `image`, `quantity`, `is_active` และ `sort_order`; ผลลัพธ์รายการมี `awarded_count` และ `remaining_count` ซึ่งคำนวณจากประวัติผู้ชนะด้วย
 
 ### รางวัล: ลำดับการสุ่มและ Excel
-- `PUT /api/v1/events/:event_id/prizes/reorder` (Staff JWT) — body `{ "prize_ids": [3, 1, 2] }` ตั้ง `sort_order` = ตำแหน่ง (1, 2, 3…) คืนรายการรางวัลทั้งหมด
-- `POST /api/v1/events/:event_id/prizes/import` (Staff JWT) — body `{ "prizes": [{ "row": 2, "sort_order": 1, "name": "…", "code": "GRAND-01", "description": "", "quantity": 1, "is_active": true, "image": "" }] }` สูงสุด 500 แถว
+- `PUT /api/v1/events/:event_id/prizes/reorder` (Admin JWT) — body `{ "prize_ids": [3, 1, 2] }` ตั้ง `sort_order` = ตำแหน่ง (1, 2, 3…) คืนรายการรางวัลทั้งหมด
+- `POST /api/v1/events/:event_id/prizes/import` (Admin JWT) — body `{ "prizes": [{ "row": 2, "sort_order": 1, "name": "…", "code": "GRAND-01", "description": "", "quantity": 1, "is_active": true, "image": "" }] }` สูงสุด 500 แถว
   - จับคู่รางวัลเดิมด้วย `code` ก่อน แล้วค่อย `name` (ไม่สนตัวพิมพ์เล็ก-ใหญ่) → อัปเดต; ไม่พบ → สร้างใหม่ต่อท้ายลำดับ; **ไม่ลบ** รางวัลที่ไม่มีในไฟล์
   - `image` ว่าง = คงรูปเดิม · ทำใน transaction เดียว แถวผิดแถวเดียวจะไม่บันทึกอะไรเลย (400 พร้อมเลขแถว)
   - Response: `{ "success": true, "data": { "created": 1, "updated": 5 } }`
@@ -468,7 +518,7 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
 
 # Participants: นำเข้าจาก Excel
 
-`POST /api/v1/participants/import` (Staff JWT)
+`POST /api/v1/participants/import` (Admin JWT)
 
 - Body: `{ "participants": [{ "row": 2, "name": "สมชาย ใจดี", "company": "ACME", "position": "", "email": "a@x.co", "phone": "0812345678", "attendee_type": "VIP", "organization_type": "สถานศึกษา" }] }` สูงสุด 5,000 แถว
 - `organization_type` (ไม่บังคับ): รหัสหรือชื่อไทย/อังกฤษของประเภทองค์กร (ไม่สนตัวพิมพ์เล็ก-ใหญ่และช่องว่างรอบ `/`) → จับคู่เป็น `organization_type_id`; ไม่ตรงกับประเภทใด → เก็บเป็น `organization_type_other`; ว่าง → ไม่ระบุ
@@ -485,15 +535,15 @@ Authorization: Bearer <JWT_ACCESS_TOKEN>
   ```json
   { "success": true, "data": [{ "id": 1, "name_th": "หน่วยงานราชการ / รัฐวิสาหกิจ", "name_en": "Government agency / State enterprise", "color": "blue", "sort_order": 1, "is_active": true, "usage_count": 5 }] }
   ```
-- `POST /api/v1/events/:event_id/organization-types` (Staff JWT) — body `{ "name_th": "มูลนิธิ", "name_en": "Foundation", "color": "violet", "is_active": true }` → 201 ต่อท้ายลำดับ
+- `POST /api/v1/events/:event_id/organization-types` (Admin JWT) — body `{ "name_th": "มูลนิธิ", "name_en": "Foundation", "color": "violet", "is_active": true }` → 201 ต่อท้ายลำดับ
   - `name_th` ว่าง → 400 `NAME_TH_REQUIRED` · `color` ต้องเป็น `blue` `red` `green` `violet` `orange` `aqua` `yellow` `magenta` มิฉะนั้น 400 `INVALID_COLOR`
-- `PUT /api/v1/events/:event_id/organization-types/:id` (Staff JWT) — body แบบเดียวกับ POST (ส่งครบทุกช่อง) · ไม่พบ → 404 `NOT_FOUND`
-- `PUT /api/v1/events/:event_id/organization-types/reorder` (Staff JWT) — body `{ "ids": [3, 1, 2] }` ตั้ง `sort_order` ตามตำแหน่ง คืนรายการทั้งหมด · ids ผิดรูปแบบ → 400 `INVALID_IDS`
-- `DELETE /api/v1/events/:event_id/organization-types/:id` (Staff JWT) — มีผู้เข้าร่วมเลือกแล้ว → 409 `{ "error": "IN_USE", "usage_count": 12 }` (ให้ปิด `is_active` แทน)
+- `PUT /api/v1/events/:event_id/organization-types/:id` (Admin JWT) — body แบบเดียวกับ POST (ส่งครบทุกช่อง) · ไม่พบ → 404 `NOT_FOUND`
+- `PUT /api/v1/events/:event_id/organization-types/reorder` (Admin JWT) — body `{ "ids": [3, 1, 2] }` ตั้ง `sort_order` ตามตำแหน่ง คืนรายการทั้งหมด · ids ผิดรูปแบบ → 400 `INVALID_IDS`
+- `DELETE /api/v1/events/:event_id/organization-types/:id` (Admin JWT) — มีผู้เข้าร่วมเลือกแล้ว → 409 `{ "error": "IN_USE", "usage_count": 12 }` (ให้ปิด `is_active` แทน)
 
 # Settings (ตั้งค่าระบบ)
 
 - `GET /api/v1/settings` (Public) — object key/value ของทุกค่าตั้งค่า
-- `PUT /api/v1/settings` (Staff JWT) — ส่งเฉพาะ key ที่ต้องการแก้ ระบบรับเฉพาะ key ในรายการที่อนุญาต แล้วส่ง WebSocket `settings:update`
+- `PUT /api/v1/settings` (Admin JWT) — ส่งเฉพาะ key ที่ต้องการแก้ ระบบรับเฉพาะ key ในรายการที่อนุญาต แล้วส่ง WebSocket `settings:update`
 - รายการ key ทั้งหมดและความหมายอยู่ที่ [configuration.md](configuration.md#2-ค่าตั้งค่าในระบบ-settings) · `event_map_url` ต้องขึ้นต้นด้วย `http(s)://` มิฉะนั้นตอบ 400
 

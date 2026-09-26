@@ -63,7 +63,7 @@
 
 ## 2. ค่าตั้งค่าในระบบ (Settings)
 
-เก็บแบบ key/value ในตาราง `settings` (server สร้างตารางและค่าว่างให้เองตอนเปิด) · อ่าน `GET /api/v1/settings` (public) · แก้ `PUT /api/v1/settings` (เจ้าหน้าที่) · key ที่รับได้กำหนดใน `server/controllers/settingsController.js`
+เก็บแบบ key/value ในตาราง `settings` (server สร้างตารางและค่าเริ่มต้นให้เองตอนเปิด) · อ่าน `GET /api/v1/settings` (public) · แก้ `PUT /api/v1/settings` (Admin) · key ที่รับได้และค่าเริ่มต้นอยู่ที่ `DEFAULT_SETTINGS` ใน `server/repositories/settingsRepository.js` ส่วน `SETTINGS_GROUPS` บอกว่า key ไหนอยู่แท็บใด (ใช้ตอนรีเซ็ตทีละแท็บ, [ADR-0017](adr/0017-backup-and-reset.md))
 
 | Key | แก้ที่ (หน้า `/settings`) | แสดงที่ |
 |---|---|---|
@@ -79,7 +79,9 @@
 
 ข้อมูลอื่นที่แก้จากหน้า `/settings` แต่อยู่คนละตาราง: กำหนดการ (`agenda_items`), ของรางวัล (`lucky_draw_prizes`) และประเภทองค์กร (`organization_types` — แท็บ "ประเภทองค์กร": ชื่อไทย/อังกฤษ, สีในกราฟ 8 สี, แสดงในหน้าลงทะเบียน, ลำดับ; server ใส่ 6 ประเภทเริ่มต้นให้ถ้ายังไม่มี · [ADR-0012](adr/0012-organization-types.md))
 
-**เพิ่ม key ใหม่:** เพิ่มใน `initTable()` + ค่า fallback ใน `settingsRepository.js`, `allowedKeys` ใน `settingsController.js`, `SystemSettings` + `DEFAULT_SETTINGS` ใน `client/src/lib/api.ts` แล้วอัปเดตตารางนี้
+**เพิ่ม key ใหม่:** เพิ่มใน `DEFAULT_SETTINGS` และ `SETTINGS_GROUPS` (`server/repositories/settingsRepository.js` — สร้างค่าเริ่มต้น, fallback, key ที่รับได้ และการรีเซ็ต มาจากที่นี่ทั้งหมด), `SystemSettings` + `DEFAULT_SETTINGS` ใน `client/src/lib/api.ts`, แถวใน `generalRows` / `registrationRows` (`client/src/lib/backupExport.ts`, ไฟล์ Excel) แล้วอัปเดตตารางนี้
+
+**รีเซ็ตกลับค่าเริ่มต้น:** หน้า `/settings` ทุกแท็บ และแท็บ **สำรองและรีเซ็ต** (`/settings?tab=backup`) · ประเภทองค์กรกลับเป็น 6 รายการเริ่มต้น (`DEFAULT_TYPES` ใน `organizationTypeRepository.js`) · กำหนดการ ของรางวัล และข้อมูลผู้เข้าร่วมถูกลบ · บัญชีผู้ใช้ไม่ถูกลบ ([ADR-0017](adr/0017-backup-and-reset.md))
 
 ---
 
@@ -105,7 +107,7 @@
 | Role | ทำได้ | ทำไม่ได้ |
 |---|---|---|
 | **Admin** | ทุกอย่าง | — |
-| **Staff** | สแกนเช็คอิน, ดู/เพิ่ม/แก้ไขผู้เข้าร่วม, รายงานและกราฟ, สุ่มรางวัล | ตั้งค่าระบบทุกแท็บ, ลบผู้เข้าร่วม, นำเข้า Excel |
+| **Staff** | สแกนเช็คอิน, ดู/เพิ่ม/แก้ไขผู้เข้าร่วม, รายงานและกราฟ, สุ่มรางวัล | ตั้งค่าระบบทุกแท็บ (รวมสำรองและรีเซ็ต), ลบผู้เข้าร่วม, นำเข้า Excel |
 
 รายละเอียด: [ADR-0015](adr/0015-roles-and-access.md) · login ผิด 10 ครั้งใน 15 นาที ต้องรอ 15 นาที (หรือ restart server)
 

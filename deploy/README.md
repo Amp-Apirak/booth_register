@@ -66,6 +66,7 @@ kubectl -n booth create job --from=cronjob/booth-db-backup backup-now   # สำ
 
 | รอบ | สิ่งที่ server เพิ่มให้เอง | หลังอัปเดตให้ทำ |
 |---|---|---|
+| 2026-09-26 (รอบ 3) | ไม่มีตาราง/คอลัมน์ใหม่ · endpoint `GET /events/:id/reset-summary`, `POST /events/:id/reset` (Admin) | เปิด `/settings?tab=backup` ตรวจว่าจำนวนข้อมูลแต่ละหมวดตรง · **ก่อนกดรีเซ็ตบน production ให้สำรองทันที** `kubectl -n booth create job --from=cronjob/booth-db-backup backup-now` (หรือ `pg_dump` ด้านบน) เพราะรีเซ็ตแล้วกู้จากหน้าเว็บไม่ได้ |
 | 2026-09-26 | คอลัมน์ `checkins.scanned_by` เริ่มถูกบันทึก (มีอยู่แล้วใน schema) · env `TRUST_PROXY=1` (อยู่ใน `server.yaml` / `docker-compose.prod.yml` แล้ว) | ตั้ง role บัญชี: ผู้ที่ต้องตั้งค่าระบบ = Admin, เจ้าหน้าที่หน้างาน = Staff (`create-admin.js`) · ทดสอบลงทะเบียนแล้วตรวจอีเมลตั๋วว่าเป็นชื่อ/วัน/สถานที่ของงานจริง |
 | 2026-09-25 | ตาราง `organization_types` (+ 6 ประเภทเริ่มต้น), คอลัมน์ `organization_type_id`, `organization_type_other` ใน `participants` | เปิด `/settings?tab=organizations` ตรวจรายการประเภทองค์กร · ผู้ลงทะเบียนเดิมเป็น "ไม่ระบุ" (เลือกแทนได้ในแดชบอร์ด) · ช่องประเภทองค์กรในหน้าลงทะเบียนกลายเป็นช่องบังคับ |
 
