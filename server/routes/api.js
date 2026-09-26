@@ -7,6 +7,7 @@ const settingsController = require('../controllers/settingsController');
 const agendaController = require('../controllers/agendaController');
 const prizeController = require('../controllers/prizeController');
 const organizationTypeController = require('../controllers/organizationTypeController');
+const resetController = require('../controllers/resetController');
 const { verifyToken, requireRole } = require('../middlewares/authMiddleware');
 
 // Access levels (ADR-0015): public · staff (any login: Admin or Staff) · admin (Admin only)
@@ -77,5 +78,9 @@ router.put('/settings', admin, (req, res) => settingsController.updateSettings(r
 // Event Agenda: public display feed + protected back-office replacement
 router.get('/events/:event_id/agenda', (req, res) => agendaController.getByEvent(req, res));
 router.put('/events/:event_id/agenda', admin, (req, res) => agendaController.replaceForEvent(req, res));
+
+// Backup & reset (Settings → สำรองและรีเซ็ต, ADR-0017): back to a new event's defaults
+router.get('/events/:event_id/reset-summary', admin, (req, res) => resetController.summary(req, res));
+router.post('/events/:event_id/reset', admin, (req, res) => resetController.reset(req, res));
 
 module.exports = router;

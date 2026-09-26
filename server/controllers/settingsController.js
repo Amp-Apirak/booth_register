@@ -1,4 +1,5 @@
 const settingsRepository = require('../repositories/settingsRepository');
+const { DEFAULT_SETTINGS } = settingsRepository;
 
 class SettingsController {
   
@@ -19,27 +20,7 @@ class SettingsController {
   // PUT /api/v1/settings (Protected)
   async updateSettings(req, res) {
     try {
-      const allowedKeys = [
-        'event_name',
-        'event_logo',
-        'event_venue',
-        'event_address',
-        'event_building',
-        'event_floor',
-        'event_start',
-        'event_end',
-        'registration_hero_image',
-        'registration_brochure_image',
-        'registration_intro',
-        'registration_objectives',
-        'registration_terms',
-        'organizer_name',
-        'contact_phone',
-        'contact_email',
-        'contact_line',
-        'event_map_url',
-        'privacy_policy'
-      ];
+      const allowedKeys = Object.keys(DEFAULT_SETTINGS);
 
       const updateData = {};
       for (const key of allowedKeys) {

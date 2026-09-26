@@ -1,5 +1,38 @@
 const { query } = require('../config/db');
 
+// Value of every setting on a new system, and after "reset to defaults" (Settings, ADR-0017)
+const DEFAULT_SETTINGS = {
+  event_name: 'SMART EVENT REGISTRATION',
+  event_logo: '',
+  event_venue: '',
+  event_address: '',
+  event_building: '',
+  event_floor: '',
+  event_start: '',
+  event_end: '',
+  registration_hero_image: '',
+  registration_brochure_image: '',
+  registration_intro: '',
+  registration_objectives: '',
+  registration_terms: '',
+  // Footer: organizer, attendee help contacts, map link and privacy policy
+  organizer_name: '',
+  contact_phone: '',
+  contact_email: '',
+  contact_line: '',
+  event_map_url: '',
+  privacy_policy: '',
+};
+
+// The settings each Settings tab edits (and resets)
+const SETTINGS_GROUPS = {
+  general: [
+    'event_name', 'event_logo', 'event_venue', 'event_address', 'event_building', 'event_floor', 'event_start', 'event_end',
+    'organizer_name', 'contact_phone', 'contact_email', 'contact_line', 'event_map_url', 'privacy_policy',
+  ],
+  registration: ['registration_hero_image', 'registration_brochure_image', 'registration_intro', 'registration_objectives', 'registration_terms'],
+};
+
 class SettingsRepository {
   /**
    * Initializes the settings table and default values if not exists
@@ -15,30 +48,9 @@ class SettingsRepository {
       await query(createTableQuery);
 
       // Insert defaults if not exist
-      const insertDefaultsQuery = `
-        INSERT INTO settings (key, value) VALUES
-          ('event_name', 'SMART EVENT REGISTRATION'),
-          ('event_logo', ''),
-          ('event_venue', ''),
-          ('event_address', ''),
-          ('event_building', ''),
-          ('event_floor', ''),
-          ('event_start', ''),
-          ('event_end', ''),
-          ('registration_hero_image', ''),
-          ('registration_brochure_image', ''),
-          ('registration_intro', ''),
-          ('registration_objectives', ''),
-          ('registration_terms', ''),
-          ('organizer_name', ''),
-          ('contact_phone', ''),
-          ('contact_email', ''),
-          ('contact_line', ''),
-          ('event_map_url', ''),
-          ('privacy_policy', '')
-        ON CONFLICT (key) DO NOTHING;
-      `;
-      await query(insertDefaultsQuery);
+      const entries = Object.entries(DEFAULT_SETTINGS);
+      const rows = entries.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(', ');
+      await query(`INSERT INTO settings (key, value) VALUES ${rows} ON CONFLICT (key) DO NOTHING`, entries.flat());
       console.log('✅ Settings table initialized.');
     } catch (error) {
       console.error('❌ Failed to initialize settings table:', error.message);
@@ -52,31 +64,18 @@ class SettingsRepository {
   async getSettings() {
     const text = 'SELECT key, value FROM settings';
     const result = await query(text);
-    
+
     const settings = {};
     result.rows.forEach(row => {
       settings[row.key] = row.value;
     });
-    
+
     // Fallbacks just in case
-    if (!settings['event_name']) settings['event_name'] = 'SMART EVENT REGISTRATION';
-    if (settings['event_logo'] === undefined) settings['event_logo'] = '';
-    if (settings['event_venue'] === undefined) settings['event_venue'] = '';
-    if (settings['event_address'] === undefined) settings['event_address'] = '';
-    if (settings['event_building'] === undefined) settings['event_building'] = '';
-    if (settings['event_floor'] === undefined) settings['event_floor'] = '';
-    if (settings['event_start'] === undefined) settings['event_start'] = '';
-    if (settings['event_end'] === undefined) settings['event_end'] = '';
-    if (settings['registration_hero_image'] === undefined) settings['registration_hero_image'] = '';
-    if (settings['registration_brochure_image'] === undefined) settings['registration_brochure_image'] = '';
-    if (settings['registration_intro'] === undefined) settings['registration_intro'] = '';
-    if (settings['registration_objectives'] === undefined) settings['registration_objectives'] = '';
-    if (settings['registration_terms'] === undefined) settings['registration_terms'] = '';
-    // Footer: organizer, attendee help contacts, map link and privacy policy
-    for (const key of ['organizer_name', 'contact_phone', 'contact_email', 'contact_line', 'event_map_url', 'privacy_policy']) {
-      if (settings[key] === undefined) settings[key] = '';
+    for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+      if (settings[key] === undefined) settings[key] = value;
     }
-    
+    if (!settings.event_name) settings.event_name = DEFAULT_SETTINGS.event_name;
+
     return settings;
   }
 
@@ -102,3 +101,5 @@ class SettingsRepository {
 }
 
 module.exports = new SettingsRepository();
+module.exports.DEFAULT_SETTINGS = DEFAULT_SETTINGS;
+module.exports.SETTINGS_GROUPS = SETTINGS_GROUPS;

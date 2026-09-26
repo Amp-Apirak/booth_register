@@ -126,3 +126,4 @@ class OrganizationTypeRepository {
 
 module.exports = new OrganizationTypeRepository();
 module.exports.COLOR_SLOTS = COLOR_SLOTS;
+module.exports.DEFAULT_TYPES = DEFAULT_TYPES;

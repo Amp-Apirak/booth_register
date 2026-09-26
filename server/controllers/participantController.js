@@ -486,3 +486,4 @@ async function getStatsSummary() {
 }
 
 module.exports = new ParticipantController();
+module.exports.getStatsSummary = getStatsSummary;
