@@ -63,6 +63,8 @@ function SignageDisplay() {
   const [now, setNow] = useState(() => new Date());
   const [welcomeQueue, setWelcomeQueue] = useState<{ fullname: string; company: string; position?: string; profile_picture?: string; attendee_type?: string }[]>([]);
   const [lastKnownWinner, setLastKnownWinner] = useState<LuckyWinnerData | null>(null);
+  const [rollingPrize, setRollingPrize] = useState<string | null>(null);
+  const rollingTimerRef = useRef<number | null>(null);
   const shownWinner = latestWinner ?? lastKnownWinner;
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -162,43 +164,47 @@ function SignageDisplay() {
     };
   }, [fullscreenMode]);
 
-  // Settings → Backup & reset removed the attendees: stop showing the previous event's guests and winner
+  // Settings → Backup & reset removed the attendees; new check-in updates welcome queue & confetti
   useEffect(() => {
     const socket = acquireSocket();
     const onReset = (payload: { sections?: string[] }) => {
       if (!payload.sections?.includes('attendees')) return;
+      if (rollingTimerRef.current !== null) {
+        window.clearTimeout(rollingTimerRef.current);
+        rollingTimerRef.current = null;
+      }
+      setRollingPrize(null);
       setWelcomeQueue([]);
       setCurrentIdx(0);
       setLastKnownWinner(null);
     };
-    socket.on('data:reset', onReset);
-    return () => {
-      socket.off('data:reset', onReset);
-      releaseSocket();
+    const onWinnerAnnounced = (raw: { prize_name?: string }) => {
+      if (rollingTimerRef.current !== null) window.clearTimeout(rollingTimerRef.current);
+      setRollingPrize(raw.prize_name || 'Grand Prize');
+      rollingTimerRef.current = window.setTimeout(() => {
+        rollingTimerRef.current = null;
+        setRollingPrize(null);
+      }, 2400);
     };
-  }, []);
-
-  // Add to welcome queue on new incoming check-in from WebSocket
-  useEffect(() => {
-    if (latestCheckin) {
+    const onCheckin = (raw: { fullname?: string; name?: string; company: string; position?: string; profile_picture?: string; attendee_type?: string }) => {
+      const guest = {
+        fullname: raw.fullname || raw.name || 'VIP Guest',
+        company: raw.company,
+        position: raw.position || '',
+        profile_picture: raw.profile_picture,
+        attendee_type: raw.attendee_type,
+      };
       setWelcomeQueue(prev => {
-        // Prevent duplicate immediate additions
-        if (prev.length > 0 && prev[0].fullname === latestCheckin.fullname) return prev;
-        return [
-          { fullname: latestCheckin.fullname, company: latestCheckin.company, position: latestCheckin.position, profile_picture: latestCheckin.profile_picture, attendee_type: latestCheckin.attendee_type },
-          ...prev.slice(0, 4)
-        ];
+        if (prev.length > 0 && prev[0].fullname === guest.fullname) return prev;
+        return [guest, ...prev.slice(0, 4)];
       });
-      setCurrentIdx(0); // Force UI to show the newest person immediately
+      setCurrentIdx(0);
 
       // Celebrate only on the Welcome screen — other displays keep their view untouched
       if (screenRef.current !== 'welcome') return;
-      // Fire confetti! Use the canvas-bound instance so it shows in fullscreen.
       const fire = confettiFireRef.current ?? confetti;
-      const isVip = latestCheckin.attendee_type === 'VIP';
-
+      const isVip = guest.attendee_type === 'VIP';
       if (isVip) {
-        // VIP: Grand gold confetti
         fire({
           particleCount: 150,
           spread: 100,
@@ -216,7 +222,6 @@ function SignageDisplay() {
           });
         }, 300);
       } else {
-        // General: Colorful festival confetti
         fire({
           particleCount: 120,
           spread: 80,
@@ -225,19 +230,32 @@ function SignageDisplay() {
           zIndex: 100
         });
       }
-    }
-  }, [latestCheckin]);
+    };
+    socket.on('data:reset', onReset);
+    socket.on('welcome:new_checkin', onCheckin);
+    socket.on('luckydraw:winner_announced', onWinnerAnnounced);
+    return () => {
+      if (rollingTimerRef.current !== null) {
+        window.clearTimeout(rollingTimerRef.current);
+        rollingTimerRef.current = null;
+      }
+      socket.off('data:reset', onReset);
+      socket.off('welcome:new_checkin', onCheckin);
+      socket.off('luckydraw:winner_announced', onWinnerAnnounced);
+      releaseSocket();
+    };
+  }, []);
 
-  // Celebrate each new lucky draw result (only on the Lucky screen)
+  // Celebrate each new lucky draw result once the 2.4s rolling buildup finishes (only on the Lucky screen)
   useEffect(() => {
-    if (!latestWinner || screenRef.current !== 'lucky') return;
+    if (!latestWinner || rollingPrize || screenRef.current !== 'lucky') return;
     const fire = confettiFireRef.current ?? confetti;
     fire({ particleCount: 180, spread: 110, origin: { y: 0.55 }, colors: ['#F59E0B', '#FCD34D', '#A855F7', '#22D3EE'], zIndex: 100 });
     const timer = setTimeout(() => {
       fire({ particleCount: 120, spread: 140, origin: { y: 0.55 }, colors: ['#F59E0B', '#FCD34D', '#FFFBEB'], zIndex: 100 });
     }, 350);
     return () => clearTimeout(timer);
-  }, [latestWinner]);
+  }, [latestWinner, rollingPrize]);
 
   const activePerson = welcomeQueue[currentIdx] || welcomeQueue[0];
   const agenda = liveAgenda ?? fetchedAgenda;
@@ -639,7 +657,31 @@ function SignageDisplay() {
             ['13%', '22%', '5px', '7s', '-2s'], ['26%', '74%', '4px', '9s', '-5s'], ['72%', '18%', '6px', '8s', '-3s'], ['87%', '68%', '4px', '6s', '-1s'], ['63%', '82%', '5px', '10s', '-7s'],
           ].map(([left, top, size, speed, delay], index) => <span key={index} className="overview-particle absolute rounded-full bg-amber-200 shadow-[0_0_16px_rgba(251,191,36,.8)] pointer-events-none" style={{ left, top, width: size, height: size, '--particle-speed': speed, '--particle-delay': delay } as CSSProperties} />)}
 
-          {shownWinner ? (
+          {rollingPrize ? (
+            <div className="relative z-10 flex flex-col items-center animate-fade-in">
+              <div className={`inline-flex items-center gap-2 rounded-full bg-fuchsia-500/20 border border-fuchsia-300/40 text-fuchsia-200 font-mono font-bold uppercase tracking-[0.25em] animate-pulse ${isFullscreen ? 'px-7 py-3 text-base mb-9' : 'px-5 py-2 text-xs mb-7'}`}>
+                <Zap className="w-4 h-4 text-amber-300 animate-bounce" /> Spinning · Lucky Draw
+              </div>
+
+              <div className={`relative flex items-center justify-center ${isFullscreen ? 'w-[min(26rem,38vh)] h-[min(26rem,38vh)] mb-7' : 'w-[min(18rem,30vh)] h-[min(18rem,30vh)] mb-6'}`}>
+                <div className="absolute inset-0 rounded-full border-4 border-dashed border-amber-300/70 animate-spin" style={{ animationDuration: '2s' }} />
+                <div className="absolute inset-[10%] rounded-full border-4 border-dotted border-cyan-300/70 animate-spin" style={{ animationDuration: '1.4s', animationDirection: 'reverse' }} />
+                <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-purple-600/40 via-pink-500/25 to-amber-400/25 border border-white/20 shadow-[0_0_95px_rgba(217,70,239,.55)] animate-pulse" />
+                <Trophy className={`relative text-amber-300 drop-shadow-[0_0_35px_rgba(251,191,36,.85)] animate-bounce ${isFullscreen ? 'w-28 h-28' : 'w-20 h-20'}`} />
+              </div>
+
+              <h1 className={`lucky-title font-black tracking-tight leading-tight ${isFullscreen ? 'text-4xl sm:text-6xl lg:text-7xl' : 'text-3xl sm:text-5xl lg:text-6xl'}`}>
+                {t.signage.lucky.spinningTitle}
+              </h1>
+              <div className={`mt-4 inline-flex items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-400/15 font-extrabold text-amber-200 shadow-[0_0_35px_rgba(251,191,36,.2)] ${isFullscreen ? 'px-8 py-3.5 text-2xl sm:text-3xl' : 'px-6 py-2.5 text-lg sm:text-xl'}`}>
+                <Sparkles className="w-5 h-5 text-amber-300" />
+                <span>{rollingPrize}</span>
+              </div>
+              <p className={`${isFullscreen ? 'text-xl mt-5' : 'text-sm sm:text-base mt-4'} text-slate-300 font-light`}>
+                {t.signage.lucky.spinningSubtitle}
+              </p>
+            </div>
+          ) : shownWinner ? (
             <LuckyWinnerReveal key={`${shownWinner.name}-${shownWinner.prize_name}-${shownWinner.drawn_at ?? ''}`} winner={shownWinner} isFullscreen={isFullscreen} />
           ) : (
           <div className="relative z-10 flex flex-col items-center">

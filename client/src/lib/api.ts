@@ -402,15 +402,20 @@ export const api = {
   // Lucky Draw Spin
   // Staff only. Throws Error with `code`: PRIZE_SOLD_OUT, PRIZE_INACTIVE, PRIZE_NOT_FOUND, NO_ELIGIBLE_PARTICIPANTS, NETWORK_ERROR…
   async luckyDrawSpin(prizeName: string): Promise<LuckyDrawWinner> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15_000);
     let res: Response;
     try {
       res = await fetch(`${API_BASE}/api/v1/events/1/lucky-draw/spin`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ prize_name: prizeName }),
+        signal: controller.signal,
       });
     } catch {
       throw Object.assign(new Error('NETWORK_ERROR'), { code: 'NETWORK_ERROR' });
+    } finally {
+      window.clearTimeout(timeoutId);
     }
     if (res.status === 401) await handleResponse(res);
     const data = await res.json().catch(() => ({}));

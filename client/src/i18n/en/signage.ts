@@ -40,6 +40,8 @@ export const signage: typeof Th = {
     getReady: 'Get ready for the grand prize draw',
     goodLuck: 'Good luck, everyone!',
     spinHint: 'Press SPIN on the control panel to start the wheel',
+    spinningTitle: 'Drawing a lucky winner...',
+    spinningSubtitle: 'Hold your breath — the winner is coming up!',
     won: 'Won',
   },
 };

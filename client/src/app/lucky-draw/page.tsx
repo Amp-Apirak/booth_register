@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Swal from 'sweetalert2';
 import api, { Participant, LuckyDrawWinner, Prize } from '@/lib/api';
 import { useT } from '@/contexts/PreferencesContext';
@@ -48,6 +48,9 @@ function LuckyDrawPageContent() {
   const [selectedPrizeId, setSelectedPrizeId] = useState<number | undefined>();
   const [winners, setWinners] = useState<LuckyDrawWinner[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const rollTimerRef = useRef<number | null>(null);
+  const mountedRef = useRef(true);
 
   // eligible people, prizes with units left, and everyone who already won (newest first)
   const applyDrawData = useCallback(({ eligible, prizeItems, past }: DrawData) => {
@@ -71,27 +74,55 @@ function LuckyDrawPageContent() {
     return () => { active = false; };
   }, [applyDrawData]);
 
-  // Settings → Backup & reset changed the people or prizes: reload, and drop the previous event's winner
+  // Keep eligible pool, prizes, and reset state in sync with live events
   useEffect(() => {
+    mountedRef.current = true;
     const socket = acquireSocket();
     const onReset = (payload: { sections?: string[] }) => {
       const sections = payload.sections ?? [];
       if (sections.includes('attendees')) setWinner(null);
       if (sections.includes('attendees') || sections.includes('prizes')) loadDrawData();
     };
+    const onLiveChange = () => {
+      loadDrawData();
+    };
     socket.on('data:reset', onReset);
+    socket.on('overview:update', onLiveChange);
+    socket.on('prizes:update', onLiveChange);
     return () => {
+      mountedRef.current = false;
+      if (rollTimerRef.current !== null) {
+        window.clearTimeout(rollTimerRef.current);
+        rollTimerRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
       socket.off('data:reset', onReset);
+      socket.off('overview:update', onLiveChange);
+      socket.off('prizes:update', onLiveChange);
       releaseSocket();
     };
   }, [loadDrawData]);
 
   const selectedPrize = prizes.find(p => p.prize_id === selectedPrizeId) || prizes[0] || { ...FALLBACK_PRIZE, name: t.luckyDraw.prizes.fallbackName, description: t.luckyDraw.prizes.fallbackDescription };
 
+  const getAudioContext = () => {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new AudioCtx();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+    return audioCtxRef.current;
+  };
+
   const playSound = (type: 'tick' | 'fanfare') => {
     if (!soundEnabled) return;
     try {
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const audioCtx = getAudioContext();
       if (type === 'tick') {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -125,41 +156,69 @@ function LuckyDrawPageContent() {
     setSpinning(true);
     setWinner(null);
 
-    // Dynamic slot roller animation
+    // Call backend immediately so the LED screen gets the winner right away and errors fail fast
+    const spinPromise = api.luckyDrawSpin(selectedPrize.name);
+    let settled = false;
+    let apiError: (Error & { code?: string }) | null = null;
+    let apiResult: LuckyDrawWinner | null = null;
+
+    spinPromise.then(
+      (res) => {
+        settled = true;
+        apiResult = res;
+      },
+      (err: Error & { code?: string }) => {
+        settled = true;
+        apiError = err;
+      },
+    );
+
+    // Dynamic slot roller animation (~2.4s minimum so both control & LED screens build excitement together)
     let iterations = 0;
-    const maxIterations = 35;
-    let speed = 60;
+    const minIterations = 22;
+    let speed = 55;
+
+    const finishSuccess = (result: LuckyDrawWinner) => {
+      if (!mountedRef.current) return;
+      setWinner(result);
+      setCurrentName(result.fullname);
+      setCurrentCompany(result.company);
+      setWinners(prev => [result, ...prev]);
+      setParticipants(prev => prev.filter(p => !(p.name === result.fullname && p.company === result.company)));
+      setPrizes(prev => prev.map(prize => prize.prize_id === selectedPrize.prize_id ? { ...prize, awarded_count: (prize.awarded_count || 0) + 1, remaining_count: Math.max(0, (prize.remaining_count ?? prize.quantity) - 1) } : prize));
+      playSound('fanfare');
+      setSpinning(false);
+    };
+
+    const finishError = (err: Error & { code?: string }) => {
+      if (!mountedRef.current) return;
+      setSpinning(false);
+      setCurrentName('');
+      setCurrentCompany('');
+      const errors = t.luckyDraw.errors;
+      Swal.fire({ icon: 'warning', title: errors.title, text: (err.code && errors[err.code]) || errors.generic });
+      loadDrawData(); // the prize list or pool may have changed
+    };
 
     const rollStep = () => {
+      if (!mountedRef.current) return;
+      if (apiError) {
+        finishError(apiError);
+        return;
+      }
+      if (settled && apiResult && iterations >= minIterations) {
+        finishSuccess(apiResult);
+        return;
+      }
+
       const randomIdx = Math.floor(Math.random() * participants.length);
       setCurrentName(participants[randomIdx].name);
       setCurrentCompany(participants[randomIdx].company);
       playSound('tick');
       iterations++;
 
-      if (iterations < maxIterations) {
-        speed += 6; // Gradually decelerate
-        setTimeout(rollStep, speed);
-      } else {
-        // Finalize with backend API
-        api.luckyDrawSpin(selectedPrize.name).then((result) => {
-          setWinner(result);
-          setCurrentName(result.fullname);
-          setCurrentCompany(result.company);
-          setWinners(prev => [result, ...prev]);
-          setParticipants(prev => prev.filter(p => !(p.name === result.fullname && p.company === result.company)));
-          setPrizes(prev => prev.map(prize => prize.prize_id === selectedPrize.prize_id ? { ...prize, awarded_count: (prize.awarded_count || 0) + 1, remaining_count: Math.max(0, (prize.remaining_count ?? prize.quantity) - 1) } : prize));
-          playSound('fanfare');
-          setSpinning(false);
-        }).catch((err: Error & { code?: string }) => {
-          setSpinning(false);
-          setCurrentName('');
-          setCurrentCompany('');
-          const errors = t.luckyDraw.errors;
-          Swal.fire({ icon: 'warning', title: errors.title, text: (err.code && errors[err.code]) || errors.generic });
-          loadDrawData(); // the prize list or pool may have changed
-        });
-      }
+      speed = Math.min(180, speed + 5);
+      rollTimerRef.current = window.setTimeout(rollStep, speed);
     };
 
     rollStep();
